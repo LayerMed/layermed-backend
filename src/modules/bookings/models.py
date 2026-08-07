@@ -6,6 +6,7 @@ from src.core.database import Base, Timestamp
 class Book(Base, Timestamp):
     __tablename__ = 'booking'
     user_id: Mapped[int]
+    doctor_id: Mapped[int]
     suggestion_id: Mapped[int]
     book_type: Mapped[str]
     status: Mapped[str]    

@@ -6,7 +6,7 @@ from src.core.database import Base, Timestamp
 class Doctor(Base, Timestamp):
     __tablename__ = 'doctors'
     user_id: Mapped[int]
-    speciality: Mapped[int]
+    speciality: Mapped[str]
     educational: Mapped[str]
-    expirience_yers: Mapped[int]
+    experience_years: Mapped[int]
     bio: Mapped[str]
