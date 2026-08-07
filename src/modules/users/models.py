@@ -2,7 +2,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from core.enums import UserRole
+from src.core.enums import UserRole
 from src.core.database import Base, Timestamp
 
 
