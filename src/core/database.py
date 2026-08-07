@@ -1,12 +1,17 @@
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase
+import datetime
+from sqlalchemy import create_engine, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from src.core.config import settings
 
 
 class Base(DeclarativeBase):
-    pass
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class Timestamp:
+    created_at: Mapped[datetime.datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime.datetime] = mapped_column(onupdate=func.now(), server_default=func.now())
 
 
 psycopg_engine = create_engine(
