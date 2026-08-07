@@ -1,0 +1,17 @@
+[project]
+name = "layermed-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.19.0",
+    "asyncpg>=0.31.0",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.14.2",
+    "pydantic[all]>=2.13.4",
+    "pyright>=1.1.411",
+    "redis>=8.1.0",
+    "ruff>=0.16.1",
+    "sqlalchemy>=2.0.51",
+]
