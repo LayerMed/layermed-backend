@@ -7,8 +7,8 @@ from src.core.database import get_session
 from src.core.enums import UserRole
 from src.core.logs import logger
 
-from modules.users.service import get_user_by_id, get_users_by_filters
-from modules.users.shemas import UserRead
+from src.modules.users.service import get_user_by_id, get_users_by_filters
+from src.modules.users.shemas import UserRead
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

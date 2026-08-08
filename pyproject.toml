@@ -17,5 +17,6 @@ dependencies = [
     "pyright>=1.1.411",
     "redis>=8.1.0",
     "ruff>=0.16.1",
+    "setuptools>=83.0.0",
     "sqlalchemy>=2.0.51",
 ]

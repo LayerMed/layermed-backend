@@ -52,7 +52,7 @@ async def get_user_by_id(
         "Executing DB query to fetch user {user_id} (excluding doctors)",
         user_id=user_id,
     )
-    query = select(User).filter(User.user_id == user_id, User.role != UserRole.DOCTOR)
+    query = select(User).filter(User.id == user_id, User.role != UserRole.DOCTOR)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     return user
