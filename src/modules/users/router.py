@@ -19,7 +19,6 @@ router = APIRouter(prefix="/users", tags=["Users"])
     summary="Get all users",
     description="Get all users (no doctors) from databse",
 )
-@cache(expire=3600)
 async def get_users(
     name: str | None = None,
     age: int | None = None,
