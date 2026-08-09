@@ -3,12 +3,13 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.core.security import create_access_token, verify_pwd
 from src.core.database import get_session
 from src.core.enums import UserRole
 from src.core.logs import logger
 
-from src.modules.users.service import get_user_by_id, get_users_by_filters
-from src.modules.users.shemas import UserRead
+from src.modules.users.service import get_user_by_email, get_user_by_id, get_users_by_filters
+from src.modules.users.schemas import UserLogin, UserRead
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -55,3 +56,29 @@ async def get_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     return user
+
+
+@router.post('/login')
+async def login_user(
+    user_data: UserLogin, 
+    db: AsyncSession = Depends(get_session)
+):
+    user = await get_user_by_email(user_data.email, db)
+    if user is None:
+        logger.info('Such user is not exists')
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    if not verify_pwd(user_data.password, user.password):
+        logger.info("The password doesn't fit")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="The password doesn't fit"
+        )
+    token = create_access_token({'sub': user_data.email})
+    return {
+        'access_token': token,
+        "token_type": "bearer"
+    }
+
+
+

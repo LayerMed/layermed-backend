@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
 
+    # JWT Settings
+    KEY: str
+    ALGORITHM: str
+    TOKEN_EXPIRE: int
+
     @property
     def pg_psycopg_dsn(self) -> str:
         return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

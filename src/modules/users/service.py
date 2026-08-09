@@ -1,5 +1,6 @@
 import datetime
 
+from pydantic import EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.enums import UserRole
@@ -56,3 +57,14 @@ async def get_user_by_id(
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     return user
+
+
+async def get_user_by_email(
+    email: EmailStr, 
+    db: AsyncSession
+):
+    query = select(User).filter(User.email == email)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    return user
+
