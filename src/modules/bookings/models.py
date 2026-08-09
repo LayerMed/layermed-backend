@@ -8,7 +8,6 @@ class Booking(Base, Timestamp):
     __tablename__ = "bookings"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="cascade"))
-    doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id", ondelete="cascade"))
     suggestion_id: Mapped[int] = mapped_column(
         ForeignKey("suggestions.id", ondelete="cascade")
     )
@@ -16,5 +15,4 @@ class Booking(Base, Timestamp):
     status: Mapped[str]
 
     user: Mapped["User"] = relationship(back_populates="bookings")
-    doctor: Mapped["Doctor"] = relationship(back_populates="bookings")
     suggestion: Mapped["Suggest"] = relationship(back_populates="bookings")

@@ -19,7 +19,6 @@ class Doctor(Base, Timestamp):
             "ix_doctors_speciality_exp", "speciality", "educational", "experience_years"
         ),
     )
-
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="doctor")
+    
     user: Mapped["User"] = relationship(back_populates="doctor")
     suggestions: Mapped[list["Suggest"]] = relationship(back_populates="doctor")
