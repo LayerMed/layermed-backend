@@ -1,8 +1,24 @@
 import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
 from src.core.security import BAD_PASSWORDS
+
+
+def validate_password_rules(value: str) -> str:
+    if value in BAD_PASSWORDS:
+        raise ValueError("This password is too easy. Please, use another password")
+    if len(set(value)) == 1:
+        raise ValueError("Password cannot consist of a single repeating character")
+    return value
+
+
+ValidPassword = Annotated[
+    str,
+    Field(min_length=8, max_length=16),
+    AfterValidator(validate_password_rules),
+]
 
 
 class UserRead(BaseModel):
@@ -17,41 +33,34 @@ class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
 
-def validate_password_rules(value: str) -> str:
-    if value in BAD_PASSWORDS:
-        raise ValueError("This password is too easy. Please, use other password")
-    if len(set(value)) == 1:
-        raise ValueError("Password cannot consist of a single repeating character")
-    return value
-
-
-class Password(BaseModel):
-    password: str = Field(min_length=8, max_length=16)
-
-    @field_validator("password")
-    @classmethod
-    def check_pwd(cls, value: str) -> str:
-        return validate_password_rules(value)
+class RegisterUser(BaseModel):
+    email: EmailStr
+    password: ValidPassword
+    name: str
+    birth_date: datetime.date | None = None
 
 
 class UserPasswordChange(BaseModel):
     old_password: str
-    new_password: str = Field(min_length=8, max_length=16)
-
-    @field_validator("new_password")
-    @classmethod
-    def check_new_pwd(cls, value: str) -> str:
-        return validate_password_rules(value)
+    new_password: ValidPassword
 
 
-class RegisterUser(UserLogin):
-    name: str
-    birth_date: datetime.date | None = None
+class PasswordConfirm(BaseModel):    
+    password: str
 
 
 class UserUpdate(BaseModel):

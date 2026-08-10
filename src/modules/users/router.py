@@ -12,7 +12,10 @@ from src.core.security import create_access_token, verify_pwd
 from src.modules.users.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
 from src.modules.users.schemas import (
+    MessageResponse,
+    PasswordConfirm,
     RegisterUser,
+    TokenResponse,
     UserPasswordChange,
     UserRead,
     UserUpdate,
@@ -22,18 +25,19 @@ from src.modules.users.service import (
     get_user_by_email,
     get_user_by_id,
     get_users_by_filters,
+    service_delete_account,
     service_update_password,
     update_user,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-# GET 
+
 @router.get(
     "/",
     response_model=list[UserRead],
     summary="Get all users",
-    description="Get all users (no doctors) from databse",
+    description="Get all users (excluding doctors) from database",
 )
 async def get_users(
     name: str | None = None,
@@ -43,25 +47,24 @@ async def get_users(
     created_at: datetime.datetime | None = None,
     updated_at: datetime.datetime | None = None,
     db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user)
+    admin: User = Depends(get_admin_user),
 ):
-    users = await get_users_by_filters(
+    return await get_users_by_filters(
         db, name, birth_date, email, role, created_at, updated_at
     )
-    return users
 
 
 @router.get(
     "/user/{user_id}",
     response_model=UserRead,
-    summary="Get user from id",
-    description="Get one user (no doctors) from databse via id",
+    summary="Get user by id",
+    description="Get one user (excluding doctors) from database via id",
 )
 @cache(expire=600)
 async def get_user(
     user_id: int,
     db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user)
+    admin: User = Depends(get_admin_user),
 ):
     user = await get_user_by_id(user_id, db)
     if user is None:
@@ -76,39 +79,44 @@ async def get_user(
 
 
 @router.get(
-    '/me', 
-    response_model=UserRead, 
-    summary="Get current active user"
+    "/me",
+    response_model=UserRead,
+    summary="Get current active user",
 )
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-# Authorization
-@router.post("/login")
-async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_session)):
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="User login",
+)
+async def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_session),
+):
     user = await get_user_by_email(form_data.username, db)
-    if user is None:
-        logger.info("Such user is not exists")
+    if user is None or not verify_pwd(form_data.password, user.password):
+        logger.info("Authentication failed for user {username}", username=form_data.username)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
         )
-    if not verify_pwd(form_data.password, user.password):
-        logger.info("The password doesn't fit")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="The password doesn't fit"
-        )
+    
     token = create_access_token({"sub": form_data.username})
-    return {"access_token": token, "token_type": "bearer"}
+    return TokenResponse(access_token=token)
 
 
 @router.post(
     "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
     summary="Registering a new user",
-    description="Length: strictly from 8 to 16 characters. Without simple passwords",
 )
 async def register_user(
-    new_user: RegisterUser, db: AsyncSession = Depends(get_session)
+    new_user: RegisterUser,
+    db: AsyncSession = Depends(get_session),
 ):
     user_id = await create_user(new_user, db)
     if user_id is None:
@@ -120,30 +128,54 @@ async def register_user(
             detail="User with this email already exists",
         )
     token = create_access_token({"sub": new_user.email})
-    return {"access_token": token, "token_type": "bearer"}
+    return TokenResponse(access_token=token)
 
 
-# PATCH
-
-@router.patch('/update')
+@router.patch(
+    "/update",
+    response_model=UserRead,
+    summary="Update basic profile information",
+)
 async def update_user_basic(
-    user_data: UserUpdate, 
-    current_user: User = Depends(get_current_user), 
-    db: AsyncSession = Depends(get_session)
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
 ):
     return await update_user(user_data, current_user, db)
 
 
-@router.patch('/me/password')
+@router.patch(
+    "/me/password",
+    response_model=MessageResponse,
+    summary="Change user password",
+)
 async def update_user_password(
     password_data: UserPasswordChange,
-    current_user: User = Depends(get_current_user), 
-    db: AsyncSession = Depends(get_session)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
 ):
-    result = await service_update_password(password_data, current_user, db)
-    if result is None:
+    success = await service_update_password(password_data, current_user, db)
+    if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect current password"
+            detail="Incorrect current password",
         )
-    return {"message": "Password successfully updated"}
+    return MessageResponse(message="Password successfully updated")
+
+
+@router.delete(
+    "/me/delete",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete current user account",
+)
+async def delete_user_account(
+    password_data: PasswordConfirm,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    success = await service_delete_account(password_data, current_user, db)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect password",
+        )

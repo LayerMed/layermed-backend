@@ -1,7 +1,7 @@
 import datetime
 
 from pydantic import EmailStr
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +9,12 @@ from src.core.enums import UserRole
 from src.core.logs import logger
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
-from src.modules.users.schemas import RegisterUser, UserPasswordChange, UserUpdate
+from src.modules.users.schemas import (
+    PasswordConfirm,
+    RegisterUser,
+    UserPasswordChange,
+    UserUpdate,
+)
 
 
 async def get_users_by_filters(
@@ -45,32 +50,26 @@ async def get_users_by_filters(
         query = query.filter(User.updated_at >= updated_at)
 
     result = await db.execute(query)
-    users = result.scalars().all()
-    return users
+    return list(result.scalars().all())
 
 
-async def get_user_by_id(
-    user_id: int,
-    db: AsyncSession,
-):
+async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
     logger.debug(
         "Executing DB query to fetch user {user_id} (excluding doctors)",
         user_id=user_id,
     )
     query = select(User).filter(User.id == user_id, User.role != UserRole.DOCTOR)
     result = await db.execute(query)
-    user = result.scalar_one_or_none()
-    return user
+    return result.scalar_one_or_none()
 
 
-async def get_user_by_email(username: EmailStr, db: AsyncSession):
-    query = select(User).filter(User.email == username)    
+async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None:
+    query = select(User).filter(User.email == username)
     result = await db.execute(query)
-    user = result.scalar_one_or_none()
-    return user
+    return result.scalar_one_or_none()
 
 
-async def create_user(new_user: RegisterUser, db: AsyncSession):
+async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
     query = (
         insert(User)
         .values(
@@ -83,19 +82,14 @@ async def create_user(new_user: RegisterUser, db: AsyncSession):
         .returning(User.id)
     )
     result = await db.execute(query)
-    user_id = result.scalar_one_or_none()
-
-    if not user_id:
-        return None
-    
-    return user_id
+    return result.scalar_one_or_none()
 
 
 async def update_user(
-    user_data: UserUpdate, 
+    user_data: UserUpdate,
     current_user: User,
-    db: AsyncSession
-):
+    db: AsyncSession,
+) -> User:
     update_data = user_data.model_dump(exclude_unset=True)
     if not update_data:
         return current_user
@@ -109,16 +103,30 @@ async def update_user(
 
 async def service_update_password(
     password_data: UserPasswordChange,
-    current_user: User, 
-    db: AsyncSession
-):
+    current_user: User,
+    db: AsyncSession,
+) -> bool:
     if not verify_pwd(password_data.old_password, current_user.password):
-        return None    
+        return False
 
     hashed_password = hash_pwd(password_data.new_password)
     query = (
         update(User)
-        .filter(User.id == current_user.id)
+        .where(User.id == current_user.id)
         .values(password=hashed_password)
-    )    
+    )
     await db.execute(query)
+    return True
+
+
+async def service_delete_account(
+    password_data: PasswordConfirm,
+    current_user: User,
+    db: AsyncSession,
+) -> bool:
+    if not verify_pwd(password_data.password, current_user.password):
+        return False
+
+    query = delete(User).where(User.id == current_user.id)
+    await db.execute(query)
+    return True
