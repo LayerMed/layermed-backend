@@ -2,25 +2,29 @@ import datetime
 
 from pydantic import EmailStr
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core.enums import UserRole
 from src.core.logs import logger
+from src.core.security import hash_pwd
 from src.modules.users.models import User
+from src.modules.users.schemas import RegisterUser
 
 
 async def get_users_by_filters(
     db: AsyncSession,
     name: str | None = None,
-    age: int | None = None,
-    email: str | None = None,
+    birth_date: datetime.date | None = None,
+    email: EmailStr | None = None,
     role: UserRole | None = None,
     created_at: datetime.datetime | None = None,
     updated_at: datetime.datetime | None = None,
 ) -> list[User]:
     logger.info(
-        "Start search users with params: {name}, {age}, {email}, {role}, {created_at}, {updated_at}",
+        "Start search users with params: {name}, {birth_date}, {email}, {role}, {created_at}, {updated_at}",
         name=name,
-        age=age,
+        birth_date=birth_date,
         email=email,
         role=role,
         created_at=created_at,
@@ -29,8 +33,8 @@ async def get_users_by_filters(
     query = select(User).filter(User.role != UserRole.DOCTOR)
     if name:
         query = query.filter(User.name.ilike(f"%{name}%"))
-    if age:
-        query = query.filter(User.age == age)
+    if birth_date:
+        query = query.filter(User.birth_date == birth_date)
     if email:
         query = query.filter(User.email == email)
     if role:
@@ -59,12 +63,30 @@ async def get_user_by_id(
     return user
 
 
-async def get_user_by_email(
-    email: EmailStr, 
-    db: AsyncSession
-):
+async def get_user_by_email(email: EmailStr, db: AsyncSession):
     query = select(User).filter(User.email == email)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     return user
 
+
+async def create_user(new_user: RegisterUser, db: AsyncSession):
+    query = (
+        insert(User)
+        .values(
+            name=new_user.name,
+            birth_date=new_user.birth_date,
+            email=new_user.email,
+            password=hash_pwd(new_user.password),
+        )
+        .on_conflict_do_nothing(index_elements=["email"])
+        .returning(User.id)
+    )
+    result = await db.execute(query)
+    user_id = result.scalar_one_or_none()
+
+    if not user_id:
+        return None
+
+    await db.commit()
+    return user_id

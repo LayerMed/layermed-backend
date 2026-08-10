@@ -11,10 +11,12 @@ from src.core.database import Base, Timestamp
 class User(Base, Timestamp):
     __tablename__ = "users"
     name: Mapped[str]
-    age: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    birth_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
     role: Mapped[UserRole] = mapped_column(default=UserRole.CLIENT)
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
-    doctor: Mapped[Optional["Doctor"]] = relationship(back_populates="user", uselist=False)
+    doctor: Mapped[Optional["Doctor"]] = relationship(
+        back_populates="user", uselist=False
+    )
