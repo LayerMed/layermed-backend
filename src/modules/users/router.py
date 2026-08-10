@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.users.dependencies import get_current_user
+from src.modules.users.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
 from src.core.database import get_session
 from src.core.enums import UserRole
@@ -36,6 +36,7 @@ async def get_users(
     created_at: datetime.datetime | None = None,
     updated_at: datetime.datetime | None = None,
     db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user)
 ):
     users = await get_users_by_filters(
         db, name, birth_date, email, role, created_at, updated_at
@@ -53,6 +54,7 @@ async def get_users(
 async def get_user(
     user_id: int,
     db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user)
 ):
     user = await get_user_by_id(user_id, db)
     if user is None:
@@ -112,3 +114,5 @@ async def register_user(
         )
     token = create_access_token({"sub": new_user.email})
     return {"access_token": token, "token_type": "bearer"}
+
+
