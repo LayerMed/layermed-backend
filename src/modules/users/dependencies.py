@@ -2,8 +2,8 @@
 
 from fastapi import Depends, HTTPException, status
 import jwt
-from core.enums import UserRole
-from modules.users.models import User
+from src.core.enums import UserRole
+from src.modules.users.models import User
 from src.modules.users.service import get_user_by_email
 from src.core.config import settings
 from src.core.security import oauth2_scheme
@@ -16,6 +16,7 @@ credentials_exception = HTTPException(
     detail="Could not validate credentials or token expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme), 

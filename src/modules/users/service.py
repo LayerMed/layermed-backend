@@ -1,15 +1,15 @@
 import datetime
 
 from pydantic import EmailStr
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.enums import UserRole
 from src.core.logs import logger
-from src.core.security import hash_pwd
+from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
-from src.modules.users.schemas import RegisterUser
+from src.modules.users.schemas import RegisterUser, UserPasswordChange, UserUpdate
 
 
 async def get_users_by_filters(
@@ -64,7 +64,7 @@ async def get_user_by_id(
 
 
 async def get_user_by_email(username: EmailStr, db: AsyncSession):
-    query = select(User).filter(User.email == username)
+    query = select(User).filter(User.email == username)    
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     return user
@@ -87,6 +87,38 @@ async def create_user(new_user: RegisterUser, db: AsyncSession):
 
     if not user_id:
         return None
-
-    await db.commit()
+    
     return user_id
+
+
+async def update_user(
+    user_data: UserUpdate, 
+    current_user: User,
+    db: AsyncSession
+):
+    update_data = user_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return current_user
+
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    await db.flush()
+    return current_user
+
+
+async def service_update_password(
+    password_data: UserPasswordChange,
+    current_user: User, 
+    db: AsyncSession
+):
+    if not verify_pwd(password_data.old_password, current_user.password):
+        return None    
+
+    hashed_password = hash_pwd(password_data.new_password)
+    query = (
+        update(User)
+        .filter(User.id == current_user.id)
+        .values(password=hashed_password)
+    )    
+    await db.execute(query)

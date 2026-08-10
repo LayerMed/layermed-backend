@@ -5,18 +5,25 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.users.dependencies import get_admin_user, get_current_user
-from src.modules.users.models import User
 from src.core.database import get_session
 from src.core.enums import UserRole
 from src.core.logs import logger
 from src.core.security import create_access_token, verify_pwd
-from src.modules.users.schemas import RegisterUser, UserLogin, UserRead
+from src.modules.users.dependencies import get_admin_user, get_current_user
+from src.modules.users.models import User
+from src.modules.users.schemas import (
+    RegisterUser,
+    UserPasswordChange,
+    UserRead,
+    UserUpdate,
+)
 from src.modules.users.service import (
     create_user,
     get_user_by_email,
     get_user_by_id,
     get_users_by_filters,
+    service_update_password,
+    update_user,
 )
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -116,3 +123,27 @@ async def register_user(
     return {"access_token": token, "token_type": "bearer"}
 
 
+# PATCH
+
+@router.patch('/update')
+async def update_user_basic(
+    user_data: UserUpdate, 
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_session)
+):
+    return await update_user(user_data, current_user, db)
+
+
+@router.patch('/me/password')
+async def update_user_password(
+    password_data: UserPasswordChange,
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_session)
+):
+    result = await service_update_password(password_data, current_user, db)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect current password"
+        )
+    return {"message": "Password successfully updated"}
