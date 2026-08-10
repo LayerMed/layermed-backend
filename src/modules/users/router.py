@@ -1,9 +1,12 @@
 import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.users.dependencies import get_current_user
+from src.modules.users.models import User
 from src.core.database import get_session
 from src.core.enums import UserRole
 from src.core.logs import logger
@@ -18,7 +21,7 @@ from src.modules.users.service import (
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-
+# GET 
 @router.get(
     "/",
     response_model=list[UserRead],
@@ -41,7 +44,7 @@ async def get_users(
 
 
 @router.get(
-    "/{user_id}",
+    "/user/{user_id}",
     response_model=UserRead,
     summary="Get user from id",
     description="Get one user (no doctors) from databse via id",
@@ -63,20 +66,30 @@ async def get_user(
     return user
 
 
+@router.get(
+    '/me', 
+    response_model=UserRead, 
+    summary="Get current active user"
+)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+# Authorization
 @router.post("/login")
-async def login_user(user_data: UserLogin, db: AsyncSession = Depends(get_session)):
-    user = await get_user_by_email(user_data.email, db)
+async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_session)):
+    user = await get_user_by_email(form_data.username, db)
     if user is None:
         logger.info("Such user is not exists")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    if not verify_pwd(user_data.password, user.password):
+    if not verify_pwd(form_data.password, user.password):
         logger.info("The password doesn't fit")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="The password doesn't fit"
         )
-    token = create_access_token({"sub": user_data.email})
+    token = create_access_token({"sub": form_data.username})
     return {"access_token": token, "token_type": "bearer"}
 
 

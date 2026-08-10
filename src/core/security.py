@@ -10,6 +10,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 
 
+with open("src/core/bad_passwords.txt", encoding="utf-8") as f:
+    BAD_PASSWORDS = set(f.read().splitlines())
+
+
 def hash_pwd(pwd: str) -> str:
     return pwd_context.hash(pwd)
 
@@ -26,5 +30,4 @@ def create_access_token(user_data: dict) -> str:
     return encoded_jwt
 
 
-with open("src/core/bad_passwords.txt", encoding="utf-8") as f:
-    BAD_PASSWORDS = set(f.read().splitlines())
+
