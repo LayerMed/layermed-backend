@@ -25,8 +25,8 @@ from src.modules.users.service import (
     get_user_by_email,
     get_user_by_id,
     get_users_by_filters,
-    service_delete_account,
-    service_update_password,
+    delete_account,
+    update_password,
     update_user,
 )
 
@@ -39,9 +39,10 @@ router = APIRouter(prefix="/users", tags=["Users"])
     summary="Get all users",
     description="Get all users (excluding doctors) from database",
 )
-async def get_users(
+async def get_users_handle(
     name: str | None = None,
     birth_date: datetime.date | None = None,
+    city: str | None = None,
     email: str | None = None,
     role: UserRole | None = None,
     created_at: datetime.datetime | None = None,
@@ -61,7 +62,7 @@ async def get_users(
     description="Get one user (excluding doctors) from database via id",
 )
 @cache(expire=600)
-async def get_user(
+async def get_user_by_id_handle(
     user_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
@@ -83,7 +84,7 @@ async def get_user(
     response_model=UserRead,
     summary="Get current active user",
 )
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me_handle(current_user: User = Depends(get_current_user)):
     return current_user
 
 
@@ -92,18 +93,20 @@ async def get_me(current_user: User = Depends(get_current_user)):
     response_model=TokenResponse,
     summary="User login",
 )
-async def login_user(
+async def login_user_handle(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session),
 ):
     user = await get_user_by_email(form_data.username, db)
     if user is None or not verify_pwd(form_data.password, user.password):
-        logger.info("Authentication failed for user {username}", username=form_data.username)
+        logger.info(
+            "Authentication failed for user {username}", username=form_data.username
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
-    
+
     token = create_access_token({"sub": form_data.username})
     return TokenResponse(access_token=token)
 
@@ -114,7 +117,7 @@ async def login_user(
     status_code=status.HTTP_201_CREATED,
     summary="Registering a new user",
 )
-async def register_user(
+async def register_user_handle(
     new_user: RegisterUser,
     db: AsyncSession = Depends(get_session),
 ):
@@ -136,7 +139,7 @@ async def register_user(
     response_model=UserRead,
     summary="Update basic profile information",
 )
-async def update_user_basic(
+async def update_user_basic_handle(
     user_data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -149,12 +152,12 @@ async def update_user_basic(
     response_model=MessageResponse,
     summary="Change user password",
 )
-async def update_user_password(
+async def update_user_password_handle(
     password_data: UserPasswordChange,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
-    success = await service_update_password(password_data, current_user, db)
+    success = await update_password(password_data, current_user, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -168,12 +171,12 @@ async def update_user_password(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete current user account",
 )
-async def delete_user_account(
+async def delete_user_account_handle(
     password_data: PasswordConfirm,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
-    success = await service_delete_account(password_data, current_user, db)
+    success = await delete_account(password_data, current_user, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

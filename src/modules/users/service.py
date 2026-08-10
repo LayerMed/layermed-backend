@@ -21,6 +21,7 @@ async def get_users_by_filters(
     db: AsyncSession,
     name: str | None = None,
     birth_date: datetime.date | None = None,
+    city: str | None = None,
     email: EmailStr | None = None,
     role: UserRole | None = None,
     created_at: datetime.datetime | None = None,
@@ -42,6 +43,8 @@ async def get_users_by_filters(
         query = query.filter(User.birth_date == birth_date)
     if email:
         query = query.filter(User.email == email)
+    if city:
+        query = query.filter(User.city == city)
     if role:
         query = query.filter(User.role == role)
     if created_at:
@@ -73,8 +76,9 @@ async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
     query = (
         insert(User)
         .values(
-            name=new_user.name,
             birth_date=new_user.birth_date,
+            city=new_user.city,
+            name=new_user.name,
             email=new_user.email,
             password=hash_pwd(new_user.password),
         )
@@ -97,11 +101,13 @@ async def update_user(
     for field, value in update_data.items():
         setattr(current_user, field, value)
 
+    db.add(current_user)
     await db.flush()
+    await db.refresh(current_user)
     return current_user
 
 
-async def service_update_password(
+async def update_password(
     password_data: UserPasswordChange,
     current_user: User,
     db: AsyncSession,
@@ -111,15 +117,13 @@ async def service_update_password(
 
     hashed_password = hash_pwd(password_data.new_password)
     query = (
-        update(User)
-        .where(User.id == current_user.id)
-        .values(password=hashed_password)
+        update(User).where(User.id == current_user.id).values(password=hashed_password)
     )
     await db.execute(query)
     return True
 
 
-async def service_delete_account(
+async def delete_account(
     password_data: PasswordConfirm,
     current_user: User,
     db: AsyncSession,

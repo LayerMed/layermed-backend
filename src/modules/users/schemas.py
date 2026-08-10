@@ -25,6 +25,7 @@ class UserRead(BaseModel):
     id: int
     name: str
     birth_date: datetime.date | None = None
+    city: str
     email: EmailStr
     role: str
     created_at: datetime.datetime
@@ -48,10 +49,11 @@ class UserLogin(BaseModel):
 
 
 class RegisterUser(BaseModel):
+    birth_date: datetime.date | None = None
+    city: str
     email: EmailStr
     password: ValidPassword
     name: str
-    birth_date: datetime.date | None = None
 
 
 class UserPasswordChange(BaseModel):
@@ -59,10 +61,11 @@ class UserPasswordChange(BaseModel):
     new_password: ValidPassword
 
 
-class PasswordConfirm(BaseModel):    
+class PasswordConfirm(BaseModel):
     password: str
 
 
 class UserUpdate(BaseModel):
-    name: str | None = None
     birth_date: datetime.date | None = None
+    city: str
+    name: str | None = None

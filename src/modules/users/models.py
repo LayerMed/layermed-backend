@@ -12,6 +12,7 @@ class User(Base, Timestamp):
     __tablename__ = "users"
     name: Mapped[str]
     birth_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    city: Mapped[str]
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
     role: Mapped[UserRole] = mapped_column(default=UserRole.CLIENT)

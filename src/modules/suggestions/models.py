@@ -13,6 +13,7 @@ class Suggest(Base, Timestamp):
     cost: Mapped[int]
     suggest_format: Mapped[str]
     duration: Mapped[int]
+    city: Mapped[str]
 
     __table_args__ = (
         Index("ix_suggestions_title_cost_format", "title", "cost", "suggest_format"),
