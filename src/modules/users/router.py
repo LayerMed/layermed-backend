@@ -1,4 +1,4 @@
-import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -6,7 +6,6 @@ from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
-from src.core.enums import UserRole
 from src.core.logs import logger
 from src.core.security import create_access_token, verify_pwd
 from src.modules.users.dependencies import get_admin_user, get_current_user
@@ -16,6 +15,7 @@ from src.modules.users.schemas import (
     PasswordConfirm,
     RegisterUser,
     TokenResponse,
+    UserFilterParams,
     UserPasswordChange,
     UserRead,
     UserUpdate,
@@ -40,19 +40,11 @@ router = APIRouter(prefix="/users", tags=["Users"])
     description="Get all users (excluding doctors) from database",
 )
 async def get_users_handle(
-    name: str | None = None,
-    birth_date: datetime.date | None = None,
-    city: str | None = None,
-    email: str | None = None,
-    role: UserRole | None = None,
-    created_at: datetime.datetime | None = None,
-    updated_at: datetime.datetime | None = None,
+    user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
 ):
-    return await get_users_by_filters(
-        db, name, birth_date, email, role, created_at, updated_at
-    )
+    return await get_users_by_filters(user_params, db)
 
 
 @router.get(

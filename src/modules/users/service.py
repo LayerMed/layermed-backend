@@ -1,5 +1,7 @@
 import datetime
+from typing import Annotated
 
+from fastapi import Depends
 from pydantic import EmailStr
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -12,45 +14,43 @@ from src.modules.users.models import User
 from src.modules.users.schemas import (
     PasswordConfirm,
     RegisterUser,
+    UserFilterParams,
     UserPasswordChange,
     UserUpdate,
 )
 
 
 async def get_users_by_filters(
+    user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession,
-    name: str | None = None,
-    birth_date: datetime.date | None = None,
-    city: str | None = None,
-    email: EmailStr | None = None,
-    role: UserRole | None = None,
-    created_at: datetime.datetime | None = None,
-    updated_at: datetime.datetime | None = None,
 ) -> list[User]:
-    logger.info(
+    logger.debug(
         "Start search users with params: {name}, {birth_date}, {email}, {role}, {created_at}, {updated_at}",
-        name=name,
-        birth_date=birth_date,
-        email=email,
-        role=role,
-        created_at=created_at,
-        updated_at=updated_at,
+        name=user_params.name,
+        birth_date=user_params.birth_date,
+        city_id=user_params.city_id,
+        email=user_params.email,
+        role=user_params.role,
+        created_at=user_params.created_at,
+        updated_at=user_params.updated_at,
     )
+
     query = select(User).filter(User.role != UserRole.DOCTOR)
-    if name:
-        query = query.filter(User.name.ilike(f"%{name}%"))
-    if birth_date:
-        query = query.filter(User.birth_date == birth_date)
-    if email:
-        query = query.filter(User.email == email)
-    if city:
-        query = query.filter(User.city == city)
-    if role:
-        query = query.filter(User.role == role)
-    if created_at:
-        query = query.filter(User.created_at >= created_at)
-    if updated_at:
-        query = query.filter(User.updated_at >= updated_at)
+
+    if user_params.name:
+        query = query.filter(User.name.ilike(f"%{user_params.name}%"))
+    if user_params.birth_date:
+        query = query.filter(User.birth_date == user_params.birth_date)
+    if user_params.email:
+        query = query.filter(User.email == user_params.email)
+    if user_params.city_id:
+        query = query.filter(User.city_id == user_params.city_id)
+    if user_params.role:
+        query = query.filter(User.role == user_params.role)
+    if user_params.created_at:
+        query = query.filter(User.created_at >= user_params.created_at)
+    if user_params.updated_at:
+        query = query.filter(User.updated_at >= user_params.updated_at)
 
     result = await db.execute(query)
     return list(result.scalars().all())
@@ -76,9 +76,9 @@ async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
     query = (
         insert(User)
         .values(
-            birth_date=new_user.birth_date,
-            city=new_user.city,
             name=new_user.name,
+            city_id=new_user.city_id,
+            birth_date=new_user.birth_date,
             email=new_user.email,
             password=hash_pwd(new_user.password),
         )

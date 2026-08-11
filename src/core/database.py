@@ -35,9 +35,3 @@ async def get_session():
     async with async_session_maker() as session:
         async with session.begin():
             yield session
-
-
-import src.modules.bookings.models
-import src.modules.doctors.models
-import src.modules.suggestions.models
-import src.modules.users.models

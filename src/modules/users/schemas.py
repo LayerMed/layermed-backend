@@ -3,6 +3,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
+from core.enums import UserRole
 from src.core.security import BAD_PASSWORDS
 
 
@@ -25,13 +26,23 @@ class UserRead(BaseModel):
     id: int
     name: str
     birth_date: datetime.date | None = None
-    city: str
+    city: int
     email: EmailStr
     role: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserFilterParams(BaseModel):
+    name: str | None = None
+    birth_date: datetime.date | None = None
+    city_id: int | None = None
+    email: str | None = None
+    role: UserRole | None = None
+    created_at: datetime.datetime | None = None
+    updated_at: datetime.datetime | None = None
 
 
 class TokenResponse(BaseModel):
@@ -49,11 +60,11 @@ class UserLogin(BaseModel):
 
 
 class RegisterUser(BaseModel):
+    name: str
+    city_id: int
     birth_date: datetime.date | None = None
-    city: str
     email: EmailStr
     password: ValidPassword
-    name: str
 
 
 class UserPasswordChange(BaseModel):
@@ -67,5 +78,5 @@ class PasswordConfirm(BaseModel):
 
 class UserUpdate(BaseModel):
     birth_date: datetime.date | None = None
-    city: str
+    city_id: int
     name: str | None = None
