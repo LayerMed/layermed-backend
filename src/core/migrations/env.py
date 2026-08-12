@@ -8,6 +8,7 @@ from src.modules.doctors.models import *
 from src.modules.suggestions.models import *
 from src.modules.users.models import *
 from src.modules.cities.models import *
+from src.modules.symptoms.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

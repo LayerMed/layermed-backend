@@ -1,20 +1,98 @@
 
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_cache.decorator import cache
-from src.modules.symptoms.service import get_symptom_by_id, get_symptoms
-from src.core.database import get_session
-from src.core.logs import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.database import get_session
+from src.core.dependencies import get_admin_user
+from src.core.logs import logger
+from src.modules.symptoms.schemas import SymptomCreated, SymptomRead, SymptomUpdate
+from src.modules.symptoms.service import (
+    create_symptom,
+    delete_symptom,
+    get_symptom_by_id,
+    get_symptoms,
+    update_symptom,
+)
+from src.modules.users.models import User
 
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 
 
+
+# Admin
+@router.post(
+    "/",
+    response_model=SymptomRead,
+    summary="Create symptom",
+    status_code=status.HTTP_201_CREATE, 
+    description="Create symptom in database"
+)
+async def create_symptom_handle(
+    new_symptom: SymptomCreated,
+    db: AsyncSession = Depends(get_session),         
+    admin: User = Depends(get_admin_user)
+):
+    created_symptom = await create_symptom(new_symptom, db)
+    if created_symptom is None:
+        logger.warning(
+            'Symptom with this name: {name} already exists',
+            name=new_symptom.name
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Symptom with this name already exists"
+        )
+    return created_symptom
+
+
+@router.delete(
+    "/{symptom_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete symptom",
+    description="Delete symptom from database"
+)
+async def delete_symptom_handle(
+    symptom_id: int, 
+    db: AsyncSession = Depends(get_session),         
+    admin: User = Depends(get_admin_user)
+):
+    deleted_symptom = await delete_symptom(symptom_id, db)
+    if deleted_symptom is None:
+        logger.info("A symptom with this id does not exist: {symptom_id}", symptom_id=symptom_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"A symptom with this id does not exist: {symptom_id}")
+    return deleted_symptom 
+
+
+@router.patch(
+    "/{symptom_id}",
+    response_model=SymptomRead,
+    summary="Update symptom",
+    description="Update symptom in database"
+)
+async def update_symptom_by_id_handle(
+    symptom_id: int,
+    symptom_data: SymptomUpdate, 
+    db: AsyncSession = Depends(get_session),         
+    admin: User = Depends(get_admin_user)
+):
+    updated_symptom = await update_symptom(symptom_id, symptom_data, db)
+    if updated_symptom is None:
+        logger.warning(
+            "Failed to fetch symptom: Symptom with id {symptom_id} not found",
+            symptom_id=symptom_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
+        )
+    return updated_symptom
+
+
+# GET
 @router.get(
     "/", 
+    response_model=list[SymptomRead],
     summary="Get all symptoms",
     description="Get all symptoms from database"
 )
@@ -27,7 +105,8 @@ async def get_symptoms_handle(
 
 
 @router.get(
-    "/symptom/{id}", 
+    "/symptom/{symptom_id}", 
+    response_model=SymptomRead,
     summary="Get symptom by id",
     description="Get one symptom from database via id",
 )
@@ -36,16 +115,14 @@ async def get_symptom_by_id_handle(
     symptom_id: int, 
     db: AsyncSession = Depends(get_session)    
 ):
-    symptom = get_symptom_by_id(symptom_id, db)
+    symptom = await get_symptom_by_id(symptom_id, db)
     if symptom is None:
         logger.warning(
-            "Failed to fetch symptom: Symptom with id {id} not found or is a doctor",
-            id=symptom_id,
+            "Failed to fetch symptom: Symptom with id {symptom_id} not found",
+            symptom_id=symptom_id,
         )
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
         )
 
     return symptom
-
-
