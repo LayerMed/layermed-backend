@@ -6,6 +6,7 @@ from src.core.database import Base, Timestamp
 
 class Doctor(Base, Timestamp):
     __tablename__ = "doctors"
+    
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="cascade"), unique=True
     )
@@ -20,6 +21,5 @@ class Doctor(Base, Timestamp):
         ),
     )
 
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="doctor")
     user: Mapped["User"] = relationship(back_populates="doctor")
-    suggestions: Mapped[list["Suggest"]] = relationship(back_populates="doctor")
+    suggestions: Mapped[list["Suggestion"]] = relationship(back_populates="doctor")

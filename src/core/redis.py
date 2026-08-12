@@ -7,5 +7,5 @@ redis_client = aioredis.from_url(
 )
 
 
-async def get_redis():
+async def get_redis() -> aioredis.Redis:
     return redis_client
