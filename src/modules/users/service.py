@@ -68,7 +68,8 @@ async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
 async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None:
     query = select(User).filter(User.email == username)
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
+    return user
 
 
 async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
@@ -85,7 +86,8 @@ async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
         .returning(User.id)
     )
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    user_id = result.scalar_one_or_none()
+    return user_id
 
 
 async def update_user(

@@ -32,13 +32,14 @@ from src.modules.users.service import (
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
+# Admin
 @router.get(
     "/",
     response_model=list[UserRead],
     summary="Get all users",
     description="Get all users (excluding doctors) from database",
 )
-async def get_users_handle(
+async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
@@ -71,6 +72,7 @@ async def get_user_by_id_handle(
     return user
 
 
+# GET
 @router.get(
     "/me",
     response_model=UserRead,
@@ -79,7 +81,7 @@ async def get_user_by_id_handle(
 async def get_me_handle(current_user: User = Depends(get_current_user)):
     return current_user
 
-
+# POST
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -126,6 +128,7 @@ async def register_user_handle(
     return TokenResponse(access_token=token)
 
 
+# UPDATE
 @router.patch(
     "/update",
     response_model=UserRead,
@@ -165,6 +168,7 @@ async def update_user_password_handle(
     return MessageResponse(message="Password successfully updated")
 
 
+# DELETE
 @router.delete(
     "/me/delete",
     status_code=status.HTTP_204_NO_CONTENT,
