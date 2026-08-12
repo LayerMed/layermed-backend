@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
-from src.modules.symptoms.schemas import SymptomCreated, SymptomRead, SymptomUpdate
+from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 from src.modules.symptoms.service import (
     create_symptom,
     delete_symptom,
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
     description="Create symptom in database"
 )
 async def create_symptom_handle(
-    new_symptom: SymptomCreated,
+    new_symptom: SymptomCreate,
     db: AsyncSession = Depends(get_session),         
     admin: User = Depends(get_admin_user)
 ):

@@ -17,7 +17,7 @@ class SymptomRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SymptomCreated(BaseModel):
+class SymptomCreate(BaseModel):
     name: SymptomName
     description: SymptomDescription
 
