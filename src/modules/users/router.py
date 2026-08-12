@@ -43,7 +43,8 @@ async def get_users_handle(
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
 ):
-    return await get_users_by_filters(user_params, db)
+    users = await get_users_by_filters(user_params, db)
+    return users
 
 
 @router.get(

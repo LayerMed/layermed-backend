@@ -51,7 +51,8 @@ async def get_users_by_filters(
         query = query.filter(User.updated_at >= user_params.updated_at)
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    users = list(result.scalars().all())
+    return users
 
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
@@ -93,13 +94,10 @@ async def update_user(
     db: AsyncSession,
 ) -> User:
     update_data = user_data.model_dump(exclude_unset=True)
-    if not update_data:
-        return current_user
 
     for field, value in update_data.items():
         setattr(current_user, field, value)
 
-    db.add(current_user)
     await db.flush()
     await db.refresh(current_user)
     return current_user
