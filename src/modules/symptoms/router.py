@@ -1,5 +1,3 @@
-
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,29 +18,27 @@ from src.modules.users.models import User
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 
 
-
 # Admin
 @router.post(
     "/",
     response_model=SymptomRead,
     summary="Create symptom",
-    status_code=status.HTTP_201_CREATE, 
-    description="Create symptom in database"
+    status_code=status.HTTP_201_CREATE,
+    description="Create symptom in database",
 )
 async def create_symptom_handle(
     new_symptom: SymptomCreate,
-    db: AsyncSession = Depends(get_session),         
-    admin: User = Depends(get_admin_user)
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
 ):
     created_symptom = await create_symptom(new_symptom, db)
     if created_symptom is None:
         logger.warning(
-            'Symptom with this name: {name} already exists',
-            name=new_symptom.name
+            "Symptom with this name: {name} already exists", name=new_symptom.name
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Symptom with this name already exists"
+            detail="Symptom with this name already exists",
         )
     return created_symptom
 
@@ -51,31 +47,36 @@ async def create_symptom_handle(
     "/{symptom_id}",
     status_code=status.HTTP_200_OK,
     summary="Delete symptom",
-    description="Delete symptom from database"
+    description="Delete symptom from database",
 )
 async def delete_symptom_handle(
-    symptom_id: int, 
-    db: AsyncSession = Depends(get_session),         
-    admin: User = Depends(get_admin_user)
+    symptom_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
 ):
     deleted_symptom = await delete_symptom(symptom_id, db)
     if deleted_symptom is None:
-        logger.info("A symptom with this id does not exist: {symptom_id}", symptom_id=symptom_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"A symptom with this id does not exist: {symptom_id}")
-    return deleted_symptom 
+        logger.info(
+            "A symptom with this id does not exist: {symptom_id}", symptom_id=symptom_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"A symptom with this id does not exist: {symptom_id}",
+        )
+    return deleted_symptom
 
 
 @router.patch(
     "/{symptom_id}",
     response_model=SymptomRead,
     summary="Update symptom",
-    description="Update symptom in database"
+    description="Update symptom in database",
 )
 async def update_symptom_by_id_handle(
     symptom_id: int,
-    symptom_data: SymptomUpdate, 
-    db: AsyncSession = Depends(get_session),         
-    admin: User = Depends(get_admin_user)
+    symptom_data: SymptomUpdate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
 ):
     updated_symptom = await update_symptom(symptom_id, symptom_data, db)
     if updated_symptom is None:
@@ -91,29 +92,28 @@ async def update_symptom_by_id_handle(
 
 # GET
 @router.get(
-    "/", 
+    "/",
     response_model=list[SymptomRead],
     summary="Get all symptoms",
-    description="Get all symptoms from database"
+    description="Get all symptoms from database",
 )
 @cache(expire=600)
 async def get_symptoms_handle(
-    db: AsyncSession = Depends(get_session),     
+    db: AsyncSession = Depends(get_session),
 ):
     symptoms = await get_symptoms(db)
     return symptoms
 
 
 @router.get(
-    "/symptom/{symptom_id}", 
+    "/symptom/{symptom_id}",
     response_model=SymptomRead,
     summary="Get symptom by id",
     description="Get one symptom from database via id",
 )
 @cache(expire=100)
 async def get_symptom_by_id_handle(
-    symptom_id: int, 
-    db: AsyncSession = Depends(get_session)    
+    symptom_id: int, db: AsyncSession = Depends(get_session)
 ):
     symptom = await get_symptom_by_id(symptom_id, db)
     if symptom is None:
