@@ -1,4 +1,3 @@
-import datetime
 from typing import Annotated
 
 from fastapi import Depends
@@ -6,7 +5,6 @@ from pydantic import EmailStr
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.core.enums import UserRole
 from src.core.logs import logger
 from src.core.security import hash_pwd, verify_pwd

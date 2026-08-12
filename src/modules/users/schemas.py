@@ -2,9 +2,9 @@ import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
+from src.core.security import BAD_PASSWORDS
 
 from core.enums import UserRole
-from src.core.security import BAD_PASSWORDS
 
 
 def validate_password_rules(value: str) -> str:

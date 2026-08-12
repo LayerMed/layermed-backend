@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.core.database import get_session
 from src.core.logs import logger
 from src.core.security import create_access_token, verify_pwd
@@ -22,10 +21,10 @@ from src.modules.users.schemas import (
 )
 from src.modules.users.service import (
     create_user,
+    delete_account,
     get_user_by_email,
     get_user_by_id,
     get_users_by_filters,
-    delete_account,
     update_password,
     update_user,
 )
@@ -136,7 +135,14 @@ async def update_user_basic_handle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
-    return await update_user(user_data, current_user, db)
+    logger.debug(
+        "User ID:{id}, was update with params: {birth_date}, {name}, {city_id}",
+        birth_date=user_data.birth_date,
+        name=user_data.name,
+        city_id=user_data.city_id,
+        id=current_user.id,
+    )
+    current_user = await update_user(user_data, current_user, db)
 
 
 @router.patch(
