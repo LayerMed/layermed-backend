@@ -18,8 +18,8 @@ async def get_symptoms(
 async def get_symptom_by_id(symptom_id: int, db: AsyncSession):
     query = select(Symptom).filter(Symptom.id == symptom_id)
     result = await db.execute(query)
-    symptoms = result.scalar_one_or_none()
-    return symptoms
+    symptom = result.scalar_one_or_none()
+    return symptom
 
 
 async def create_symptom(new_symptom: SymptomCreate, db: AsyncSession):
