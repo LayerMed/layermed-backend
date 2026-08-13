@@ -12,7 +12,7 @@ class User(Base, Timestamp):
 
     name: Mapped[str]
     birth_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
-    city_id: Mapped[int] = mapped_column(ForeignKey("cities.id"))
+    city_id: Mapped[int | None] = mapped_column(ForeignKey("cities.id"), nullable=True, default=None)
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
     role: Mapped[UserRole] = mapped_column(default=UserRole.CLIENT)

@@ -24,7 +24,7 @@ router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
     "/",
     response_model=SymptomRead,
     summary="Create symptom",
-    status_code=status.HTTP_201_CREATE,
+    status_code=status.HTTP_201_CREATED,
     description="Create symptom in database",
 )
 async def create_symptom_handle(
@@ -110,7 +110,7 @@ async def get_symptoms_handle(
 
 
 @router.get(
-    "/symptom/{symptom_id}",
+    "/{symptom_id}",
     response_model=SymptomRead,
     summary="Get symptom by id",
     description="Get one symptom from database via id",
