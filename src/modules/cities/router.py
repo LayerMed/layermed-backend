@@ -1,0 +1,128 @@
+
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi_cache import FastAPICache
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.core.dependencies import get_admin_user
+from src.modules.cities.service import create_city, delete_city, get_cities, get_city_by_id, update_city
+from src.modules.users.models import User
+from src.core.database import get_session
+from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
+from src.core.logs import logger
+from fastapi_cache.decorator import cache
+
+
+router = APIRouter(prefix="/cities", tags=["Cities"])
+
+
+# Admin
+@router.post(
+    "/",
+    response_model=CityRead,
+    summary="Create city",
+    status_code=status.HTTP_201_CREATED,
+    description="Create city in database",
+)
+async def create_city_handle(
+    new_city: CityCreate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    created_city= await create_city(new_city, db)
+    if created_city is None:
+        logger.warning(
+            "City with this name: {name} already exists", name=new_city.name
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="City with this name already exists",
+        )
+    await FastAPICache.clear(namespace="cities")
+    return created_city
+
+
+@router.delete(
+    "/{city_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete city",
+    description="Delete city from database",
+)
+async def delete_city_handle(
+    city_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    deleted_city = await delete_city(city_id, db)
+    if deleted_city is None:
+        logger.info(
+            "A city with this id does not exist: {city_id}", city_id=city_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"A city with this id does not exist: {city_id}",
+        )
+    await FastAPICache.clear(namespace="cities")
+    return deleted_city
+
+
+@router.patch(
+    "/{city_id}",
+    response_model=CityRead,
+    summary="Update city",
+    description="Update city in database",
+)
+async def update_city_by_id_handle(
+    city_id: int,
+    city_data: CityUpdate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    updated_city = await update_city(city_id, city_data, db)
+    if updated_city is None:
+        logger.warning(
+            "Failed to fetch city: City with id {city_id} not found",
+            city_id=city_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
+        )
+    await FastAPICache.clear(namespace="cities")
+    return updated_city
+
+
+# GET
+@router.get(
+    "/",
+    response_model=list[CityRead],
+    summary="Get all cities",
+    description="Get all cities from database",
+)
+@cache(expire=600, namespace="cities")
+async def get_cities_handle(
+    db: AsyncSession = Depends(get_session),
+):
+    cities = await get_cities(db)
+    return cities
+
+
+@router.get(
+    "/{city_id}",
+    response_model=CityRead,
+    summary="Get city by id",
+    description="Get one city from database via id",
+)
+@cache(expire=100, namespace="cities")
+async def get_city_by_id_handle(
+    city_id: int, db: AsyncSession = Depends(get_session)
+):
+    city = await get_city_by_id(city_id, db)
+    if city is None:
+        logger.warning(
+            "Failed to fetch city: City with id {city_id} not found",
+            city_id=city_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
+        )
+
+    return city
