@@ -1,9 +1,9 @@
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
-
-from src.modules.cities.schemas import CityCreate, CityUpdate
-from src.modules.cities.models import City
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.modules.cities.models import City
+from src.modules.cities.schemas import CityCreate, CityUpdate
 
 
 async def get_cities(db: AsyncSession):
@@ -22,11 +22,7 @@ async def get_city_by_id(city_id: int, db: AsyncSession):
 
 async def create_city(new_city: CityCreate, db: AsyncSession):
     try:
-        query = (
-            insert(City)
-            .values(name=new_city.name)
-            .returning(City)
-        )
+        query = insert(City).values(name=new_city.name).returning(City)
         result = await db.execute(query)
         created_city = result.scalar_one_or_none()
         return created_city
@@ -41,21 +37,14 @@ async def delete_city(city_id: int, db: AsyncSession):
     return deleted_city
 
 
-async def update_city(
-    city_id: int, city_data: CityUpdate, db: AsyncSession
-):
+async def update_city(city_id: int, city_data: CityUpdate, db: AsyncSession):
     update_data = city_data.model_dump(exclude_unset=True)
 
     if not update_data:
         return await get_city_by_id(city_id, db)
 
-    query = (
-        update(City)
-        .where(City.id == city_id)
-        .values(**update_data)
-        .returning(City)
-    )
+    query = update(City).where(City.id == city_id).values(**update_data).returning(City)
 
     result = await db.execute(query)
-    updated_city= result.scalar_one_or_none()
+    updated_city = result.scalar_one_or_none()
     return updated_city

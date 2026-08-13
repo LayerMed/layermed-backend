@@ -1,16 +1,20 @@
-
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_cache import FastAPICache
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.core.dependencies import get_admin_user
-from src.modules.cities.service import create_city, delete_city, get_cities, get_city_by_id, update_city
-from src.modules.users.models import User
-from src.core.database import get_session
-from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
-from src.core.logs import logger
 from fastapi_cache.decorator import cache
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.database import get_session
+from src.core.dependencies import get_admin_user
+from src.core.logs import logger
+from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
+from src.modules.cities.service import (
+    create_city,
+    delete_city,
+    get_cities,
+    get_city_by_id,
+    update_city,
+)
+from src.modules.users.models import User
 
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
@@ -28,11 +32,9 @@ async def create_city_handle(
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
 ):
-    created_city= await create_city(new_city, db)
+    created_city = await create_city(new_city, db)
     if created_city is None:
-        logger.warning(
-            "City with this name: {name} already exists", name=new_city.name
-        )
+        logger.warning("City with this name: {name} already exists", name=new_city.name)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="City with this name already exists",
@@ -54,9 +56,7 @@ async def delete_city_handle(
 ):
     deleted_city = await delete_city(city_id, db)
     if deleted_city is None:
-        logger.info(
-            "A city with this id does not exist: {city_id}", city_id=city_id
-        )
+        logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"A city with this id does not exist: {city_id}",
@@ -112,9 +112,7 @@ async def get_cities_handle(
     description="Get one city from database via id",
 )
 @cache(expire=100, namespace="cities")
-async def get_city_by_id_handle(
-    city_id: int, db: AsyncSession = Depends(get_session)
-):
+async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)):
     city = await get_city_by_id(city_id, db)
     if city is None:
         logger.warning(

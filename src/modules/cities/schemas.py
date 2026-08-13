@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 class CityRead(BaseModel):
     id: int
-    name: str    
+    name: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -18,4 +18,3 @@ class CityCreate(BaseModel):
 
 class CityUpdate(BaseModel):
     name: str | None = None
-
