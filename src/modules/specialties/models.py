@@ -11,8 +11,7 @@ class Specialty(Base, Timestamp):
     description: Mapped[str]
 
     doctors: Mapped[list["Doctor"]] = relationship(
-        secondary="doctor_specialties",
-        back_populates="specialties"
+        secondary="doctor_specialties", back_populates="specialties"
     )
 
 
@@ -23,7 +22,6 @@ class DoctorSpecialty(Base, Timestamp):
     doctor_id: Mapped[int] = mapped_column(
         ForeignKey("doctors.id", ondelete="cascade"), primary_key=True
     )
-    speciality_id: Mapped[int] = mapped_column(
+    specialty_id: Mapped[int] = mapped_column(
         ForeignKey("specialties.id", ondelete="cascade"), primary_key=True
     )
-

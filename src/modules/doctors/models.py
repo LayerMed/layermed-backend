@@ -23,4 +23,4 @@ class Doctor(Base, Timestamp):
 
     user: Mapped["User"] = relationship(back_populates="doctor")
     suggestions: Mapped[list["Suggestion"]] = relationship(back_populates="doctor")
-    specialties: Mapped[list["Specialty"]] = relationship(back_populates="doctor", secondary="doctor_specialties")
+    specialties: Mapped[list["Specialty"]] = relationship(back_populates="doctors", secondary="doctor_specialties")
