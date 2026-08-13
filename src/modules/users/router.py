@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_session
 from src.core.logs import logger
 from src.core.security import create_access_token, verify_pwd
-from src.modules.users.dependencies import get_admin_user, get_current_user
+from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     MessageResponse,
@@ -147,6 +147,7 @@ async def update_user_basic_handle(
         id=current_user.id,
     )
     current_user = await update_user(user_data, current_user, db)
+    return current_user
 
 
 @router.patch(

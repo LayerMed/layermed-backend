@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 from src.core.security import BAD_PASSWORDS
 
-from core.enums import UserRole
+from src.core.enums import UserRole
 
 
 def validate_password_rules(value: str) -> str:
@@ -26,7 +26,7 @@ class UserRead(BaseModel):
     id: int
     name: str
     birth_date: datetime.date | None = None
-    city: int
+    city_id: int | None = None
     email: EmailStr
     role: str
     created_at: datetime.datetime
@@ -61,7 +61,7 @@ class UserLogin(BaseModel):
 
 class RegisterUser(BaseModel):
     name: str
-    city_id: int
+    city_id: int | None = Field(default=None)
     birth_date: datetime.date | None = None
     email: EmailStr
     password: ValidPassword
@@ -78,5 +78,5 @@ class PasswordConfirm(BaseModel):
 
 class UserUpdate(BaseModel):
     birth_date: datetime.date | None = None
-    city_id: int
+    city_id: int | None = None
     name: str | None = None
