@@ -13,13 +13,12 @@ from src.modules.specialties.router import router as specialty_router
 
 import src.core
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    FastAPICache.init(RedisBackend(redis_client), prefix='fastapi-cache')
-    yield
-    await redis_client.close()
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):    
+#     yield
+#     await redis_client.close()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.include_router(users_router)
 app.include_router(symptom_router)

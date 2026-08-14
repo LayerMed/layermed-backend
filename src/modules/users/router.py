@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_session
 from src.core.logs import logger
@@ -54,7 +53,6 @@ async def get_users_by_filters_handle(
     summary="Get user by id",
     description="Get one user (excluding doctors) from database via id",
 )
-@cache(expire=600)
 async def get_user_by_id_handle(
     user_id: int,
     db: AsyncSession = Depends(get_session),

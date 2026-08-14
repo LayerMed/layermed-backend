@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi_cache import FastAPICache
-from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
@@ -15,6 +13,7 @@ from src.modules.symptoms.service import (
     update_symptom,
 )
 from src.modules.users.models import User
+
 
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 
@@ -41,7 +40,7 @@ async def create_symptom_handle(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Symptom with this name already exists",
         )
-    await FastAPICache.clear(namespace="symptoms")
+
     return created_symptom
 
 
@@ -65,7 +64,7 @@ async def delete_symptom_handle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"A symptom with this id does not exist: {symptom_id}",
         )
-    await FastAPICache.clear(namespace="symptoms")
+
     return deleted_symptom
 
 
@@ -90,7 +89,7 @@ async def update_symptom_by_id_handle(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
         )
-    await FastAPICache.clear(namespace="symptoms")
+
     return updated_symptom
 
 
@@ -101,7 +100,6 @@ async def update_symptom_by_id_handle(
     summary="Get all symptoms",
     description="Get all symptoms from database",
 )
-@cache(expire=600, namespace="symptoms")
 async def get_symptoms_handle(
     db: AsyncSession = Depends(get_session),
 ):
@@ -115,7 +113,6 @@ async def get_symptoms_handle(
     summary="Get symptom by id",
     description="Get one symptom from database via id",
 )
-@cache(expire=100, namespace="symptoms")
 async def get_symptom_by_id_handle(
     symptom_id: int, db: AsyncSession = Depends(get_session)
 ):

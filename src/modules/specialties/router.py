@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi_cache import FastAPICache
-from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
@@ -19,6 +17,7 @@ from src.modules.specialties.service import (
     update_specialty,
 )
 from src.modules.users.models import User
+
 
 router = APIRouter(prefix="/specialties", tags=["specialties"])
 
@@ -46,7 +45,6 @@ async def create_specialty_handle(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Specialty with this name already exists",
         )
-    await FastAPICache.clear(namespace="specialties")
     return created_specialty
 
 
@@ -71,7 +69,8 @@ async def delete_specialty_handle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"A specialty with this id does not exist: {specialty_id}",
         )
-    await FastAPICache.clear(namespace="specialties")
+
+    return deleted_specialty
 
 
 @router.patch(
@@ -95,7 +94,6 @@ async def update_specialty_by_id_handle(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
         )
-    await FastAPICache.clear(namespace="specialties")
     return updated_specialty
 
 
@@ -106,7 +104,6 @@ async def update_specialty_by_id_handle(
     summary="Get all specialties",
     description="Get all specialties from database",
 )
-@cache(expire=600, namespace="specialties")
 async def get_specialties_handle(
     db: AsyncSession = Depends(get_session),
 ):
@@ -120,7 +117,6 @@ async def get_specialties_handle(
     summary="Get specialty by id",
     description="Get one specialty from database via id",
 )
-@cache(expire=100, namespace="specialties")
 async def get_specialty_by_id_handle(
     specialty_id: int, db: AsyncSession = Depends(get_session)
 ):
