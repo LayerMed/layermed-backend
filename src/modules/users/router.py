@@ -36,7 +36,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
     "/",
     response_model=list[UserRead],
     summary="Get all users",
-    description="Get all users (excluding doctors) from database",
+    description="Get all users from database",
 )
 async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
@@ -51,7 +51,7 @@ async def get_users_by_filters_handle(
     "/user/{user_id}",
     response_model=UserRead,
     summary="Get user by id",
-    description="Get one user (excluding doctors) from database via id",
+    description="Get one user from database via id",
 )
 async def get_user_by_id_handle(
     user_id: int,
@@ -61,7 +61,7 @@ async def get_user_by_id_handle(
     user = await get_user_by_id(user_id, db)
     if user is None:
         logger.warning(
-            "Failed to fetch user: User with id {user_id} not found or is a doctor",
+            "Failed to fetch user: User with id {user_id} not found",
             user_id=user_id,
         )
         raise HTTPException(
@@ -128,7 +128,7 @@ async def register_user_handle(
 
 # UPDATE
 @router.patch(
-    "/update",
+    "/me",
     response_model=UserRead,
     summary="Update basic profile information",
 )

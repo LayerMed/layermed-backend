@@ -1,13 +1,14 @@
 import jwt
 from fastapi import Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 from src.core.config import settings
 from src.core.database import get_session
 from src.core.enums import UserRole
 from src.core.logs import logger
 from src.core.security import oauth2_scheme
 from src.modules.users.models import User
-from src.modules.users.service import get_user_by_email
 
 credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -29,7 +30,10 @@ async def get_current_user(
         logger.warning("Failed to decode JWT token: {error}", error=str(e))
         raise credentials_exception
 
-    user = await get_user_by_email(email, db)
+    query = select(User).where(User.email == email).options(joinedload(User.doctor))
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
     if user is None:
         logger.warning(
             "Token contains email {email}, but user was not found in DB", email=email
@@ -37,6 +41,15 @@ async def get_current_user(
         raise credentials_exception
 
     return user
+
+
+async def get_current_doctor(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.DOCTOR or current_user.doctor is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor privileges required",
+        )
+    return current_user.doctor
 
 
 async def get_admin_user(current_user: User = Depends(get_current_user)):

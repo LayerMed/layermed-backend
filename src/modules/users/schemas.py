@@ -2,6 +2,7 @@ import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
+from src.modules.doctors.schemas import DoctorRead
 from src.core.security import BAD_PASSWORDS
 
 from src.core.enums import UserRole
@@ -31,6 +32,7 @@ class UserRead(BaseModel):
     role: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    doctor: DoctorRead | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,3 +82,10 @@ class UserUpdate(BaseModel):
     birth_date: datetime.date | None = None
     city_id: int | None = None
     name: str | None = None
+
+
+class DoctorFilterParams(BaseModel):
+    specialty_id: int | None = None
+    min_experience: int | None = Field(default=None, ge=0)
+    limit: int = Field(default=10, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
