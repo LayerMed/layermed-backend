@@ -32,6 +32,7 @@ async def create_specialty(new_specialty: SpecialtyCreate, db: AsyncSession):
         result = await db.execute(query)
         created_specialty = result.scalar_one_or_none()
         return created_specialty
+        await db.commit()
     except IntegrityError:
         return None
 
@@ -44,6 +45,7 @@ async def delete_specialty(specialty_id: int, db: AsyncSession):
     )
     result = await db.execute(query)
     deleted_speciality = result.scalar_one_or_none()
+    await db.commit()
     return deleted_speciality
 
 async def update_specialty(
@@ -63,4 +65,5 @@ async def update_specialty(
 
     result = await db.execute(query)
     updated_specialty = result.scalar_one_or_none()
+    await db.commit()
     return updated_specialty

@@ -25,6 +25,7 @@ async def create_city(new_city: CityCreate, db: AsyncSession):
         query = insert(City).values(name=new_city.name).returning(City)
         result = await db.execute(query)
         created_city = result.scalar_one_or_none()
+        await db.commit()
         return created_city
     except IntegrityError:
         return None
@@ -34,6 +35,7 @@ async def delete_city(city_id: int, db: AsyncSession):
     query = delete(City).where(City.id == city_id).returning(City)
     result = await db.execute(query)
     deleted_city = result.scalar_one_or_none()
+    await db.commit()
     return deleted_city
 
 
@@ -47,4 +49,5 @@ async def update_city(city_id: int, city_data: CityUpdate, db: AsyncSession):
 
     result = await db.execute(query)
     updated_city = result.scalar_one_or_none()
+    await db.commit()
     return updated_city
