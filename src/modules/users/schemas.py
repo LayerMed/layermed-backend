@@ -61,13 +61,6 @@ class UserFilterParams(BaseModel):
     updated_at: datetime.datetime | None = None
 
 
-class DoctorFilterParams(BaseModel):
-    specialty_id: int | None = None
-    min_experience: int | None = Field(default=None, ge=0)
-    limit: int = Field(default=10, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)
-
-
 class UserPasswordUpdate(BaseModel):
     old_password: str
     new_password: ValidPassword
@@ -81,10 +74,6 @@ class UserLogin(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-
-
-class MessageResponse(BaseModel):
-    message: str
 
 
 class PasswordConfirm(BaseModel):

@@ -56,10 +56,6 @@ async def get_users_by_filters(
 
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
-    logger.debug(
-        "Executing DB query to fetch user {user_id} (excluding doctors)",
-        user_id=user_id,
-    )
     query = select(User).filter(User.id == user_id)
     result = await db.execute(query)
     return result.scalar_one_or_none()
@@ -87,9 +83,11 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     )
     result = await db.execute(query)
     user_id = result.scalar_one_or_none()
-    await db.commit()
-    return user_id
 
+    if user_id is not None:
+        await db.commit()
+
+    return user_id
 
 async def update_user(
     user_data: UserUpdate,
@@ -101,8 +99,7 @@ async def update_user(
     for field, value in update_data.items():
         setattr(current_user, field, value)
 
-    await db.flush()
-    await db.refresh(current_user)
+    await db.commit()
     return current_user
 
 

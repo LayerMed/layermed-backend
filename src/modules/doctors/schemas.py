@@ -1,6 +1,6 @@
 import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DoctorRead(BaseModel):
@@ -30,3 +30,10 @@ class DoctorUpdate(BaseModel):
     education: str | None = None
     experience_years: int | None = None
     bio: str | None = None
+
+
+class DoctorFilterParams(BaseModel):
+    specialty_id: int | None = None
+    min_experience: int | None = Field(default=None, ge=0)
+    limit: int = Field(default=10, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)

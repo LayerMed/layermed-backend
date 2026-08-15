@@ -8,8 +8,7 @@ from src.core.logs import logger
 from src.core.security import create_access_token, verify_pwd
 from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
-from src.modules.users.schemas import (
-    MessageResponse,
+from src.modules.users.schemas import (    
     PasswordConfirm,
     UserCreate,
     TokenResponse,
@@ -35,14 +34,13 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.get(
     "/",
     response_model=list[UserRead],
-    summary="Get all users",
-    description="Get all users from database",
+    summary="Get all users",    
 )
 async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> list[User]:
     users = await get_users_by_filters(user_params, db)
     return users
 
@@ -50,18 +48,17 @@ async def get_users_by_filters_handle(
 @router.get(
     "/user/{user_id}",
     response_model=UserRead,
-    summary="Get user by id",
-    description="Get one user from database via id",
+    summary="Get user by id",    
 )
 async def get_user_by_id_handle(
     user_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> User:
     user = await get_user_by_id(user_id, db)
     if user is None:
         logger.warning(
-            "Failed to fetch user: User with id {user_id} not found",
+            "User with id {user_id} not found",
             user_id=user_id,
         )
         raise HTTPException(
@@ -79,11 +76,23 @@ async def get_user_by_id_handle(
 async def login_user_handle(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session),
-):
+) -> TokenResponse:
     user = await get_user_by_email(form_data.username, db)
-    if user is None or not verify_pwd(form_data.password, user.password):
-        logger.info(
-            "Authentication failed for user {username}", username=form_data.username
+    if user is None:    
+        logger.warning(
+            "Login failed: User with email {email} does not exist", 
+            email=form_data.username
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+
+    if not verify_pwd(form_data.password, user.password):    
+        logger.warning(
+            "Login failed: Invalid password for user_id={user_id} (email={email})", 
+            user_id=user.id,
+            email=user.email,
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -110,7 +119,7 @@ async def register_user_handle(
             "Failed to register: Email {email} already exists", email=new_user.email
         )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="User with this email already exists",
         )
     token = create_access_token({"sub": new_user.email})
@@ -138,34 +147,28 @@ async def update_user_basic_handle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
-    logger.debug(
-        "User ID:{id}, was update with params: {birth_date}, {name}, {city_id}",
-        birth_date=user_data.birth_date,
-        name=user_data.name,
-        city_id=user_data.city_id,
-        id=current_user.id,
-    )
     current_user = await update_user(user_data, current_user, db)
     return current_user
 
 
 @router.patch(
     "/me/password",
-    response_model=MessageResponse,
+    response_model=dict[str, str],
     summary="Change user password",
 )
 async def update_user_password_handle(
     password_data: UserPasswordUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
-    success = await update_password(password_data, current_user, db)
-    if not success:
+) -> dict[str, str]:
+    result = await update_password(password_data, current_user, db)
+    if not result:
+        logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect current password",
         )
-    return MessageResponse(message="Password successfully updated")
+    return {"message": "Password successfully updated"}
 
 
 # DELETE
@@ -178,9 +181,10 @@ async def delete_user_account_handle(
     password_data: PasswordConfirm,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
+) -> None:
     success = await delete_account(password_data, current_user, db)
     if not success:
+        logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect password",
