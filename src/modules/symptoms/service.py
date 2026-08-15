@@ -31,6 +31,7 @@ async def create_symptom(new_symptom: SymptomCreate, db: AsyncSession):
         )
         result = await db.execute(query)
         created_symptom = result.scalar_one_or_none()
+        await db.commit()
         return created_symptom
     except IntegrityError:
         return None
@@ -40,6 +41,7 @@ async def delete_symptom(symptom_id: int, db: AsyncSession):
     query = delete(Symptom).where(Symptom.id == symptom_id).returning(Symptom)
     result = await db.execute(query)
     deleted_symptom = result.scalar_one_or_none()
+    await db.commit()
     return deleted_symptom
 
 
@@ -60,4 +62,5 @@ async def update_symptom(
 
     result = await db.execute(query)
     updated_symptom = result.scalar_one_or_none()
+    await db.commit()
     return updated_symptom

@@ -33,7 +33,7 @@ async def get_users_by_filters(
         updated_at=user_params.updated_at,
     )
 
-    query = select(User).filter(User.role != UserRole.DOCTOR)
+    query = select(User).filter(User.role != UserRole.ADMIN)
 
     if user_params.name:
         query = query.filter(User.name.ilike(f"%{user_params.name}%"))
@@ -60,7 +60,7 @@ async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
         "Executing DB query to fetch user {user_id} (excluding doctors)",
         user_id=user_id,
     )
-    query = select(User).filter(User.id == user_id, User.role != UserRole.DOCTOR)
+    query = select(User).filter(User.id == user_id)
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -87,6 +87,7 @@ async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
     )
     result = await db.execute(query)
     user_id = result.scalar_one_or_none()
+    await db.commit()
     return user_id
 
 
@@ -118,6 +119,7 @@ async def update_password(
         update(User).where(User.id == current_user.id).values(password=hashed_password)
     )
     await db.execute(query)
+    await db.commit()
     return True
 
 
@@ -131,4 +133,5 @@ async def delete_account(
 
     query = delete(User).where(User.id == current_user.id)
     await db.execute(query)
+    await db.commit()
     return True

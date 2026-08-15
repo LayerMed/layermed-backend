@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi_cache import FastAPICache
-from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
@@ -39,7 +37,6 @@ async def create_city_handle(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="City with this name already exists",
         )
-    await FastAPICache.clear(namespace="cities")
     return created_city
 
 
@@ -61,7 +58,6 @@ async def delete_city_handle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"A city with this id does not exist: {city_id}",
         )
-    await FastAPICache.clear(namespace="cities")
     return deleted_city
 
 
@@ -86,7 +82,6 @@ async def update_city_by_id_handle(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
         )
-    await FastAPICache.clear(namespace="cities")
     return updated_city
 
 
@@ -97,7 +92,6 @@ async def update_city_by_id_handle(
     summary="Get all cities",
     description="Get all cities from database",
 )
-@cache(expire=600, namespace="cities")
 async def get_cities_handle(
     db: AsyncSession = Depends(get_session),
 ):
@@ -111,7 +105,6 @@ async def get_cities_handle(
     summary="Get city by id",
     description="Get one city from database via id",
 )
-@cache(expire=100, namespace="cities")
 async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)):
     city = await get_city_by_id(city_id, db)
     if city is None:
