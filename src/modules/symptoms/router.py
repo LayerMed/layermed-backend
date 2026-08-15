@@ -18,7 +18,7 @@ from src.modules.users.models import User
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 
 
-# Admin
+# ADMIN
 @router.post(
     "/",
     response_model=SymptomRead,
@@ -44,56 +44,7 @@ async def create_symptom_handle(
     return created_symptom
 
 
-@router.delete(
-    "/{symptom_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Delete symptom",
-    description="Delete symptom from database",
-)
-async def delete_symptom_handle(
-    symptom_id: int,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    deleted_symptom = await delete_symptom(symptom_id, db)
-    if deleted_symptom is None:
-        logger.info(
-            "A symptom with this id does not exist: {symptom_id}", symptom_id=symptom_id
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A symptom with this id does not exist: {symptom_id}",
-        )
-
-    return deleted_symptom
-
-
-@router.patch(
-    "/{symptom_id}",
-    response_model=SymptomRead,
-    summary="Update symptom",
-    description="Update symptom in database",
-)
-async def update_symptom_by_id_handle(
-    symptom_id: int,
-    symptom_data: SymptomUpdate,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    updated_symptom = await update_symptom(symptom_id, symptom_data, db)
-    if updated_symptom is None:
-        logger.warning(
-            "Failed to fetch symptom: Symptom with id {symptom_id} not found",
-            symptom_id=symptom_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
-        )
-
-    return updated_symptom
-
-
-# GET
+# READ
 @router.get(
     "/",
     response_model=list[SymptomRead],
@@ -127,3 +78,54 @@ async def get_symptom_by_id_handle(
         )
 
     return symptom
+
+
+# UPDATE
+@router.patch(
+    "/{symptom_id}",
+    response_model=SymptomRead,
+    summary="Update symptom",
+    description="Update symptom in database",
+)
+async def update_symptom_by_id_handle(
+    symptom_id: int,
+    symptom_data: SymptomUpdate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    updated_symptom = await update_symptom(symptom_id, symptom_data, db)
+    if updated_symptom is None:
+        logger.warning(
+            "Failed to fetch symptom: Symptom with id {symptom_id} not found",
+            symptom_id=symptom_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
+        )
+
+    return updated_symptom
+
+
+# DELETE
+@router.delete(
+    "/{symptom_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete symptom",
+    description="Delete symptom from database",
+)
+async def delete_symptom_handle(
+    symptom_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    deleted_symptom = await delete_symptom(symptom_id, db)
+    if deleted_symptom is None:
+        logger.info(
+            "A symptom with this id does not exist: {symptom_id}", symptom_id=symptom_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"A symptom with this id does not exist: {symptom_id}",
+        )
+
+    return deleted_symptom

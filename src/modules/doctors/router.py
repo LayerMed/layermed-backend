@@ -21,7 +21,7 @@ from src.modules.users.schemas import DoctorFilterParams, PasswordConfirm
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
 
-# POST
+# CREATE
 @router.post(
     "/register", 
     response_model=DoctorRead,
@@ -38,6 +38,41 @@ async def register_doctor_handle(
             detail="Doctor profile already exists",
         )
     doctor = await register_doctor(new_doctor, current_user, db)
+    return doctor
+
+
+# READ
+@router.get(
+    "/", 
+    response_model=list[DoctorRead],
+    summary="Get all doctor from databse"
+)
+async def get_doctors_by_filters_handle(
+    filters: Annotated[DoctorFilterParams, Depends()],
+    db: AsyncSession = Depends(get_session),
+):
+    doctors = await get_doctors_by_filters(filters, db)
+    return doctors
+
+
+@router.get(
+    "/{doctor_id}",
+    response_model=DoctorRead,
+    summary="Get doctor by id"
+)
+async def get_doctor_by_id_handle(
+    doctor_id: int,
+    db: AsyncSession = Depends(get_session),
+):
+    doctor = await get_doctor_by_id(doctor_id, db)
+    if doctor is None:
+        logger.warning(
+            "Failed to fetch doctor: Doctor with id {doctor_id} not found",
+            doctor_id=doctor_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor not found"
+        )
     return doctor
 
 
@@ -81,38 +116,3 @@ async def delete_doctor_account_handle(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect password",
         )
-
-
-# GET
-@router.get(
-    "/", 
-    response_model=list[DoctorRead],
-    summary="Get all doctor from databse"
-)
-async def get_doctors_by_filters_handle(
-    filters: Annotated[DoctorFilterParams, Depends()],
-    db: AsyncSession = Depends(get_session),
-):
-    doctors = await get_doctors_by_filters(filters, db)
-    return doctors
-
-
-@router.get(
-    "/{doctor_id}",
-    response_model=DoctorRead,
-    summary="Get doctor by id"
-)
-async def get_doctor_by_id_handle(
-    doctor_id: int,
-    db: AsyncSession = Depends(get_session),
-):
-    doctor = await get_doctor_by_id(doctor_id, db)
-    if doctor is None:
-        logger.warning(
-            "Failed to fetch doctor: Doctor with id {doctor_id} not found",
-            doctor_id=doctor_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Doctor not found"
-        )
-    return doctor

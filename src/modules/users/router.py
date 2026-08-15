@@ -31,7 +31,7 @@ from src.modules.users.service import (
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-# Admin
+# ADMIN
 @router.get(
     "/",
     response_model=list[UserRead],
@@ -70,16 +70,7 @@ async def get_user_by_id_handle(
     return user
 
 
-# GET
-@router.get(
-    "/me",
-    response_model=UserRead,
-    summary="Get current active user",
-)
-async def get_me_handle(current_user: User = Depends(get_current_user)):
-    return current_user
-
-# POST
+# CREATE
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -124,6 +115,16 @@ async def register_user_handle(
         )
     token = create_access_token({"sub": new_user.email})
     return TokenResponse(access_token=token)
+
+
+# READ
+@router.get(
+    "/me",
+    response_model=UserRead,
+    summary="Get current active user",
+)
+async def get_me_handle(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
 # UPDATE

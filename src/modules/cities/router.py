@@ -17,7 +17,7 @@ from src.modules.users.models import User
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
 
-# Admin
+# ADMIN
 @router.post(
     "/",
     response_model=CityRead,
@@ -40,52 +40,7 @@ async def create_city_handle(
     return created_city
 
 
-@router.delete(
-    "/{city_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Delete city",
-    description="Delete city from database",
-)
-async def delete_city_handle(
-    city_id: int,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    deleted_city = await delete_city(city_id, db)
-    if deleted_city is None:
-        logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A city with this id does not exist: {city_id}",
-        )
-    return deleted_city
-
-
-@router.patch(
-    "/{city_id}",
-    response_model=CityRead,
-    summary="Update city",
-    description="Update city in database",
-)
-async def update_city_by_id_handle(
-    city_id: int,
-    city_data: CityUpdate,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    updated_city = await update_city(city_id, city_data, db)
-    if updated_city is None:
-        logger.warning(
-            "Failed to fetch city: City with id {city_id} not found",
-            city_id=city_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
-        )
-    return updated_city
-
-
-# GET
+# READ
 @router.get(
     "/",
     response_model=list[CityRead],
@@ -117,3 +72,50 @@ async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_ses
         )
 
     return city
+
+
+# UPDATE
+@router.patch(
+    "/{city_id}",
+    response_model=CityRead,
+    summary="Update city",
+    description="Update city in database",
+)
+async def update_city_by_id_handle(
+    city_id: int,
+    city_data: CityUpdate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    updated_city = await update_city(city_id, city_data, db)
+    if updated_city is None:
+        logger.warning(
+            "Failed to fetch city: City with id {city_id} not found",
+            city_id=city_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
+        )
+    return updated_city
+
+
+# DELETE
+@router.delete(
+    "/{city_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete city",
+    description="Delete city from database",
+)
+async def delete_city_handle(
+    city_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    deleted_city = await delete_city(city_id, db)
+    if deleted_city is None:
+        logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"A city with this id does not exist: {city_id}",
+        )
+    return deleted_city

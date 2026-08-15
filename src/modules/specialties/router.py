@@ -22,7 +22,7 @@ from src.modules.users.models import User
 router = APIRouter(prefix="/specialties", tags=["specialties"])
 
 
-# Admin
+# ADMIN
 @router.post(
     "/",
     response_model=SpecialtyRead,
@@ -48,56 +48,7 @@ async def create_specialty_handle(
     return created_specialty
 
 
-@router.delete(
-    "/{specialty_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete specialty",
-    description="Delete specialty from database",
-)
-async def delete_specialty_handle(
-    specialty_id: int,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    deleted_specialty = await delete_specialty(specialty_id, db)
-    if deleted_specialty is None:
-        logger.info(
-            "A specialty with this id does not exist: {specialty_id}",
-            specialty_id=specialty_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A specialty with this id does not exist: {specialty_id}",
-        )
-
-    return deleted_specialty
-
-
-@router.patch(
-    "/{specialty_id}",
-    response_model=SpecialtyRead,
-    summary="Update specialty",
-    description="Update specialty in database",
-)
-async def update_specialty_by_id_handle(
-    specialty_id: int,
-    specialty_data: SpecialtyUpdate,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    updated_specialty = await update_specialty(specialty_id, specialty_data, db)
-    if updated_specialty is None:
-        logger.warning(
-            "Failed to fetch specialty: Specialty with id {specialty_id} not found",
-            specialty_id=specialty_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
-        )
-    return updated_specialty
-
-
-# GET
+# READ
 @router.get(
     "/",
     response_model=list[SpecialtyRead],
@@ -131,3 +82,55 @@ async def get_specialty_by_id_handle(
         )
 
     return specialty
+
+
+# UPDATE
+@router.patch(
+    "/{specialty_id}",
+    response_model=SpecialtyRead,
+    summary="Update specialty",
+    description="Update specialty in database",
+)
+async def update_specialty_by_id_handle(
+    specialty_id: int,
+    specialty_data: SpecialtyUpdate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    updated_specialty = await update_specialty(specialty_id, specialty_data, db)
+    if updated_specialty is None:
+        logger.warning(
+            "Failed to fetch specialty: Specialty with id {specialty_id} not found",
+            specialty_id=specialty_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
+        )
+    return updated_specialty
+
+
+# DELETE
+@router.delete(
+    "/{specialty_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete specialty",
+    description="Delete specialty from database",
+)
+async def delete_specialty_handle(
+    specialty_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+):
+    deleted_specialty = await delete_specialty(specialty_id, db)
+    if deleted_specialty is None:
+        logger.info(
+            "A specialty with this id does not exist: {specialty_id}",
+            specialty_id=specialty_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"A specialty with this id does not exist: {specialty_id}",
+        )
+
+    return deleted_specialty
+
