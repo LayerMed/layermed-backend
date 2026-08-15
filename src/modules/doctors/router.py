@@ -22,7 +22,11 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
 
 # POST
-@router.post("/register", response_model=DoctorRead)
+@router.post(
+    "/register", 
+    response_model=DoctorRead,
+    summary="Registering a doctor account"
+)
 async def register_doctor_handle(
     new_doctor: DoctorRegister,
     current_user: User = Depends(get_current_user),
@@ -38,7 +42,11 @@ async def register_doctor_handle(
 
 
 # UPDATE
-@router.patch("/me", response_model=DoctorRead)
+@router.patch(  
+    "/me", 
+    response_model=DoctorRead,
+    summary="Update doctor profile informaiton"
+)
 async def update_doctor_basic_handle(
     doctor_data: DoctorUpdate,
     current_doctor: Doctor = Depends(get_current_doctor),
@@ -76,8 +84,12 @@ async def delete_doctor_account_handle(
 
 
 # GET
-@router.get("/", response_model=list[DoctorRead])
-async def get_doctors_handle(
+@router.get(
+    "/", 
+    response_model=list[DoctorRead],
+    summary="Get all doctor from databse"
+)
+async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
 ):
@@ -85,7 +97,11 @@ async def get_doctors_handle(
     return doctors
 
 
-@router.get("/{doctor_id}", response_model=DoctorRead)
+@router.get(
+    "/{doctor_id}",
+    response_model=DoctorRead,
+    summary="Get doctor by id"
+)
 async def get_doctor_by_id_handle(
     doctor_id: int,
     db: AsyncSession = Depends(get_session),
