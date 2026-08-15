@@ -26,9 +26,8 @@ router = APIRouter(prefix="/specialties", tags=["specialties"])
 @router.post(
     "/",
     response_model=SpecialtyRead,
-    summary="Create specialty",
     status_code=status.HTTP_201_CREATED,
-    description="Create specialty in database",
+    summary="Create specialty",
 )
 async def create_specialty_handle(
     new_specialty: SpecialtyCreate,
@@ -53,7 +52,6 @@ async def create_specialty_handle(
     "/",
     response_model=list[SpecialtyRead],
     summary="Get all specialties",
-    description="Get all specialties from database",
 )
 async def get_specialties_handle(
     db: AsyncSession = Depends(get_session),
@@ -66,7 +64,6 @@ async def get_specialties_handle(
     "/{specialty_id}",
     response_model=SpecialtyRead,
     summary="Get specialty by id",
-    description="Get one specialty from database via id",
 )
 async def get_specialty_by_id_handle(
     specialty_id: int, db: AsyncSession = Depends(get_session)
@@ -89,7 +86,6 @@ async def get_specialty_by_id_handle(
     "/{specialty_id}",
     response_model=SpecialtyRead,
     summary="Update specialty",
-    description="Update specialty in database",
 )
 async def update_specialty_by_id_handle(
     specialty_id: int,
@@ -114,7 +110,6 @@ async def update_specialty_by_id_handle(
     "/{specialty_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete specialty",
-    description="Delete specialty from database",
 )
 async def delete_specialty_handle(
     specialty_id: int,
@@ -133,4 +128,3 @@ async def delete_specialty_handle(
         )
 
     return deleted_specialty
-

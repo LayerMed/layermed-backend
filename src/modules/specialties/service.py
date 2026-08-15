@@ -38,15 +38,12 @@ async def create_specialty(new_specialty: SpecialtyCreate, db: AsyncSession):
 
 
 async def delete_specialty(specialty_id: int, db: AsyncSession):
-    query = (
-        delete(Specialty)
-        .where(Specialty.id == specialty_id)
-        .returning(Specialty)
-    )
+    query = delete(Specialty).where(Specialty.id == specialty_id).returning(Specialty)
     result = await db.execute(query)
     deleted_speciality = result.scalar_one_or_none()
     await db.commit()
     return deleted_speciality
+
 
 async def update_specialty(
     specialty_id: int, specialty_data: SpecialtyUpdate, db: AsyncSession

@@ -21,9 +21,8 @@ router = APIRouter(prefix="/cities", tags=["Cities"])
 @router.post(
     "/",
     response_model=CityRead,
-    summary="Create city",
     status_code=status.HTTP_201_CREATED,
-    description="Create city in database",
+    summary="Create city",
 )
 async def create_city_handle(
     new_city: CityCreate,
@@ -45,7 +44,6 @@ async def create_city_handle(
     "/",
     response_model=list[CityRead],
     summary="Get all cities",
-    description="Get all cities from database",
 )
 async def get_cities_handle(
     db: AsyncSession = Depends(get_session),
@@ -58,7 +56,6 @@ async def get_cities_handle(
     "/{city_id}",
     response_model=CityRead,
     summary="Get city by id",
-    description="Get one city from database via id",
 )
 async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)):
     city = await get_city_by_id(city_id, db)
@@ -79,7 +76,6 @@ async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_ses
     "/{city_id}",
     response_model=CityRead,
     summary="Update city",
-    description="Update city in database",
 )
 async def update_city_by_id_handle(
     city_id: int,
@@ -102,9 +98,8 @@ async def update_city_by_id_handle(
 # DELETE
 @router.delete(
     "/{city_id}",
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete city",
-    description="Delete city from database",
 )
 async def delete_city_handle(
     city_id: int,

@@ -17,7 +17,13 @@ class Suggestion(Base, Timestamp):
     duration: Mapped[int]
 
     __table_args__ = (
-        Index("ix_suggestions_title_cost_format", "city_id", "title", "cost", "suggest_format"),
+        Index(
+            "ix_suggestions_title_cost_format",
+            "city_id",
+            "title",
+            "cost",
+            "suggest_format",
+        ),
     )
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="suggestion")

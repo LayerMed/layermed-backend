@@ -22,9 +22,8 @@ router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 @router.post(
     "/",
     response_model=SymptomRead,
-    summary="Create symptom",
     status_code=status.HTTP_201_CREATED,
-    description="Create symptom in database",
+    summary="Create symptom",
 )
 async def create_symptom_handle(
     new_symptom: SymptomCreate,
@@ -49,7 +48,6 @@ async def create_symptom_handle(
     "/",
     response_model=list[SymptomRead],
     summary="Get all symptoms",
-    description="Get all symptoms from database",
 )
 async def get_symptoms_handle(
     db: AsyncSession = Depends(get_session),
@@ -62,7 +60,6 @@ async def get_symptoms_handle(
     "/{symptom_id}",
     response_model=SymptomRead,
     summary="Get symptom by id",
-    description="Get one symptom from database via id",
 )
 async def get_symptom_by_id_handle(
     symptom_id: int, db: AsyncSession = Depends(get_session)
@@ -85,7 +82,6 @@ async def get_symptom_by_id_handle(
     "/{symptom_id}",
     response_model=SymptomRead,
     summary="Update symptom",
-    description="Update symptom in database",
 )
 async def update_symptom_by_id_handle(
     symptom_id: int,
@@ -111,7 +107,6 @@ async def update_symptom_by_id_handle(
     "/{symptom_id}",
     status_code=status.HTTP_200_OK,
     summary="Delete symptom",
-    description="Delete symptom from database",
 )
 async def delete_symptom_handle(
     symptom_id: int,
