@@ -3,15 +3,6 @@ import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class DoctorRegister(BaseModel):
-    specialty_id: int
-    education: str
-    experience_years: int
-    bio: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class DoctorRead(BaseModel):
     id: int
     user_id: int
@@ -21,6 +12,15 @@ class DoctorRead(BaseModel):
     bio: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DoctorCreate(BaseModel):
+    specialty_id: int
+    education: str
+    experience_years: int
+    bio: str
 
     model_config = ConfigDict(from_attributes=True)
 

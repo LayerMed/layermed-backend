@@ -37,6 +37,20 @@ class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserCreate(BaseModel):
+    name: str
+    city_id: int | None = Field(default=None)
+    birth_date: datetime.date | None = None
+    email: EmailStr
+    password: ValidPassword
+
+
+class UserUpdate(BaseModel):
+    birth_date: datetime.date | None = None
+    city_id: int | None = None
+    name: str | None = None
+
+
 class UserFilterParams(BaseModel):
     name: str | None = None
     birth_date: datetime.date | None = None
@@ -45,6 +59,23 @@ class UserFilterParams(BaseModel):
     role: UserRole | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+
+
+class DoctorFilterParams(BaseModel):
+    specialty_id: int | None = None
+    min_experience: int | None = Field(default=None, ge=0)
+    limit: int = Field(default=10, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+
+class UserPasswordUpdate(BaseModel):
+    old_password: str
+    new_password: ValidPassword
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
 
 class TokenResponse(BaseModel):
@@ -56,36 +87,5 @@ class MessageResponse(BaseModel):
     message: str
 
 
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class RegisterUser(BaseModel):
-    name: str
-    city_id: int | None = Field(default=None)
-    birth_date: datetime.date | None = None
-    email: EmailStr
-    password: ValidPassword
-
-
-class UserPasswordChange(BaseModel):
-    old_password: str
-    new_password: ValidPassword
-
-
 class PasswordConfirm(BaseModel):
     password: str
-
-
-class UserUpdate(BaseModel):
-    birth_date: datetime.date | None = None
-    city_id: int | None = None
-    name: str | None = None
-
-
-class DoctorFilterParams(BaseModel):
-    specialty_id: int | None = None
-    min_experience: int | None = Field(default=None, ge=0)
-    limit: int = Field(default=10, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)

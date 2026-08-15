@@ -11,10 +11,10 @@ from src.modules.users.models import User
 from src.modules.users.schemas import (
     MessageResponse,
     PasswordConfirm,
-    RegisterUser,
+    UserCreate,
     TokenResponse,
     UserFilterParams,
-    UserPasswordChange,
+    UserPasswordUpdate,
     UserRead,
     UserUpdate,
 )
@@ -110,7 +110,7 @@ async def login_user_handle(
     summary="Registering a new user",
 )
 async def register_user_handle(
-    new_user: RegisterUser,
+    new_user: UserCreate,
     db: AsyncSession = Depends(get_session),
 ):
     user_id = await create_user(new_user, db)
@@ -154,7 +154,7 @@ async def update_user_basic_handle(
     summary="Change user password",
 )
 async def update_user_password_handle(
-    password_data: UserPasswordChange,
+    password_data: UserPasswordUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):

@@ -7,7 +7,7 @@ from src.core.database import get_session
 from src.core.dependencies import get_current_doctor, get_current_user
 from src.core.logs import logger
 from src.modules.doctors.models import Doctor
-from src.modules.doctors.schemas import DoctorRead, DoctorRegister, DoctorUpdate
+from src.modules.doctors.schemas import DoctorRead, DoctorCreate, DoctorUpdate
 from src.modules.doctors.service import (
     delete_doctor,
     get_doctor_by_id,
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
     summary="Registering a doctor account"
 )
 async def register_doctor_handle(
-    new_doctor: DoctorRegister,
+    new_doctor: DoctorCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):

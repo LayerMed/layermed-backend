@@ -5,13 +5,13 @@ from sqlalchemy.orm import selectinload
 from src.core.enums import UserRole
 from src.core.security import verify_pwd
 from src.modules.doctors.models import Doctor
-from src.modules.doctors.schemas import DoctorRegister, DoctorUpdate
+from src.modules.doctors.schemas import DoctorCreate, DoctorUpdate
 from src.modules.users.models import User
 from src.modules.users.schemas import DoctorFilterParams, PasswordConfirm
 
 
 async def register_doctor(
-    new_doctor: DoctorRegister,
+    new_doctor: DoctorCreate,
     current_user: User,
     db: AsyncSession,
 ):

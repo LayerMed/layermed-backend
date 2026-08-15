@@ -11,9 +11,9 @@ from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     PasswordConfirm,
-    RegisterUser,
+    UserCreate,
     UserFilterParams,
-    UserPasswordChange,
+    UserPasswordUpdate,
     UserUpdate,
 )
 
@@ -72,7 +72,7 @@ async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None
     return user
 
 
-async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
+async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     query = (
         insert(User)
         .values(
@@ -107,7 +107,7 @@ async def update_user(
 
 
 async def update_password(
-    password_data: UserPasswordChange,
+    password_data: UserPasswordUpdate,
     current_user: User,
     db: AsyncSession,
 ) -> bool:
