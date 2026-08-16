@@ -23,6 +23,14 @@ ValidPassword = Annotated[
 ]
 
 
+class UserCreate(BaseModel):
+    name: str
+    city_id: int | None = Field(default=None)
+    birth_date: datetime.date | None = None
+    email: EmailStr
+    password: ValidPassword
+
+
 class UserRead(BaseModel):
     id: int
     name: str
@@ -35,14 +43,6 @@ class UserRead(BaseModel):
     doctor: DoctorRead | None = None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class UserCreate(BaseModel):
-    name: str
-    city_id: int | None = Field(default=None)
-    birth_date: datetime.date | None = None
-    email: EmailStr
-    password: ValidPassword
 
 
 class UserUpdate(BaseModel):

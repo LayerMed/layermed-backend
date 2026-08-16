@@ -18,21 +18,34 @@ from src.modules.users.schemas import (
 )
 
 
+# CREATE
+async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
+    query = (
+        insert(User)
+        .values(
+            name=new_user.name,
+            city_id=new_user.city_id,
+            birth_date=new_user.birth_date,
+            email=new_user.email,
+            password=hash_pwd(new_user.password),
+        )
+        .on_conflict_do_nothing(index_elements=["email"])
+        .returning(User.id)
+    )
+    result = await db.execute(query)
+    user_id = result.scalar_one_or_none()
+
+    if user_id is not None:
+        await db.commit()
+
+    return user_id
+
+
+# READ
 async def get_users_by_filters(
     user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession,
 ) -> list[User]:
-    logger.debug(
-        "Start search users with params: {name}, {birth_date}, {email}, {role}, {created_at}, {updated_at}",
-        name=user_params.name,
-        birth_date=user_params.birth_date,
-        city_id=user_params.city_id,
-        email=user_params.email,
-        role=user_params.role,
-        created_at=user_params.created_at,
-        updated_at=user_params.updated_at,
-    )
-
     query = select(User).filter(User.role != UserRole.ADMIN)
 
     if user_params.name:
@@ -68,27 +81,7 @@ async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None
     return user
 
 
-async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
-    query = (
-        insert(User)
-        .values(
-            name=new_user.name,
-            city_id=new_user.city_id,
-            birth_date=new_user.birth_date,
-            email=new_user.email,
-            password=hash_pwd(new_user.password),
-        )
-        .on_conflict_do_nothing(index_elements=["email"])
-        .returning(User.id)
-    )
-    result = await db.execute(query)
-    user_id = result.scalar_one_or_none()
-
-    if user_id is not None:
-        await db.commit()
-
-    return user_id
-
+# UPDATE
 async def update_user(
     user_data: UserUpdate,
     current_user: User,
@@ -110,7 +103,6 @@ async def update_password(
 ) -> bool:
     if not verify_pwd(password_data.old_password, current_user.password):
         return False
-
     hashed_password = hash_pwd(password_data.new_password)
     query = (
         update(User).where(User.id == current_user.id).values(password=hashed_password)
@@ -120,6 +112,7 @@ async def update_password(
     return True
 
 
+# DELETE
 async def delete_account(
     password_data: PasswordConfirm,
     current_user: User,

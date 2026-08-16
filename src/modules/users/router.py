@@ -8,7 +8,7 @@ from src.core.logs import logger
 from src.core.security import create_access_token, verify_pwd
 from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
-from src.modules.users.schemas import (    
+from src.modules.users.schemas import (
     PasswordConfirm,
     UserCreate,
     TokenResponse,
@@ -30,11 +30,67 @@ from src.modules.users.service import (
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-# ADMIN
+# CREATE
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registering a new user",
+)
+async def register_user_handle(
+    new_user: UserCreate,
+    db: AsyncSession = Depends(get_session),
+) -> TokenResponse:
+    user_id = await create_user(new_user, db)
+    if user_id is None:
+        logger.warning("Email {email} already exists", email=new_user.email)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with this email already exists",
+        )
+    token = create_access_token({"sub": new_user.email})
+    return TokenResponse(access_token=token)
+
+
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="User login",
+)
+async def login_user_handle(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_session),
+) -> TokenResponse:
+    user = await get_user_by_email(form_data.username, db)
+    if user is None:
+        logger.warning(
+            "User with email {email} does not exist", email=form_data.username
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+
+    if not verify_pwd(form_data.password, user.password):
+        logger.warning(
+            "Invalid password for user_id={user_id} (email={email})",
+            user_id=user.id,
+            email=user.email,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+
+    token = create_access_token({"sub": form_data.username})
+    return TokenResponse(access_token=token)
+
+
+# READ
 @router.get(
     "/",
     response_model=list[UserRead],
-    summary="Get all users",    
+    summary="Get all users",
 )
 async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
@@ -48,7 +104,7 @@ async def get_users_by_filters_handle(
 @router.get(
     "/user/{user_id}",
     response_model=UserRead,
-    summary="Get user by id",    
+    summary="Get user by id",
 )
 async def get_user_by_id_handle(
     user_id: int,
@@ -67,72 +123,14 @@ async def get_user_by_id_handle(
     return user
 
 
-# CREATE
-@router.post(
-    "/login",
-    response_model=TokenResponse,
-    summary="User login",
-)
-async def login_user_handle(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_session),
-) -> TokenResponse:
-    user = await get_user_by_email(form_data.username, db)
-    if user is None:    
-        logger.warning(
-            "Login failed: User with email {email} does not exist", 
-            email=form_data.username
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
-
-    if not verify_pwd(form_data.password, user.password):    
-        logger.warning(
-            "Login failed: Invalid password for user_id={user_id} (email={email})", 
-            user_id=user.id,
-            email=user.email,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
-
-    token = create_access_token({"sub": form_data.username})
-    return TokenResponse(access_token=token)
-
-
-@router.post(
-    "/register",
-    response_model=TokenResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Registering a new user",
-)
-async def register_user_handle(
-    new_user: UserCreate,
-    db: AsyncSession = Depends(get_session),
-):
-    user_id = await create_user(new_user, db)
-    if user_id is None:
-        logger.warning(
-            "Failed to register: Email {email} already exists", email=new_user.email
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User with this email already exists",
-        )
-    token = create_access_token({"sub": new_user.email})
-    return TokenResponse(access_token=token)
-
-
-# READ
 @router.get(
     "/me",
     response_model=UserRead,
     summary="Get current active user",
 )
-async def get_me_handle(current_user: User = Depends(get_current_user)):
+async def get_me_handle(
+    current_user: User = Depends(get_current_user)
+) -> User:
     return current_user
 
 
@@ -146,7 +144,7 @@ async def update_user_basic_handle(
     user_data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
+) -> User:
     current_user = await update_user(user_data, current_user, db)
     return current_user
 
