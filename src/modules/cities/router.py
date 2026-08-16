@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.cities.models import City
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
@@ -14,10 +15,11 @@ from src.modules.cities.service import (
 )
 from src.modules.users.models import User
 
+
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
-
-# ADMIN
+ 
+# CREATE
 @router.post(
     "/",
     response_model=CityRead,
@@ -28,7 +30,7 @@ async def create_city_handle(
     new_city: CityCreate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> City:
     created_city = await create_city(new_city, db)
     if created_city is None:
         logger.warning("City with this name: {name} already exists", name=new_city.name)
@@ -47,7 +49,7 @@ async def create_city_handle(
 )
 async def get_cities_handle(
     db: AsyncSession = Depends(get_session),
-):
+) -> list[City]:
     cities = await get_cities(db)
     return cities
 
@@ -57,7 +59,7 @@ async def get_cities_handle(
     response_model=CityRead,
     summary="Get city by id",
 )
-async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)):
+async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)) -> City:
     city = await get_city_by_id(city_id, db)
     if city is None:
         logger.warning(
@@ -82,7 +84,7 @@ async def update_city_by_id_handle(
     city_data: CityUpdate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> City:
     updated_city = await update_city(city_id, city_data, db)
     if updated_city is None:
         logger.warning(
@@ -105,12 +107,12 @@ async def delete_city_handle(
     city_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> City:
     deleted_city = await delete_city(city_id, db)
     if deleted_city is None:
         logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A city with this id does not exist: {city_id}",
+            detail=f"This city does not exist",
         )
     return deleted_city

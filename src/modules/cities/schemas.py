@@ -3,6 +3,10 @@ import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class CityCreate(BaseModel):
+    name: str
+
+
 class CityRead(BaseModel):
     id: int
     name: str
@@ -10,10 +14,6 @@ class CityRead(BaseModel):
     updated_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class CityCreate(BaseModel):
-    name: str
 
 
 class CityUpdate(BaseModel):
