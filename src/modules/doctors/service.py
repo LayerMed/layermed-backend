@@ -79,15 +79,14 @@ async def delete_doctor(
     current_doctor: Doctor,
     db: AsyncSession,
 ) -> bool:
-
     user = current_doctor.user
+    
     if not verify_pwd(password_data.password, user.password):
         return False
-
+    
     user.role = UserRole.CLIENT
 
     await db.delete(current_doctor)
-
     await db.commit()
 
     return True

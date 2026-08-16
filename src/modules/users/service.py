@@ -26,7 +26,6 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
             email=new_user.email,
             password=hash_pwd(new_user.password),
         )
-        .on_conflict_do_nothing(index_elements=["email"])
         .returning(User.id)
     )
     result = await db.execute(query)
@@ -40,29 +39,31 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
 
 # READ
 async def get_users_by_filters(
-    user_params: UserFilterParams,
+    filters: UserFilterParams,
     db: AsyncSession,
 ) -> list[User]:
     query = (
         select(User)
         .filter(User.role != UserRole.ADMIN)
         .options(selectinload(User.doctor))
+        .limit(filters.limit)
+        .offset(filters.offset)
     )
 
-    if user_params.name:
-        query = query.filter(User.name.ilike(f"%{user_params.name}%"))
-    if user_params.birth_date:
-        query = query.filter(User.birth_date == user_params.birth_date)
-    if user_params.email:
-        query = query.filter(User.email == user_params.email)
-    if user_params.city_id:
-        query = query.filter(User.city_id == user_params.city_id)
-    if user_params.role:
-        query = query.filter(User.role == user_params.role)
-    if user_params.created_at:
-        query = query.filter(User.created_at >= user_params.created_at)
-    if user_params.updated_at:
-        query = query.filter(User.updated_at >= user_params.updated_at)
+    if filters.name:
+        query = query.filter(User.name.ilike(f"%{filters.name}%"))
+    if filters.birth_date:
+        query = query.filter(User.birth_date == filters.birth_date)
+    if filters.email:
+        query = query.filter(User.email == filters.email)
+    if filters.city_id:
+        query = query.filter(User.city_id == filters.city_id)
+    if filters.role:
+        query = query.filter(User.role == filters.role)
+    if filters.created_at:
+        query = query.filter(User.created_at >= filters.created_at)
+    if filters.updated_at:
+        query = query.filter(User.updated_at >= filters.updated_at)
 
     result = await db.execute(query)
     users = list(result.scalars().all())

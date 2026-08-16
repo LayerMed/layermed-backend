@@ -59,6 +59,8 @@ class UserFilterParams(BaseModel):
     role: UserRole | None = None
     created_at: datetime.datetime | None = None
     updated_at: datetime.datetime | None = None
+    limit: int | None = None
+    offset: int | None = None
 
 
 class UserPasswordUpdate(BaseModel):
