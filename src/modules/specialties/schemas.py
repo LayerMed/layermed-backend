@@ -7,6 +7,11 @@ SpecialtyName = Annotated[str, Field(min_length=2, max_length=50)]
 SpecialtyDescription = Annotated[str, Field(min_length=8, max_length=100)]
 
 
+class SpecialtyCreate(BaseModel):
+    name: SpecialtyName
+    description: SpecialtyDescription
+
+
 class SpecialtyRead(BaseModel):
     id: int
     name: str
@@ -15,11 +20,6 @@ class SpecialtyRead(BaseModel):
     updated_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class SpecialtyCreate(BaseModel):
-    name: SpecialtyName
-    description: SpecialtyDescription
 
 
 class SpecialtyUpdate(BaseModel):

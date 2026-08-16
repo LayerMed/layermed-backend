@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.specialties.models import Specialty
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
@@ -22,7 +23,7 @@ from src.modules.users.models import User
 router = APIRouter(prefix="/specialties", tags=["specialties"])
 
 
-# ADMIN
+# CREATE
 @router.post(
     "/",
     response_model=SpecialtyRead,
@@ -33,7 +34,7 @@ async def create_specialty_handle(
     new_specialty: SpecialtyCreate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> Specialty:
     created_specialty = await create_specialty(new_specialty, db)
     if created_specialty is None:
         logger.warning(
@@ -55,7 +56,7 @@ async def create_specialty_handle(
 )
 async def get_specialties_handle(
     db: AsyncSession = Depends(get_session),
-):
+) -> list[Specialty]:
     specialties = await get_specialties(db)
     return specialties
 
@@ -67,7 +68,7 @@ async def get_specialties_handle(
 )
 async def get_specialty_by_id_handle(
     specialty_id: int, db: AsyncSession = Depends(get_session)
-):
+) -> Specialty:
     specialty = await get_specialty_by_id(specialty_id, db)
     if specialty is None:
         logger.warning(
@@ -77,7 +78,6 @@ async def get_specialty_by_id_handle(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
         )
-
     return specialty
 
 
@@ -92,7 +92,7 @@ async def update_specialty_by_id_handle(
     specialty_data: SpecialtyUpdate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> Specialty:
     updated_specialty = await update_specialty(specialty_id, specialty_data, db)
     if updated_specialty is None:
         logger.warning(
@@ -115,7 +115,7 @@ async def delete_specialty_handle(
     specialty_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> Specialty:
     deleted_specialty = await delete_specialty(specialty_id, db)
     if deleted_specialty is None:
         logger.info(
