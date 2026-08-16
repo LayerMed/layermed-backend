@@ -7,7 +7,7 @@ from src.core.database import Base, Timestamp
 class Specialty(Base, Timestamp):
     __tablename__ = "specialties"
 
-    name: Mapped[str]
+    name: Mapped[str] = mapped_column(unique=True)
     description: Mapped[str]
 
     doctors: Mapped[list["Doctor"]] = relationship(
@@ -15,7 +15,7 @@ class Specialty(Base, Timestamp):
     )
 
 
-class DoctorSpecialty(Base, Timestamp):
+class DoctorSpecialty(Base):
     __tablename__ = "doctor_specialties"
 
     id = None

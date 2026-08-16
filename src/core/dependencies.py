@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from src.modules.doctors.models import Doctor
 from src.core.config import settings
 from src.core.database import get_session
 from src.core.enums import UserRole
@@ -43,7 +44,7 @@ async def get_current_user(
     return user
 
 
-async def get_current_doctor(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_doctor(current_user: User = Depends(get_current_user)) -> Doctor:
     if current_user.role != UserRole.DOCTOR or current_user.doctor is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

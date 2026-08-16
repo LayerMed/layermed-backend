@@ -7,6 +7,11 @@ SymptomName = Annotated[str, Field(min_length=2, max_length=50)]
 SymptomDescription = Annotated[str, Field(min_length=8, max_length=100)]
 
 
+class SymptomCreate(BaseModel):
+    name: SymptomName
+    description: SymptomDescription
+
+
 class SymptomRead(BaseModel):
     id: int
     name: str
@@ -15,11 +20,6 @@ class SymptomRead(BaseModel):
     updated_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class SymptomCreate(BaseModel):
-    name: SymptomName
-    description: SymptomDescription
 
 
 class SymptomUpdate(BaseModel):

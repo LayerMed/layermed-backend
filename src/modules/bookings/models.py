@@ -15,7 +15,9 @@ class Booking(Base, Timestamp):
         ForeignKey("suggestions.id", ondelete="cascade")
     )
     status: Mapped[BookStatus] = mapped_column(default=BookStatus.PENDING)
-    appointment_time: Mapped[datetime.datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    appointment_time: Mapped[datetime.datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False
+    )
 
     user: Mapped["User"] = relationship(back_populates="bookings")
     suggestion: Mapped["Suggestion"] = relationship(back_populates="bookings")

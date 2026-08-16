@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.cities.models import City
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
@@ -14,22 +15,22 @@ from src.modules.cities.service import (
 )
 from src.modules.users.models import User
 
+
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
 
-# Admin
+# CREATE
 @router.post(
     "/",
     response_model=CityRead,
-    summary="Create city",
     status_code=status.HTTP_201_CREATED,
-    description="Create city in database",
+    summary="Create city",
 )
 async def create_city_handle(
     new_city: CityCreate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> City:
     created_city = await create_city(new_city, db)
     if created_city is None:
         logger.warning("City with this name: {name} already exists", name=new_city.name)
@@ -40,61 +41,15 @@ async def create_city_handle(
     return created_city
 
 
-@router.delete(
-    "/{city_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Delete city",
-    description="Delete city from database",
-)
-async def delete_city_handle(
-    city_id: int,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    deleted_city = await delete_city(city_id, db)
-    if deleted_city is None:
-        logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A city with this id does not exist: {city_id}",
-        )
-    return deleted_city
-
-
-@router.patch(
-    "/{city_id}",
-    response_model=CityRead,
-    summary="Update city",
-    description="Update city in database",
-)
-async def update_city_by_id_handle(
-    city_id: int,
-    city_data: CityUpdate,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    updated_city = await update_city(city_id, city_data, db)
-    if updated_city is None:
-        logger.warning(
-            "Failed to fetch city: City with id {city_id} not found",
-            city_id=city_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
-        )
-    return updated_city
-
-
-# GET
+# READ
 @router.get(
     "/",
     response_model=list[CityRead],
     summary="Get all cities",
-    description="Get all cities from database",
 )
 async def get_cities_handle(
     db: AsyncSession = Depends(get_session),
-):
+) -> list[City]:
     cities = await get_cities(db)
     return cities
 
@@ -103,9 +58,10 @@ async def get_cities_handle(
     "/{city_id}",
     response_model=CityRead,
     summary="Get city by id",
-    description="Get one city from database via id",
 )
-async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)):
+async def get_city_by_id_handle(
+    city_id: int, db: AsyncSession = Depends(get_session)
+) -> City:
     city = await get_city_by_id(city_id, db)
     if city is None:
         logger.warning(
@@ -117,3 +73,47 @@ async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_ses
         )
 
     return city
+
+
+# UPDATE
+@router.patch(
+    "/{city_id}",
+    response_model=CityRead,
+    summary="Update city",
+)
+async def update_city_by_id_handle(
+    city_id: int,
+    city_data: CityUpdate,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+) -> City:
+    updated_city = await update_city(city_id, city_data, db)
+    if updated_city is None:
+        logger.warning(
+            "City with id {city_id} not found",
+            city_id=city_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="City not found"
+        )
+    return updated_city
+
+
+# DELETE
+@router.delete(
+    "/{city_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete city",
+)
+async def delete_city_handle(
+    city_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+) -> None:
+    deleted_city = await delete_city(city_id, db)
+    if not deleted_city:
+        logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This city does not exist",
+        )

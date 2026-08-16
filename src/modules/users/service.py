@@ -1,54 +1,69 @@
-from typing import Annotated
-
-from fastapi import Depends
 from pydantic import EmailStr
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from src.core.enums import UserRole
-from src.core.logs import logger
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
-    PasswordConfirm,
-    RegisterUser,
+    UserCreate,
     UserFilterParams,
-    UserPasswordChange,
+    UserPasswordUpdate,
     UserUpdate,
 )
+from src.core.schemas import PasswordConfirm
 
 
+# CREATE
+async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
+    query = (
+        insert(User)
+        .values(
+            name=new_user.name,
+            city_id=new_user.city_id,
+            birth_date=new_user.birth_date,
+            email=new_user.email,
+            password=hash_pwd(new_user.password),
+        )
+        .returning(User.id)
+    )
+    result = await db.execute(query)
+    user_id = result.scalar_one_or_none()
+
+    if user_id is not None:
+        await db.commit()
+
+    return user_id
+
+
+# READ
 async def get_users_by_filters(
-    user_params: Annotated[UserFilterParams, Depends()],
+    filters: UserFilterParams,
     db: AsyncSession,
 ) -> list[User]:
-    logger.debug(
-        "Start search users with params: {name}, {birth_date}, {email}, {role}, {created_at}, {updated_at}",
-        name=user_params.name,
-        birth_date=user_params.birth_date,
-        city_id=user_params.city_id,
-        email=user_params.email,
-        role=user_params.role,
-        created_at=user_params.created_at,
-        updated_at=user_params.updated_at,
+    query = (
+        select(User)
+        .filter(User.role != UserRole.ADMIN)
+        .options(selectinload(User.doctor))
+        .limit(filters.limit)
+        .offset(filters.offset)
     )
 
-    query = select(User).filter(User.role != UserRole.ADMIN)
-
-    if user_params.name:
-        query = query.filter(User.name.ilike(f"%{user_params.name}%"))
-    if user_params.birth_date:
-        query = query.filter(User.birth_date == user_params.birth_date)
-    if user_params.email:
-        query = query.filter(User.email == user_params.email)
-    if user_params.city_id:
-        query = query.filter(User.city_id == user_params.city_id)
-    if user_params.role:
-        query = query.filter(User.role == user_params.role)
-    if user_params.created_at:
-        query = query.filter(User.created_at >= user_params.created_at)
-    if user_params.updated_at:
-        query = query.filter(User.updated_at >= user_params.updated_at)
+    if filters.name:
+        query = query.filter(User.name.ilike(f"%{filters.name}%"))
+    if filters.birth_date:
+        query = query.filter(User.birth_date == filters.birth_date)
+    if filters.email:
+        query = query.filter(User.email == filters.email)
+    if filters.city_id:
+        query = query.filter(User.city_id == filters.city_id)
+    if filters.role:
+        query = query.filter(User.role == filters.role)
+    if filters.created_at:
+        query = query.filter(User.created_at >= filters.created_at)
+    if filters.updated_at:
+        query = query.filter(User.updated_at >= filters.updated_at)
 
     result = await db.execute(query)
     users = list(result.scalars().all())
@@ -56,11 +71,7 @@ async def get_users_by_filters(
 
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
-    logger.debug(
-        "Executing DB query to fetch user {user_id} (excluding doctors)",
-        user_id=user_id,
-    )
-    query = select(User).filter(User.id == user_id)
+    query = select(User).filter(User.id == user_id).options(selectinload(User.doctor))
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -72,25 +83,7 @@ async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None
     return user
 
 
-async def create_user(new_user: RegisterUser, db: AsyncSession) -> int | None:
-    query = (
-        insert(User)
-        .values(
-            name=new_user.name,
-            city_id=new_user.city_id,
-            birth_date=new_user.birth_date,
-            email=new_user.email,
-            password=hash_pwd(new_user.password),
-        )
-        .on_conflict_do_nothing(index_elements=["email"])
-        .returning(User.id)
-    )
-    result = await db.execute(query)
-    user_id = result.scalar_one_or_none()
-    await db.commit()
-    return user_id
-
-
+# UPDATE
 async def update_user(
     user_data: UserUpdate,
     current_user: User,
@@ -101,19 +94,17 @@ async def update_user(
     for field, value in update_data.items():
         setattr(current_user, field, value)
 
-    await db.flush()
-    await db.refresh(current_user)
+    await db.commit()
     return current_user
 
 
 async def update_password(
-    password_data: UserPasswordChange,
+    password_data: UserPasswordUpdate,
     current_user: User,
     db: AsyncSession,
 ) -> bool:
     if not verify_pwd(password_data.old_password, current_user.password):
         return False
-
     hashed_password = hash_pwd(password_data.new_password)
     query = (
         update(User).where(User.id == current_user.id).values(password=hashed_password)
@@ -123,6 +114,7 @@ async def update_password(
     return True
 
 
+# DELETE
 async def delete_account(
     password_data: PasswordConfirm,
     current_user: User,

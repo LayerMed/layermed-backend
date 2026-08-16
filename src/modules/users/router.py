@@ -9,12 +9,9 @@ from src.core.security import create_access_token, verify_pwd
 from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
 from src.modules.users.schemas import (
-    MessageResponse,
-    PasswordConfirm,
-    RegisterUser,
-    TokenResponse,
+    UserCreate,
     UserFilterParams,
-    UserPasswordChange,
+    UserPasswordUpdate,
     UserRead,
     UserUpdate,
 )
@@ -27,59 +24,33 @@ from src.modules.users.service import (
     update_password,
     update_user,
 )
+from src.core.schemas import TokenResponse, PasswordConfirm
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-# Admin
-@router.get(
-    "/",
-    response_model=list[UserRead],
-    summary="Get all users",
-    description="Get all users from database",
+# CREATE
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registering a new user",
 )
-async def get_users_by_filters_handle(
-    user_params: Annotated[UserFilterParams, Depends()],
+async def register_user_handle(
+    new_user: UserCreate,
     db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    users = await get_users_by_filters(user_params, db)
-    return users
-
-
-@router.get(
-    "/user/{user_id}",
-    response_model=UserRead,
-    summary="Get user by id",
-    description="Get one user from database via id",
-)
-async def get_user_by_id_handle(
-    user_id: int,
-    db: AsyncSession = Depends(get_session),
-    admin: User = Depends(get_admin_user),
-):
-    user = await get_user_by_id(user_id, db)
-    if user is None:
-        logger.warning(
-            "Failed to fetch user: User with id {user_id} not found",
-            user_id=user_id,
-        )
+) -> TokenResponse:
+    user_id = await create_user(new_user, db)
+    if user_id is None:
+        logger.warning("Email {email} already exists", email=new_user.email)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with this email already exists",
         )
-    return user
+    token = create_access_token({"sub": new_user.email})
+    return TokenResponse(access_token=token)
 
 
-# GET
-@router.get(
-    "/me",
-    response_model=UserRead,
-    summary="Get current active user",
-)
-async def get_me_handle(current_user: User = Depends(get_current_user)):
-    return current_user
-
-# POST
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -88,11 +59,22 @@ async def get_me_handle(current_user: User = Depends(get_current_user)):
 async def login_user_handle(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session),
-):
+) -> TokenResponse:
     user = await get_user_by_email(form_data.username, db)
-    if user is None or not verify_pwd(form_data.password, user.password):
-        logger.info(
-            "Authentication failed for user {username}", username=form_data.username
+    if user is None:
+        logger.warning(
+            "User with email {email} does not exist", email=form_data.username
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+
+    if not verify_pwd(form_data.password, user.password):
+        logger.warning(
+            "Invalid password for user_id={user_id} (email={email})",
+            user_id=user.id,
+            email=user.email,
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -103,27 +85,50 @@ async def login_user_handle(
     return TokenResponse(access_token=token)
 
 
-@router.post(
-    "/register",
-    response_model=TokenResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Registering a new user",
+# READ
+@router.get(
+    "/",
+    response_model=list[UserRead],
+    summary="Get all users",
 )
-async def register_user_handle(
-    new_user: RegisterUser,
+async def get_users_by_filters_handle(
+    user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-):
-    user_id = await create_user(new_user, db)
-    if user_id is None:
+    admin: User = Depends(get_admin_user),
+) -> list[User]:
+    users = await get_users_by_filters(user_params, db)
+    return users
+
+
+@router.get(
+    "/user/{user_id}",
+    response_model=UserRead,
+    summary="Get user by id",
+)
+async def get_user_by_id_handle(
+    user_id: int,
+    db: AsyncSession = Depends(get_session),
+    admin: User = Depends(get_admin_user),
+) -> User:
+    user = await get_user_by_id(user_id, db)
+    if user is None:
         logger.warning(
-            "Failed to register: Email {email} already exists", email=new_user.email
+            "User with id {user_id} not found",
+            user_id=user_id,
         )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists",
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    token = create_access_token({"sub": new_user.email})
-    return TokenResponse(access_token=token)
+    return user
+
+
+@router.get(
+    "/me",
+    response_model=UserRead,
+    summary="Get current active user",
+)
+async def get_me_handle(current_user: User = Depends(get_current_user)) -> User:
+    return current_user
 
 
 # UPDATE
@@ -136,35 +141,29 @@ async def update_user_basic_handle(
     user_data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
-    logger.debug(
-        "User ID:{id}, was update with params: {birth_date}, {name}, {city_id}",
-        birth_date=user_data.birth_date,
-        name=user_data.name,
-        city_id=user_data.city_id,
-        id=current_user.id,
-    )
+) -> User:
     current_user = await update_user(user_data, current_user, db)
     return current_user
 
 
 @router.patch(
     "/me/password",
-    response_model=MessageResponse,
+    response_model=dict[str, str],
     summary="Change user password",
 )
 async def update_user_password_handle(
-    password_data: UserPasswordChange,
+    password_data: UserPasswordUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
-    success = await update_password(password_data, current_user, db)
-    if not success:
+) -> dict[str, str]:
+    result = await update_password(password_data, current_user, db)
+    if not result:
+        logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect current password",
         )
-    return MessageResponse(message="Password successfully updated")
+    return {"message": "Password successfully updated"}
 
 
 # DELETE
@@ -177,9 +176,10 @@ async def delete_user_account_handle(
     password_data: PasswordConfirm,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
+) -> None:
     success = await delete_account(password_data, current_user, db)
     if not success:
+        logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect password",
