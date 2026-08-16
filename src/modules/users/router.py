@@ -9,9 +9,7 @@ from src.core.security import create_access_token, verify_pwd
 from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.models import User
 from src.modules.users.schemas import (
-    PasswordConfirm,
     UserCreate,
-    TokenResponse,
     UserFilterParams,
     UserPasswordUpdate,
     UserRead,
@@ -26,6 +24,7 @@ from src.modules.users.service import (
     update_password,
     update_user,
 )
+from src.core.schemas import TokenResponse, PasswordConfirm
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

@@ -6,8 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_session
 from src.core.dependencies import get_current_doctor, get_current_user
 from src.core.logs import logger
+from src.core.schemas import PasswordConfirm
 from src.modules.doctors.models import Doctor
-from src.modules.doctors.schemas import DoctorRead, DoctorCreate, DoctorUpdate
+from src.modules.doctors.schemas import (
+    DoctorCreate,
+    DoctorFilterParams,
+    DoctorRead,
+    DoctorUpdate,
+)
 from src.modules.doctors.service import (
     delete_doctor,
     get_doctor_by_id,
@@ -16,7 +22,6 @@ from src.modules.doctors.service import (
     update_doctor,
 )
 from src.modules.users.models import User
-from src.modules.users.schemas import DoctorFilterParams, PasswordConfirm
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
@@ -32,7 +37,7 @@ async def register_doctor_handle(
     new_doctor: DoctorCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-):
+) -> Doctor:
     if current_user.role == "doctor":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -43,11 +48,15 @@ async def register_doctor_handle(
 
 
 # READ
-@router.get("/", response_model=list[DoctorRead], summary="Get all doctor from databse")
+@router.get(
+    "/",
+    response_model=list[DoctorRead],
+    summary="Get all doctor from databse by filters",
+)
 async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-):
+) -> list[Doctor]:
     doctors = await get_doctors_by_filters(filters, db)
     return doctors
 
@@ -56,11 +65,11 @@ async def get_doctors_by_filters_handle(
 async def get_doctor_by_id_handle(
     doctor_id: int,
     db: AsyncSession = Depends(get_session),
-):
+) -> Doctor:
     doctor = await get_doctor_by_id(doctor_id, db)
     if doctor is None:
         logger.warning(
-            "Failed to fetch doctor: Doctor with id {doctor_id} not found",
+            "Doctor with id {doctor_id} not found",
             doctor_id=doctor_id,
         )
         raise HTTPException(
@@ -77,14 +86,7 @@ async def update_doctor_basic_handle(
     doctor_data: DoctorUpdate,
     current_doctor: Doctor = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
-):
-    logger.debug(
-        "Doctor ID:{id}, was update with params: {specialty_id},  {education}, {experience_years}",
-        specialty_id=current_doctor.specialty_id,
-        education=current_doctor.education,
-        experience_years=current_doctor.experience_years,
-        id=current_doctor.id,
-    )
+) -> Doctor:
     updated_doctor = await update_doctor(doctor_data, current_doctor, db)
     return updated_doctor
 
@@ -100,7 +102,7 @@ async def delete_doctor_account_handle(
     current_user: User = Depends(get_current_user),
     current_doctor: Doctor = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
-):
+) -> None:
     result = await delete_doctor(password_data, current_doctor, current_user, db)
     if not result:
         raise HTTPException(
