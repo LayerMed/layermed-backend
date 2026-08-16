@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.symptoms.models import Symptom
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
@@ -18,7 +19,7 @@ from src.modules.users.models import User
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 
 
-# ADMIN
+# CREATE
 @router.post(
     "/",
     response_model=SymptomRead,
@@ -29,7 +30,7 @@ async def create_symptom_handle(
     new_symptom: SymptomCreate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> Symptom | None:
     created_symptom = await create_symptom(new_symptom, db)
     if created_symptom is None:
         logger.warning(
@@ -39,7 +40,6 @@ async def create_symptom_handle(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Symptom with this name already exists",
         )
-
     return created_symptom
 
 
@@ -51,7 +51,7 @@ async def create_symptom_handle(
 )
 async def get_symptoms_handle(
     db: AsyncSession = Depends(get_session),
-):
+) -> list[Symptom]:
     symptoms = await get_symptoms(db)
     return symptoms
 
@@ -63,17 +63,16 @@ async def get_symptoms_handle(
 )
 async def get_symptom_by_id_handle(
     symptom_id: int, db: AsyncSession = Depends(get_session)
-):
+) -> Symptom:
     symptom = await get_symptom_by_id(symptom_id, db)
     if symptom is None:
         logger.warning(
-            "Failed to fetch symptom: Symptom with id {symptom_id} not found",
+            "Symptom with id {symptom_id} not found",
             symptom_id=symptom_id,
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
         )
-
     return symptom
 
 
@@ -88,17 +87,16 @@ async def update_symptom_by_id_handle(
     symptom_data: SymptomUpdate,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> Symptom:
     updated_symptom = await update_symptom(symptom_id, symptom_data, db)
     if updated_symptom is None:
         logger.warning(
-            "Failed to fetch symptom: Symptom with id {symptom_id} not found",
+            "Symptom with id {symptom_id} not found",
             symptom_id=symptom_id,
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
         )
-
     return updated_symptom
 
 
@@ -112,7 +110,7 @@ async def delete_symptom_handle(
     symptom_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-):
+) -> Symptom:
     deleted_symptom = await delete_symptom(symptom_id, db)
     if deleted_symptom is None:
         logger.info(
@@ -120,7 +118,6 @@ async def delete_symptom_handle(
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A symptom with this id does not exist: {symptom_id}",
+            detail=f"A symptom does not exist",
         )
-
     return deleted_symptom
