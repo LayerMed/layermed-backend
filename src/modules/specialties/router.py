@@ -115,9 +115,9 @@ async def delete_specialty_handle(
     specialty_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-) -> Specialty:
+) -> None:
     deleted_specialty = await delete_specialty(specialty_id, db)
-    if deleted_specialty is None:
+    if not deleted_specialty:
         logger.info(
             "A specialty with this id does not exist: {specialty_id}",
             specialty_id=specialty_id,
@@ -126,5 +126,3 @@ async def delete_specialty_handle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"A specialty with this id does not exist: {specialty_id}",
         )
-
-    return deleted_specialty

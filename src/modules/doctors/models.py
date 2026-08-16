@@ -10,7 +10,6 @@ class Doctor(Base, Timestamp):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="cascade"), unique=True
     )
-    specialty_id: Mapped[int]
     education: Mapped[str]
     experience_years: Mapped[int]
     bio: Mapped[str]

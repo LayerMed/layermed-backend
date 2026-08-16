@@ -127,9 +127,7 @@ async def get_user_by_id_handle(
     response_model=UserRead,
     summary="Get current active user",
 )
-async def get_me_handle(
-    current_user: User = Depends(get_current_user)
-) -> User:
+async def get_me_handle(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 

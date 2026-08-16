@@ -27,7 +27,7 @@ async def register_doctor(
     db.add(doctor)
 
     await db.commit()
-    doctor.user = current_user
+    await db.refresh(doctor)
     return doctor
 
 
@@ -77,13 +77,14 @@ async def update_doctor(
 async def delete_doctor(
     password_data: PasswordConfirm,
     current_doctor: Doctor,
-    current_user: User,
     db: AsyncSession,
 ) -> bool:
-    if not verify_pwd(password_data.password, current_user.password):
+
+    user = current_doctor.user
+    if not verify_pwd(password_data.password, user.password):
         return False
 
-    current_user.role = UserRole.CLIENT
+    user.role = UserRole.CLIENT
 
     await db.delete(current_doctor)
 

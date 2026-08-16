@@ -18,7 +18,7 @@ from src.modules.users.models import User
 
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
- 
+
 # CREATE
 @router.post(
     "/",
@@ -59,7 +59,9 @@ async def get_cities_handle(
     response_model=CityRead,
     summary="Get city by id",
 )
-async def get_city_by_id_handle(city_id: int, db: AsyncSession = Depends(get_session)) -> City:
+async def get_city_by_id_handle(
+    city_id: int, db: AsyncSession = Depends(get_session)
+) -> City:
     city = await get_city_by_id(city_id, db)
     if city is None:
         logger.warning(
@@ -88,7 +90,7 @@ async def update_city_by_id_handle(
     updated_city = await update_city(city_id, city_data, db)
     if updated_city is None:
         logger.warning(
-            "Failed to fetch city: City with id {city_id} not found",
+            "City with id {city_id} not found",
             city_id=city_id,
         )
         raise HTTPException(
@@ -107,12 +109,11 @@ async def delete_city_handle(
     city_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-) -> City:
+) -> None:
     deleted_city = await delete_city(city_id, db)
-    if deleted_city is None:
+    if not deleted_city:
         logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"This city does not exist",
+            detail="This city does not exist",
         )
-    return deleted_city

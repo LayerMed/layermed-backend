@@ -21,6 +21,7 @@ async def create_specialty(
         await db.commit()
         return created_specialty
     except IntegrityError:
+        await db.rollback()
         return None
 
 
@@ -64,9 +65,11 @@ async def update_specialty(
 
 
 # DELETE
-async def delete_specialty(specialty_id: int, db: AsyncSession) -> Specialty | None:
+async def delete_specialty(specialty_id: int, db: AsyncSession) -> bool:
     query = delete(Specialty).where(Specialty.id == specialty_id).returning(Specialty)
     result = await db.execute(query)
     deleted_speciality = result.scalar_one_or_none()
+    if deleted_speciality is None:
+        return False
     await db.commit()
-    return deleted_speciality
+    return True

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.enums import UserRole
 from src.core.database import get_session
 from src.core.dependencies import get_current_doctor, get_current_user
 from src.core.logs import logger
@@ -38,7 +39,7 @@ async def register_doctor_handle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ) -> Doctor:
-    if current_user.role == "doctor":
+    if current_user.role == UserRole.DOCTOR:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Doctor profile already exists",
@@ -99,11 +100,10 @@ async def update_doctor_basic_handle(
 )
 async def delete_doctor_account_handle(
     password_data: PasswordConfirm,
-    current_user: User = Depends(get_current_user),
     current_doctor: Doctor = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
 ) -> None:
-    result = await delete_doctor(password_data, current_doctor, current_user, db)
+    result = await delete_doctor(password_data, current_doctor, db)
     if not result:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

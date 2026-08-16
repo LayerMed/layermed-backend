@@ -1,21 +1,18 @@
-from typing import Annotated
-
-from fastapi import Depends
 from pydantic import EmailStr
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from src.core.enums import UserRole
-from src.core.logs import logger
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
-    PasswordConfirm,
     UserCreate,
     UserFilterParams,
     UserPasswordUpdate,
     UserUpdate,
 )
+from src.core.schemas import PasswordConfirm
 
 
 # CREATE
@@ -43,10 +40,14 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
 
 # READ
 async def get_users_by_filters(
-    user_params: Annotated[UserFilterParams, Depends()],
+    user_params: UserFilterParams,
     db: AsyncSession,
 ) -> list[User]:
-    query = select(User).filter(User.role != UserRole.ADMIN)
+    query = (
+        select(User)
+        .filter(User.role != UserRole.ADMIN)
+        .options(selectinload(User.doctor))
+    )
 
     if user_params.name:
         query = query.filter(User.name.ilike(f"%{user_params.name}%"))
@@ -69,7 +70,7 @@ async def get_users_by_filters(
 
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
-    query = select(User).filter(User.id == user_id)
+    query = select(User).filter(User.id == user_id).options(selectinload(User.doctor))
     result = await db.execute(query)
     return result.scalar_one_or_none()
 

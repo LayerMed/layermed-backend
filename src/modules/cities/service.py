@@ -15,6 +15,7 @@ async def create_city(new_city: CityCreate, db: AsyncSession) -> City | None:
         await db.commit()
         return created_city
     except IntegrityError:
+        await db.rollback()
         return None
 
 
@@ -26,7 +27,7 @@ async def get_cities(db: AsyncSession) -> list[City]:
     return cities
 
 
-async def get_city_by_id(city_id: int, db: AsyncSession) -> City:
+async def get_city_by_id(city_id: int, db: AsyncSession) -> City | None:
     query = select(City).filter(City.id == city_id)
     result = await db.execute(query)
     city = result.scalar_one_or_none()
@@ -34,7 +35,9 @@ async def get_city_by_id(city_id: int, db: AsyncSession) -> City:
 
 
 # UPDATE
-async def update_city(city_id: int, city_data: CityUpdate, db: AsyncSession) -> City | None:
+async def update_city(
+    city_id: int, city_data: CityUpdate, db: AsyncSession
+) -> City | None:
     update_data = city_data.model_dump(exclude_unset=True)
 
     if not update_data:
@@ -49,9 +52,11 @@ async def update_city(city_id: int, city_data: CityUpdate, db: AsyncSession) -> 
 
 
 # DELETE
-async def delete_city(city_id: int, db: AsyncSession) -> City | None:
+async def delete_city(city_id: int, db: AsyncSession) -> bool:
     query = delete(City).where(City.id == city_id).returning(City)
     result = await db.execute(query)
     deleted_city = result.scalar_one_or_none()
+    if deleted_city is None:
+        return False
     await db.commit()
-    return deleted_city
+    return True

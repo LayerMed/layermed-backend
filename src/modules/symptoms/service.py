@@ -8,8 +8,7 @@ from src.modules.symptoms.schemas import SymptomCreate, SymptomUpdate
 
 # CREATE
 async def create_symptom(
-    new_symptom: SymptomCreate,
-    db: AsyncSession
+    new_symptom: SymptomCreate, db: AsyncSession
 ) -> Symptom | None:
     try:
         query = (
@@ -22,6 +21,7 @@ async def create_symptom(
         await db.commit()
         return created_symptom
     except IntegrityError:
+        await db.rollback()
         return None
 
 
@@ -35,10 +35,7 @@ async def get_symptoms(
     return symptoms
 
 
-async def get_symptom_by_id(
-    symptom_id: int, 
-    db: AsyncSession
-) -> Symptom | None:
+async def get_symptom_by_id(symptom_id: int, db: AsyncSession) -> Symptom | None:
     query = select(Symptom).filter(Symptom.id == symptom_id)
     result = await db.execute(query)
     symptom = result.scalar_one_or_none()
@@ -62,13 +59,11 @@ async def update_symptom(
 
 
 # DELETE
-async def delete_symptom(
-    symptom_id: int, 
-    db: AsyncSession
-) -> Symptom | None:
+async def delete_symptom(symptom_id: int, db: AsyncSession) -> bool:
     query = delete(Symptom).where(Symptom.id == symptom_id).returning(Symptom)
     result = await db.execute(query)
     deleted_symptom = result.scalar_one_or_none()
+    if deleted_symptom is None:
+        return False
     await db.commit()
-    return deleted_symptom
-
+    return True

@@ -11,8 +11,8 @@ class User(Base, Timestamp):
     __tablename__ = "users"
 
     name: Mapped[str]
-    birth_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
-    city_id: Mapped[int | None] = mapped_column(
+    birth_date: Mapped[Optional[datetime.date]] = mapped_column(Date, nullable=True)
+    city_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("cities.id"), nullable=True, default=None
     )
     email: Mapped[str] = mapped_column(unique=True)
@@ -23,4 +23,4 @@ class User(Base, Timestamp):
     doctor: Mapped[Optional["Doctor"]] = relationship(
         back_populates="user", uselist=False
     )
-    city: Mapped["City"] = relationship(back_populates="user")
+    city: Mapped[Optional["City"]] = relationship(back_populates="user")
