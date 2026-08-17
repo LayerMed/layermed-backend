@@ -4,12 +4,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.core.enums import UserRole
-from src.core.security import hash_pwd, verify_pwd
+from src.core.security import get_user_password, hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     UserCreate,
     UserFilterParams,
     UserPasswordUpdate,
+    UserRead,
     UserUpdate,
 )
 from src.core.schemas import PasswordConfirm
@@ -86,25 +87,36 @@ async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None
 # UPDATE
 async def update_user(
     user_data: UserUpdate,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
-) -> User:
+) -> UserRead:
     update_data = user_data.model_dump(exclude_unset=True)
-
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
-
+    if not update_data:
+        return current_user
+    query = (
+        update(User)
+        .where(User.id == current_user.id)
+        .values(**update_data)
+        .returning(User)
+    )
+    result = await db.execute(query)
+    updated_user = result.scalar_one_or_none()
     await db.commit()
-    return current_user
+    return UserRead.model_validate(updated_user)
 
 
 async def update_password(
     password_data: UserPasswordUpdate,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
 ) -> bool:
-    if not verify_pwd(password_data.old_password, current_user.password):
+    current_password = await get_user_password(current_user, db)
+    if current_password is None:
         return False
+
+    if not verify_pwd(password_data.old_password, current_password):
+        return False
+    
     hashed_password = hash_pwd(password_data.new_password)
     query = (
         update(User).where(User.id == current_user.id).values(password=hashed_password)
@@ -117,10 +129,14 @@ async def update_password(
 # DELETE
 async def delete_account(
     password_data: PasswordConfirm,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
 ) -> bool:
-    if not verify_pwd(password_data.password, current_user.password):
+    current_password = await get_user_password(current_user, db)
+    if current_password is None:
+        return False
+    
+    if not verify_pwd(password_data.password, current_password):
         return False
 
     query = delete(User).where(User.id == current_user.id)
