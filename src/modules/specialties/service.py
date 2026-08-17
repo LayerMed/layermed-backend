@@ -3,13 +3,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.specialties.models import Specialty
-from src.modules.specialties.schemas import SpecialtyCreate, SpecialtyUpdate
+from src.modules.specialties.schemas import (
+    SpecialtyCreate,
+    SpecialtyRead,
+    SpecialtyUpdate,
+)
 
 
 # CREATE
 async def create_specialty(
     new_specialty: SpecialtyCreate, db: AsyncSession
-) -> Specialty | None:
+) -> SpecialtyRead | None:
     try:
         query = (
             insert(Specialty)
@@ -19,7 +23,7 @@ async def create_specialty(
         result = await db.execute(query)
         created_specialty = result.scalar_one_or_none()
         await db.commit()
-        return created_specialty
+        return SpecialtyRead.model_validate(created_specialty)
     except IntegrityError:
         await db.rollback()
         return None
@@ -27,25 +31,31 @@ async def create_specialty(
 
 # READ
 async def get_specialties(
+    ids: list[int] | None,
     db: AsyncSession,
 ) -> list[Specialty]:
-    query = select(Specialty)
+    if ids is None:
+        query = select(Specialty)
+    else:
+        query = select(Specialty).where(Specialty.id.in_(ids))
     result = await db.execute(query)
     specialties = list(result.scalars().all())
     return specialties
 
 
-async def get_specialty_by_id(specialty_id: int, db: AsyncSession) -> Specialty | None:
+async def get_specialty_by_id(
+    specialty_id: int, db: AsyncSession
+) -> SpecialtyRead | None:
     query = select(Specialty).filter(Specialty.id == specialty_id)
     result = await db.execute(query)
     specialty = result.scalar_one_or_none()
-    return specialty
+    return SpecialtyRead.model_validate(specialty)
 
 
 # UPDATE
 async def update_specialty(
     specialty_id: int, specialty_data: SpecialtyUpdate, db: AsyncSession
-) -> Specialty | None:
+) -> SpecialtyRead | None:
     update_data = specialty_data.model_dump(exclude_unset=True)
 
     if not update_data:
@@ -61,7 +71,7 @@ async def update_specialty(
     result = await db.execute(query)
     updated_specialty = result.scalar_one_or_none()
     await db.commit()
-    return updated_specialty
+    return SpecialtyRead.model_validate(updated_specialty)
 
 
 # DELETE

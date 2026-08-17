@@ -95,9 +95,9 @@ async def login_user_handle(
 )
 async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
-    db: AsyncSession = Depends(get_session),    
+    db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-) -> list[User]:    
+) -> list[User]:
     users = await get_users_by_filters(user_params, db)
     return users
 
@@ -141,9 +141,9 @@ async def get_me_handle(current_user: User = Depends(get_current_user)) -> User:
 )
 async def update_user_basic_handle(
     user_data: UserUpdate,
-    current_user: UserRead = Depends(get_current_user),    
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> UserRead:
     current_user = await update_user(user_data, current_user, db)
     cache_key = redis.build_key("users", "current", current_user.email)
@@ -160,7 +160,7 @@ async def update_user_password_handle(
     password_data: UserPasswordUpdate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> dict[str, str]:
     result = await update_password(password_data, current_user, db)
     if not result:
@@ -184,7 +184,7 @@ async def delete_user_account_handle(
     password_data: PasswordConfirm,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> None:
     success = await delete_account(password_data, current_user, db)
     if not success:
@@ -194,4 +194,3 @@ async def delete_user_account_handle(
             detail="Incorrect password",
         )
     await redis.invalidate("users")
-

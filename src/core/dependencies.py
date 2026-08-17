@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from src.modules.doctors.schemas import DoctorRead
 from src.core.redis import RedisCache, get_redis
 from src.modules.users.schemas import UserRead
 from src.modules.doctors.models import Doctor
@@ -55,7 +56,7 @@ async def get_current_user(
     return user_dto
 
 
-async def get_current_doctor(current_user: User = Depends(get_current_user)) -> Doctor:
+async def get_current_doctor(current_user: UserRead = Depends(get_current_user)) -> DoctorRead:
     if current_user.role != UserRole.DOCTOR or current_user.doctor is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -64,7 +65,7 @@ async def get_current_doctor(current_user: User = Depends(get_current_user)) -> 
     return current_user.doctor
 
 
-async def get_admin_user(current_user: User = Depends(get_current_user)):
+async def get_admin_user(current_user: UserRead = Depends(get_current_user)):
     if current_user.role != UserRole.ADMIN:
         logger.warning(
             "Access denied for user {email} (id={user_id}, role={role}). Admin privileges required.",

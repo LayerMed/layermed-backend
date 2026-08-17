@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.redis import RedisCache, get_redis
 from src.modules.specialties.models import Specialty
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
@@ -33,8 +35,9 @@ router = APIRouter(prefix="/specialties", tags=["specialties"])
 async def create_specialty_handle(
     new_specialty: SpecialtyCreate,
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
-) -> Specialty:
+) -> SpecialtyRead:
     created_specialty = await create_specialty(new_specialty, db)
     if created_specialty is None:
         logger.warning(
@@ -45,7 +48,8 @@ async def create_specialty_handle(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Specialty with this name already exists",
         )
-    return created_specialty
+    await redis.invalidate("specialties")
+    return SpecialtyRead.model_validate(created_specialty)
 
 
 # READ
@@ -55,10 +59,27 @@ async def create_specialty_handle(
     summary="Get all specialties",
 )
 async def get_specialties_handle(
+    ids: list[int] | None = Query(default=None),
     db: AsyncSession = Depends(get_session),
-) -> list[Specialty]:
-    specialties = await get_specialties(db)
-    return specialties
+    redis: RedisCache = Depends(get_redis),
+) -> list[SpecialtyRead]:
+    if ids is not None:
+        specialties = await get_specialties(ids, db)
+        return [SpecialtyRead.model_validate(s) for s in specialties]
+
+    cache_key = redis.build_key("specialties", "item", "all")
+    cached_specialties = await redis.getc(cache_key)
+
+    if cached_specialties:
+        return TypeAdapter(list[SpecialtyRead]).validate_json(cached_specialties)
+
+    specialties = await get_specialties(None, db)
+    specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
+
+    json_data = TypeAdapter(list[SpecialtyRead]).dump_json(specialties_dto)
+    await redis.setc(cache_key, json_data, ex=3600)
+
+    return specialties_dto
 
 
 @router.get(
@@ -67,18 +88,30 @@ async def get_specialties_handle(
     summary="Get specialty by id",
 )
 async def get_specialty_by_id_handle(
-    specialty_id: int, db: AsyncSession = Depends(get_session)
-) -> Specialty:
+    specialty_id: int,
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> SpecialtyRead:
+    cache_key = redis.build_key("specialties", "item", specialty_id)
+    cached_specialty = await redis.getc(cache_key)
+
+    if cached_specialty:
+        return SpecialtyRead.model_validate_json(cached_specialty)
+
     specialty = await get_specialty_by_id(specialty_id, db)
     if specialty is None:
         logger.warning(
-            "Failed to fetch specialty: Specialty with id {specialty_id} not found",
+            "Specialty with id {specialty_id} not found",
             specialty_id=specialty_id,
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
         )
-    return specialty
+
+    specialty_dto = SpecialtyRead.model_validate(specialty)
+    await redis.setc(cache_key, specialty_dto.model_dump_json(), ex=3600)
+
+    return specialty_dto
 
 
 # UPDATE
@@ -91,17 +124,19 @@ async def update_specialty_by_id_handle(
     specialty_id: int,
     specialty_data: SpecialtyUpdate,
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
-) -> Specialty:
+) -> SpecialtyRead:
     updated_specialty = await update_specialty(specialty_id, specialty_data, db)
     if updated_specialty is None:
         logger.warning(
-            "Failed to fetch specialty: Specialty with id {specialty_id} not found",
+            "Specialty with id {specialty_id} not found",
             specialty_id=specialty_id,
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
         )
+    await redis.invalidate("specialties")
     return updated_specialty
 
 
@@ -114,6 +149,7 @@ async def update_specialty_by_id_handle(
 async def delete_specialty_handle(
     specialty_id: int,
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
 ) -> None:
     deleted_specialty = await delete_specialty(specialty_id, db)
@@ -126,3 +162,4 @@ async def delete_specialty_handle(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"A specialty with this id does not exist: {specialty_id}",
         )
+    await redis.invalidate("specialties")

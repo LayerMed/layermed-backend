@@ -116,7 +116,7 @@ async def update_password(
 
     if not verify_pwd(password_data.old_password, current_password):
         return False
-    
+
     hashed_password = hash_pwd(password_data.new_password)
     query = (
         update(User).where(User.id == current_user.id).values(password=hashed_password)
@@ -135,7 +135,7 @@ async def delete_account(
     current_password = await get_user_password(current_user, db)
     if current_password is None:
         return False
-    
+
     if not verify_pwd(password_data.password, current_password):
         return False
 
