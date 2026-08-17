@@ -1,5 +1,9 @@
+import json
+
+from pydantic import EmailStr
 import redis.asyncio as aioredis
 
+from src.modules.users.schemas import UserRead
 from src.core.config import settings
 
 
@@ -8,5 +12,41 @@ redis_client = aioredis.from_url(
 )
 
 
-async def get_redis() -> aioredis.Redis:
-    return redis_client
+type Value = str | int | dict | list | UserRead
+
+
+class RedisCache:
+    def __init__(self, redis_client: aioredis.Redis) -> None:
+        self.redis_client = redis_client
+
+    def build_key(self, prefix: str, entity: str, id: int | str):
+        return f"{prefix}:{entity}:{id}"
+
+    async def invalidate(self, prefix: str) -> None:
+        keys = [key async for key in self.redis_client.scan_iter(match=f"{prefix}*")]
+        if keys:
+            await self.redis_client.delete(*keys)
+
+    async def setc(self, key: str, value: Value, ex: int):
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)
+        else:
+            value = str(value)      
+        await self.redis_client.set(key, value, ex)
+
+    async def getc(self, key: str):
+        data = await self.redis_client.get(key)
+        if data is None:
+            return None
+        try:
+            return json.loads(data)
+        except (json.JSONDecodeError, TypeError):
+            return data
+        
+    async def delc(self, key: str) -> None:
+        await self.redis_client.delete(key)
+
+
+
+async def get_redis() -> RedisCache:
+    return RedisCache(redis_client)    

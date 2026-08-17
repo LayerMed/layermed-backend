@@ -3,6 +3,8 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from src.core.redis import RedisCache, get_redis
+from src.modules.users.schemas import UserRead
 from src.modules.doctors.models import Doctor
 from src.core.config import settings
 from src.core.database import get_session
@@ -19,8 +21,10 @@ credentials_exception = HTTPException(
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)
-):
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> UserRead:
     try:
         payload = jwt.decode(token, settings.KEY, algorithms=settings.ALGORITHM)
         email = payload.get("sub")
@@ -30,6 +34,11 @@ async def get_current_user(
     except jwt.PyJWTError as e:
         logger.warning("Failed to decode JWT token: {error}", error=str(e))
         raise credentials_exception
+
+    cache_key = redis.build_key("users", "current", email)
+    cached_user = await redis.getc(cache_key)
+    if cached_user:
+        return UserRead.model_validate_json(cached_user)
 
     query = select(User).where(User.email == email).options(joinedload(User.doctor))
     result = await db.execute(query)
@@ -41,7 +50,9 @@ async def get_current_user(
         )
         raise credentials_exception
 
-    return user
+    user_dto = UserRead.model_validate(user)
+    await redis.setc(cache_key, user_dto, ex=300)
+    return user_dto
 
 
 async def get_current_doctor(current_user: User = Depends(get_current_user)) -> Doctor:
