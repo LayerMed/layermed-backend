@@ -15,9 +15,7 @@ class Doctor(Base, Timestamp):
     bio: Mapped[str]
 
     __table_args__ = (
-        Index(
-            "ix_doctors_speciality_exp", "education", "experience_years"
-        ),
+        Index("ix_doctors_speciality_exp", "education", "experience_years"),
     )
 
     user: Mapped["User"] = relationship(back_populates="doctor")

@@ -2,7 +2,6 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.redis import RedisCache
 from src.modules.specialties.models import Specialty
 from src.modules.specialties.schemas import (
     SpecialtyCreate,

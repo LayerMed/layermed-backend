@@ -2,10 +2,10 @@ import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
-from src.modules.doctors.schemas import DoctorRead
-from src.core.security import BAD_PASSWORDS
 
 from src.core.enums import UserRole
+from src.core.security import BAD_PASSWORDS
+from src.modules.doctors.schemas import DoctorRead
 
 
 def validate_password_rules(value: str) -> str:

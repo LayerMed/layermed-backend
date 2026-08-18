@@ -3,8 +3,11 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from src.core.dependencies import get_user_password
 from src.core.enums import UserRole
+from src.core.redis import RedisCache
+from src.core.schemas import PasswordConfirm
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
@@ -14,7 +17,6 @@ from src.modules.users.schemas import (
     UserRead,
     UserUpdate,
 )
-from src.core.schemas import PasswordConfirm
 
 
 # CREATE
@@ -90,6 +92,7 @@ async def update_user(
     user_data: UserUpdate,
     current_user: UserRead,
     db: AsyncSession,
+    redis: RedisCache,
 ) -> UserRead:
     update_data = user_data.model_dump(exclude_unset=True)
     if not update_data:
@@ -103,6 +106,10 @@ async def update_user(
     result = await db.execute(query)
     updated_user = result.scalar_one_or_none()
     await db.commit()
+
+    cache_key = redis.build_key("users", "current", current_user.email)
+    await redis.delc(cache_key)
+
     return UserRead.model_validate(updated_user)
 
 
@@ -110,6 +117,7 @@ async def update_password(
     password_data: UserPasswordUpdate,
     current_user: UserRead,
     db: AsyncSession,
+    redis: RedisCache,
 ) -> bool:
     current_password = await get_user_password(current_user, db)
     if current_password is None:
@@ -124,6 +132,8 @@ async def update_password(
     )
     await db.execute(query)
     await db.commit()
+    cache_key = redis.build_key("users", "current", current_user.email)
+    await redis.delc(cache_key)
     return True
 
 
@@ -132,6 +142,7 @@ async def delete_account(
     password_data: PasswordConfirm,
     current_user: UserRead,
     db: AsyncSession,
+    redis: RedisCache,
 ) -> bool:
     current_password = await get_user_password(current_user, db)
     if current_password is None:
@@ -143,4 +154,8 @@ async def delete_account(
     query = delete(User).where(User.id == current_user.id)
     await db.execute(query)
     await db.commit()
+
+    cache_key = redis.build_key("users", "current", current_user.email)
+    await redis.delc(cache_key)
+    
     return True

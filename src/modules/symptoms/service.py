@@ -27,7 +27,6 @@ async def create_symptom(
         return None
 
 
-
 # READ
 async def get_symptoms(db: AsyncSession, redis: RedisCache) -> list[SymptomRead]:
     cache_key = redis.build_key("symptoms", "items", "all")
@@ -73,7 +72,7 @@ async def update_symptom(
     symptom_data: SymptomUpdate,
     db: AsyncSession,
     redis: RedisCache,
-) -> SymptomRead | None:    
+) -> SymptomRead | None:
     update_data = symptom_data.model_dump(exclude_unset=True)
     query = (
         update(Symptom)
@@ -84,7 +83,7 @@ async def update_symptom(
 
     result = await db.execute(query)
     updated_symptom = result.scalar_one_or_none()
-    await db.commit()    
+    await db.commit()
     await redis.invalidate("specialties")
     return SymptomRead.model_validate(updated_symptom)
 

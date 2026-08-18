@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.redis import RedisCache, get_redis
-from src.modules.specialties.models import Specialty
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
+from src.core.redis import RedisCache, get_redis
 from src.modules.specialties.schemas import (
     SpecialtyCreate,
     SpecialtyRead,
@@ -20,7 +18,6 @@ from src.modules.specialties.service import (
     update_specialty,
 )
 from src.modules.users.models import User
-
 
 router = APIRouter(prefix="/specialties", tags=["specialties"])
 
@@ -77,9 +74,7 @@ async def get_specialties_handle(
     specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
 
     await redis.setc(
-        cache_key, 
-        [s.model_dump(mode="json") for s in specialties_dto], 
-        ex=3600
+        cache_key, [s.model_dump(mode="json") for s in specialties_dto], ex=3600
     )
 
     return specialties_dto

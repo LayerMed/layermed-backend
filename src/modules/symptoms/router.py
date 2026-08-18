@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.redis import RedisCache, get_redis
-from src.modules.symptoms.models import Symptom
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
+from src.core.redis import RedisCache, get_redis
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 from src.modules.symptoms.service import (
     create_symptom,
@@ -15,7 +14,6 @@ from src.modules.symptoms.service import (
     update_symptom,
 )
 from src.modules.users.models import User
-
 
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 
@@ -125,5 +123,5 @@ async def delete_symptom_handle(
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A symptom does not exist",
+            detail="A symptom does not exist",
         )

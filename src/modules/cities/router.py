@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.cities.models import City
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
+from src.modules.cities.models import City
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
 from src.modules.cities.service import (
     create_city,
@@ -14,7 +14,6 @@ from src.modules.cities.service import (
     update_city,
 )
 from src.modules.users.models import User
-
 
 router = APIRouter(prefix="/cities", tags=["Cities"])
 
