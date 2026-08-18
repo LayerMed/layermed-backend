@@ -3,7 +3,6 @@ import json
 from pydantic import BaseModel
 import redis.asyncio as aioredis
 
-from src.modules.users.schemas import UserRead
 from src.core.config import settings
 
 
@@ -12,7 +11,7 @@ redis_client = aioredis.from_url(
 )
 
 
-type Value = str | int | dict | list | UserRead
+type Value = str | int | dict | list | BaseModel
 
 
 class RedisCache:

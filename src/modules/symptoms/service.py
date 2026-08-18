@@ -61,7 +61,7 @@ async def get_symptom_by_id(
         return None
 
     symptom_dto = SymptomRead.model_validate(symptom)
-    await redis.setc(cache_key, symptom_dto.model_dump(mode="json"), 3600)
+    await redis.setc(cache_key, symptom_dto, 3600)
 
     return symptom_dto
 
