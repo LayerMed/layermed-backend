@@ -1,6 +1,6 @@
 import json
 
-from pydantic import EmailStr
+from pydantic import BaseModel
 import redis.asyncio as aioredis
 
 from src.modules.users.schemas import UserRead
@@ -27,8 +27,10 @@ class RedisCache:
         if keys:
             await self.redis_client.delete(*keys)
 
-    async def setc(self, key: str, value: Value, ex: int):
-        if isinstance(value, (dict, list)):
+    async def setc(self, key: str, value: Value, ex: int):    
+        if isinstance(value, BaseModel):
+            value = value.model_dump_json()
+        elif isinstance(value, (dict, list)):
             value = json.dumps(value)
         else:
             value = str(value)      

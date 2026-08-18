@@ -15,7 +15,7 @@ class DoctorCreate(BaseModel):
 class DoctorRead(BaseModel):
     id: int
     user_id: int
-    specialty_id: int
+    specialty_id: int | None = None
     education: str
     experience_years: int
     bio: str

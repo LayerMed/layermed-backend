@@ -39,7 +39,7 @@ async def get_current_user(
     cache_key = redis.build_key("users", "current", email)
     cached_user = await redis.getc(cache_key)
     if cached_user:
-        return UserRead.model_validate_json(cached_user)
+        return UserRead.model_validate(cached_user)
 
     query = select(User).where(User.email == email).options(joinedload(User.doctor))
     result = await db.execute(query)
@@ -78,3 +78,10 @@ async def get_admin_user(current_user: UserRead = Depends(get_current_user)):
             detail="You do not have enough permissions. Admin only!",
         )
     return current_user
+
+
+async def get_user_password(current_user: UserRead,  db: AsyncSession):
+    query_password = select(User.password).filter(User.id == current_user.id)
+    result_password = await db.execute(query_password)
+    current_password = result_password.scalar_one_or_none()
+    return current_password

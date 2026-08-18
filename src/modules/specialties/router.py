@@ -71,13 +71,16 @@ async def get_specialties_handle(
     cached_specialties = await redis.getc(cache_key)
 
     if cached_specialties:
-        return TypeAdapter(list[SpecialtyRead]).validate_json(cached_specialties)
+        return [SpecialtyRead.model_validate(s) for s in cached_specialties]
 
     specialties = await get_specialties(None, db)
     specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
 
-    json_data = TypeAdapter(list[SpecialtyRead]).dump_json(specialties_dto)
-    await redis.setc(cache_key, json_data, ex=3600)
+    await redis.setc(
+        cache_key, 
+        [s.model_dump(mode="json") for s in specialties_dto], 
+        ex=3600
+    )
 
     return specialties_dto
 

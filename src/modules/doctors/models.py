@@ -16,7 +16,7 @@ class Doctor(Base, Timestamp):
 
     __table_args__ = (
         Index(
-            "ix_doctors_speciality_exp", "specialty_id", "education", "experience_years"
+            "ix_doctors_speciality_exp", "education", "experience_years"
         ),
     )
 

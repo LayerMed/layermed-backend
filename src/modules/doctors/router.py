@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.enums import UserRole
+from src.core.enums import UserRole
 from src.core.database import get_session
 from src.core.dependencies import get_current_doctor, get_current_user
 from src.core.logs import logger

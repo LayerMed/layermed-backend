@@ -3,8 +3,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from src.core.dependencies import get_user_password
 from src.core.enums import UserRole
-from src.core.security import get_user_password, hash_pwd, verify_pwd
+from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     UserCreate,
