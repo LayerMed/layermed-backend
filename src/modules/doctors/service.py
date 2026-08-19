@@ -57,7 +57,9 @@ async def get_doctors_by_filters(
     return [DoctorRead.model_validate(d) for d in doctors]
 
 
-async def get_doctor_by_id(doctor_id: int, db: AsyncSession, redis: RedisCache) -> DoctorRead | None:
+async def get_doctor_by_id(
+    doctor_id: int, db: AsyncSession, redis: RedisCache
+) -> DoctorRead | None:
     cache_key = redis.build_key("doctors", "items", doctor_id)
     cached_doctor = await redis.getc(cache_key)
     if cached_doctor:

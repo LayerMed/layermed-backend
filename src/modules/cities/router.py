@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.redis import RedisCache, get_redis
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
@@ -28,9 +29,10 @@ router = APIRouter(prefix="/cities", tags=["Cities"])
 async def create_city_handle(
     new_city: CityCreate,
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
-) -> City:
-    created_city = await create_city(new_city, db)
+) -> CityRead:
+    created_city = await create_city(new_city, db, redis)
     if created_city is None:
         logger.warning("City with this name: {name} already exists", name=new_city.name)
         raise HTTPException(
@@ -47,9 +49,9 @@ async def create_city_handle(
     summary="Get all cities",
 )
 async def get_cities_handle(
-    db: AsyncSession = Depends(get_session),
-) -> list[City]:
-    cities = await get_cities(db)
+    db: AsyncSession = Depends(get_session), redis: RedisCache = Depends(get_redis)
+) -> list[CityRead]:
+    cities = await get_cities(db, redis)
     return cities
 
 
@@ -59,9 +61,11 @@ async def get_cities_handle(
     summary="Get city by id",
 )
 async def get_city_by_id_handle(
-    city_id: int, db: AsyncSession = Depends(get_session)
-) -> City:
-    city = await get_city_by_id(city_id, db)
+    city_id: int,
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> CityRead:
+    city = await get_city_by_id(city_id, db, redis)
     if city is None:
         logger.warning(
             "Failed to fetch city: City with id {city_id} not found",
@@ -84,9 +88,10 @@ async def update_city_by_id_handle(
     city_id: int,
     city_data: CityUpdate,
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
-) -> City:
-    updated_city = await update_city(city_id, city_data, db)
+) -> CityRead:
+    updated_city = await update_city(city_id, city_data, db, redis)
     if updated_city is None:
         logger.warning(
             "City with id {city_id} not found",
@@ -107,9 +112,10 @@ async def update_city_by_id_handle(
 async def delete_city_handle(
     city_id: int,
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
 ) -> None:
-    deleted_city = await delete_city(city_id, db)
+    deleted_city = await delete_city(city_id, db, redis)
     if not deleted_city:
         logger.info("A city with this id does not exist: {city_id}", city_id=city_id)
         raise HTTPException(
