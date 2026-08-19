@@ -6,9 +6,10 @@ class UserRole(str, Enum):
     DOCTOR = "doctor"
     ADMIN = "admin"
 
+
 class BookStatus(str, Enum):
-    PENDING = "pending" 
+    PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
     COMPLETED = "completed"
-    NO_SHOW = "no_show" 
+    NO_SHOW = "no_show"

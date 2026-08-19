@@ -3,12 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.enums import UserRole
 from src.core.database import get_session
 from src.core.dependencies import get_current_doctor, get_current_user
+from src.core.enums import UserRole
 from src.core.logs import logger
+from src.core.redis import RedisCache, get_redis
 from src.core.schemas import PasswordConfirm
-from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
@@ -22,7 +22,7 @@ from src.modules.doctors.service import (
     register_doctor,
     update_doctor,
 )
-from src.modules.users.models import User
+from src.modules.users.schemas import UserRead
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
@@ -36,15 +36,23 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
 )
 async def register_doctor_handle(
     new_doctor: DoctorCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-) -> Doctor:
+    redis: RedisCache = Depends(get_redis),
+) -> DoctorRead:
     if current_user.role == UserRole.DOCTOR:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Doctor profile already exists",
         )
-    doctor = await register_doctor(new_doctor, current_user, db)
+
+    doctor = await register_doctor(new_doctor, current_user, db, redis)
+    if doctor is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One or more specialties not found or database conflict",
+        )
+
     return doctor
 
 
@@ -57,7 +65,7 @@ async def register_doctor_handle(
 async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-) -> list[Doctor]:
+) -> list[DoctorRead]:
     doctors = await get_doctors_by_filters(filters, db)
     return doctors
 
@@ -66,8 +74,9 @@ async def get_doctors_by_filters_handle(
 async def get_doctor_by_id_handle(
     doctor_id: int,
     db: AsyncSession = Depends(get_session),
-) -> Doctor:
-    doctor = await get_doctor_by_id(doctor_id, db)
+    redis: RedisCache = Depends(get_redis),
+) -> DoctorRead:
+    doctor = await get_doctor_by_id(doctor_id, db, redis)
     if doctor is None:
         logger.warning(
             "Doctor with id {doctor_id} not found",
@@ -85,10 +94,14 @@ async def get_doctor_by_id_handle(
 )
 async def update_doctor_basic_handle(
     doctor_data: DoctorUpdate,
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-) -> Doctor:
-    updated_doctor = await update_doctor(doctor_data, current_doctor, db)
+    redis: RedisCache = Depends(get_redis),
+) -> DoctorRead:
+    updated_doctor = await update_doctor(
+        doctor_data, current_doctor, current_user, db, redis
+    )
     return updated_doctor
 
 
@@ -100,10 +113,12 @@ async def update_doctor_basic_handle(
 )
 async def delete_doctor_account_handle(
     password_data: PasswordConfirm,
-    current_doctor: Doctor = Depends(get_current_doctor),
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
 ) -> None:
-    result = await delete_doctor(password_data, current_doctor, db)
+    result = await delete_doctor(password_data, current_doctor, current_user, db, redis)
     if not result:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

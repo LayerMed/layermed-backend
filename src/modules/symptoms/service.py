@@ -2,14 +2,15 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.redis import RedisCache
 from src.modules.symptoms.models import Symptom
-from src.modules.symptoms.schemas import SymptomCreate, SymptomUpdate
+from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 
 
 # CREATE
 async def create_symptom(
-    new_symptom: SymptomCreate, db: AsyncSession
-) -> Symptom | None:
+    new_symptom: SymptomCreate, db: AsyncSession, redis: RedisCache
+) -> SymptomRead | None:
     try:
         query = (
             insert(Symptom)
@@ -19,27 +20,50 @@ async def create_symptom(
         result = await db.execute(query)
         created_symptom = result.scalar_one_or_none()
         await db.commit()
-        return created_symptom
+        await redis.invalidate("symptoms")
+        return SymptomRead.model_validate(created_symptom)
     except IntegrityError:
         await db.rollback()
         return None
 
 
 # READ
-async def get_symptoms(
-    db: AsyncSession,
-) -> list[Symptom]:
+async def get_symptoms(db: AsyncSession, redis: RedisCache) -> list[SymptomRead]:
+    cache_key = redis.build_key("symptoms", "items", "all")
+    cached_symptoms = await redis.getc(cache_key)
+    if cached_symptoms:
+        return [SymptomRead.model_validate(s) for s in cached_symptoms]
+
     query = select(Symptom)
     result = await db.execute(query)
     symptoms = list(result.scalars().all())
-    return symptoms
+
+    symptoms_dto = [SymptomRead.model_validate(s) for s in symptoms]
+
+    await redis.setc(cache_key, [s.model_dump(mode="json") for s in symptoms_dto], 3600)
+    return symptoms_dto
 
 
-async def get_symptom_by_id(symptom_id: int, db: AsyncSession) -> Symptom | None:
+async def get_symptom_by_id(
+    symptom_id: int,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> SymptomRead | None:
+    cache_key = redis.build_key("symptoms", "items", symptom_id)
+    cached_symptom = await redis.getc(cache_key)
+    if cached_symptom:
+        return SymptomRead.model_validate(cached_symptom)
+
     query = select(Symptom).filter(Symptom.id == symptom_id)
     result = await db.execute(query)
     symptom = result.scalar_one_or_none()
-    return symptom
+    if symptom is None:
+        return None
+
+    symptom_dto = SymptomRead.model_validate(symptom)
+    await redis.setc(cache_key, symptom_dto, 3600)
+
+    return symptom_dto
 
 
 # UPDATE
@@ -47,23 +71,31 @@ async def update_symptom(
     symptom_id: int,
     symptom_data: SymptomUpdate,
     db: AsyncSession,
-) -> Symptom | None:
-    updated_symptom = await db.get(Symptom, symptom_id)
-    if updated_symptom is None:
-        return None
+    redis: RedisCache,
+) -> SymptomRead | None:
     update_data = symptom_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(updated_symptom, field, value)
+    query = (
+        update(Symptom)
+        .where(Symptom.id == symptom_id)
+        .values(**update_data)
+        .returning(Symptom)
+    )
+
+    result = await db.execute(query)
+    updated_symptom = result.scalar_one_or_none()
     await db.commit()
-    return updated_symptom
+    await redis.invalidate("specialties")
+    return SymptomRead.model_validate(updated_symptom)
 
 
 # DELETE
-async def delete_symptom(symptom_id: int, db: AsyncSession) -> bool:
+async def delete_symptom(symptom_id: int, db: AsyncSession, redis: RedisCache) -> bool:
     query = delete(Symptom).where(Symptom.id == symptom_id).returning(Symptom)
     result = await db.execute(query)
     deleted_symptom = result.scalar_one_or_none()
     if deleted_symptom is None:
         return False
     await db.commit()
+
+    await redis.invalidate("symptoms")
     return True

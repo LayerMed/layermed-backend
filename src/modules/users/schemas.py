@@ -2,10 +2,10 @@ import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
-from src.modules.doctors.schemas import DoctorRead
-from src.core.security import BAD_PASSWORDS
 
 from src.core.enums import UserRole
+from src.core.security import BAD_PASSWORDS
+from src.modules.doctors.schemas import DoctorRead
 
 
 def validate_password_rules(value: str) -> str:
@@ -25,8 +25,8 @@ ValidPassword = Annotated[
 
 class UserCreate(BaseModel):
     name: str
-    city_id: int | None = Field(default=None)
     birth_date: datetime.date | None = None
+    city_id: int | None = Field(default=None)
     email: EmailStr
     password: ValidPassword
 
@@ -37,6 +37,7 @@ class UserRead(BaseModel):
     birth_date: datetime.date | None = None
     city_id: int | None = None
     email: EmailStr
+    password: str = Field(exclude=True)
     role: str
     created_at: datetime.datetime
     updated_at: datetime.datetime

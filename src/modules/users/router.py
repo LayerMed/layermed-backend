@@ -3,10 +3,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core.database import get_session
-from src.core.logs import logger
-from src.core.security import create_access_token, verify_pwd
 from src.core.dependencies import get_admin_user, get_current_user
+from src.core.logs import logger
+from src.core.redis import RedisCache, get_redis
+from src.core.schemas import PasswordConfirm, TokenResponse
+from src.core.security import create_access_token, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     UserCreate,
@@ -24,7 +27,6 @@ from src.modules.users.service import (
     update_password,
     update_user,
 )
-from src.core.schemas import TokenResponse, PasswordConfirm
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -139,10 +141,11 @@ async def get_me_handle(current_user: User = Depends(get_current_user)) -> User:
 )
 async def update_user_basic_handle(
     user_data: UserUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-) -> User:
-    current_user = await update_user(user_data, current_user, db)
+    redis: RedisCache = Depends(get_redis),
+) -> UserRead:
+    current_user = await update_user(user_data, current_user, db, redis)
     return current_user
 
 
@@ -153,10 +156,11 @@ async def update_user_basic_handle(
 )
 async def update_user_password_handle(
     password_data: UserPasswordUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
 ) -> dict[str, str]:
-    result = await update_password(password_data, current_user, db)
+    result = await update_password(password_data, current_user, db, redis)
     if not result:
         logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
         raise HTTPException(
@@ -174,10 +178,11 @@ async def update_user_password_handle(
 )
 async def delete_user_account_handle(
     password_data: PasswordConfirm,
-    current_user: User = Depends(get_current_user),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
 ) -> None:
-    success = await delete_account(password_data, current_user, db)
+    success = await delete_account(password_data, current_user, db, redis)
     if not success:
         logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
         raise HTTPException(

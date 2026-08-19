@@ -2,14 +2,21 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.redis import RedisCache
 from src.modules.specialties.models import Specialty
-from src.modules.specialties.schemas import SpecialtyCreate, SpecialtyUpdate
+from src.modules.specialties.schemas import (
+    SpecialtyCreate,
+    SpecialtyRead,
+    SpecialtyUpdate,
+)
 
 
 # CREATE
 async def create_specialty(
-    new_specialty: SpecialtyCreate, db: AsyncSession
-) -> Specialty | None:
+    new_specialty: SpecialtyCreate,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> SpecialtyRead | None:
     try:
         query = (
             insert(Specialty)
@@ -19,7 +26,8 @@ async def create_specialty(
         result = await db.execute(query)
         created_specialty = result.scalar_one_or_none()
         await db.commit()
-        return created_specialty
+        await redis.invalidate("specialties")
+        return SpecialtyRead.model_validate(created_specialty)
     except IntegrityError:
         await db.rollback()
         return None
@@ -27,29 +35,66 @@ async def create_specialty(
 
 # READ
 async def get_specialties(
+    ids: list[int] | None,
     db: AsyncSession,
-) -> list[Specialty]:
-    query = select(Specialty)
-    result = await db.execute(query)
-    specialties = list(result.scalars().all())
-    return specialties
+    redis: RedisCache,
+) -> list[SpecialtyRead]:
+    if ids is None:
+        cache_key = redis.build_key("specialties", "item", "all")
+        cached_specialties = await redis.getc(cache_key)
+
+        if cached_specialties:
+            return [SpecialtyRead.model_validate(s) for s in cached_specialties]
+
+        query = select(Specialty)
+        result = await db.execute(query)
+        specialties = result.scalars().all()
+
+        specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
+
+        await redis.setc(
+            cache_key, [s.model_dump(mode="json") for s in specialties_dto], ex=3600
+        )
+        return specialties_dto
+    else:
+        query = select(Specialty).where(Specialty.id.in_(ids))
+        result = await db.execute(query)
+        specialties = result.scalars().all()
+        return [SpecialtyRead.model_validate(s) for s in specialties]
 
 
-async def get_specialty_by_id(specialty_id: int, db: AsyncSession) -> Specialty | None:
+async def get_specialty_by_id(
+    specialty_id: int, db: AsyncSession, redis: RedisCache
+) -> SpecialtyRead | None:
+    cache_key = redis.build_key("specialties", "item", specialty_id)
+    cached_specialty = await redis.getc(cache_key)
+    if cached_specialty:
+        return SpecialtyRead.model_validate(cached_specialty)
+
     query = select(Specialty).filter(Specialty.id == specialty_id)
     result = await db.execute(query)
     specialty = result.scalar_one_or_none()
-    return specialty
+
+    if specialty is None:
+        return None
+
+    specialty_dto = SpecialtyRead.model_validate(specialty)
+    await redis.setc(cache_key, specialty_dto, ex=3600)
+
+    return specialty_dto
 
 
 # UPDATE
 async def update_specialty(
-    specialty_id: int, specialty_data: SpecialtyUpdate, db: AsyncSession
-) -> Specialty | None:
+    specialty_id: int,
+    specialty_data: SpecialtyUpdate,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> SpecialtyRead | None:
     update_data = specialty_data.model_dump(exclude_unset=True)
 
     if not update_data:
-        return await get_specialty_by_id(specialty_id, db)
+        return await get_specialty_by_id(specialty_id, db, redis)
 
     query = (
         update(Specialty)
@@ -61,15 +106,19 @@ async def update_specialty(
     result = await db.execute(query)
     updated_specialty = result.scalar_one_or_none()
     await db.commit()
-    return updated_specialty
+    await redis.invalidate("specialties")
+    return SpecialtyRead.model_validate(updated_specialty)
 
 
 # DELETE
-async def delete_specialty(specialty_id: int, db: AsyncSession) -> bool:
+async def delete_specialty(
+    specialty_id: int, db: AsyncSession, redis: RedisCache
+) -> bool:
     query = delete(Specialty).where(Specialty.id == specialty_id).returning(Specialty)
     result = await db.execute(query)
     deleted_speciality = result.scalar_one_or_none()
     if deleted_speciality is None:
         return False
     await db.commit()
+    await redis.invalidate("specialties")
     return True

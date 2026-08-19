@@ -2,17 +2,20 @@ from pydantic import EmailStr
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
+
 from src.core.enums import UserRole
+from src.core.redis import RedisCache
+from src.core.schemas import PasswordConfirm
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     UserCreate,
     UserFilterParams,
     UserPasswordUpdate,
+    UserRead,
     UserUpdate,
 )
-from src.core.schemas import PasswordConfirm
 
 
 # CREATE
@@ -86,39 +89,57 @@ async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None
 # UPDATE
 async def update_user(
     user_data: UserUpdate,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
-) -> User:
+    redis: RedisCache,
+) -> UserRead:
     update_data = user_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return current_user
 
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
+    update_query = update(User).where(User.id == current_user.id).values(**update_data)
+    await db.execute(update_query)
+
+    select_query = (
+        select(User).where(User.id == current_user.id).options(joinedload(User.doctor))
+    )
+    result = await db.execute(select_query)
+    updated_user = result.scalar_one()
 
     await db.commit()
-    return current_user
+
+    cache_key = redis.build_key("users", "current", current_user.email)
+    await redis.delc(cache_key)
+
+    return UserRead.model_validate(updated_user)
 
 
 async def update_password(
     password_data: UserPasswordUpdate,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
+    redis: RedisCache,
 ) -> bool:
     if not verify_pwd(password_data.old_password, current_user.password):
         return False
+
     hashed_password = hash_pwd(password_data.new_password)
     query = (
         update(User).where(User.id == current_user.id).values(password=hashed_password)
     )
     await db.execute(query)
     await db.commit()
+    cache_key = redis.build_key("users", "current", current_user.email)
+    await redis.delc(cache_key)
     return True
 
 
 # DELETE
 async def delete_account(
     password_data: PasswordConfirm,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
+    redis: RedisCache,
 ) -> bool:
     if not verify_pwd(password_data.password, current_user.password):
         return False
@@ -126,4 +147,8 @@ async def delete_account(
     query = delete(User).where(User.id == current_user.id)
     await db.execute(query)
     await db.commit()
+
+    cache_key = redis.build_key("users", "current", current_user.email)
+    await redis.delc(cache_key)
+
     return True

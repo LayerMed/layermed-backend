@@ -219,3 +219,5 @@ __marimo__/
 
 .logs/
 bad_passwords.txt
+.vscode/
+.python-varsion
