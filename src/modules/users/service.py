@@ -148,5 +148,5 @@ async def delete_account(
 
     cache_key = redis.build_key("users", "current", current_user.email)
     await redis.delc(cache_key)
-    
+
     return True

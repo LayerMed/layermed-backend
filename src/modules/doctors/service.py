@@ -72,7 +72,7 @@ async def get_doctor_by_id(
     doctor = result.scalar_one_or_none()
     if doctor is None:
         return None
-    
+
     doctor_dto = DoctorRead.model_validate(doctor)
     await redis.setc(cache_key, doctor_dto, 900)
 
@@ -91,7 +91,7 @@ async def update_doctor(
 
     if not update_data:
         return current_doctor
-    
+
     query = (
         update(Doctor)
         .where(Doctor.id == current_doctor.id)
@@ -103,12 +103,8 @@ async def update_doctor(
 
     await db.commit()
 
-    await redis.delc(
-        redis.build_key("doctors", "items", current_doctor.id)
-    )
-    await redis.delc(
-        redis.build_key("users", "current", current_user.email)
-    )
+    await redis.delc(redis.build_key("doctors", "items", current_doctor.id))
+    await redis.delc(redis.build_key("users", "current", current_user.email))
 
     return DoctorRead.model_validate(updated_doctor)
 
@@ -123,7 +119,7 @@ async def delete_doctor(
 ) -> bool:
     if not verify_pwd(password_data.password, current_user.password):
         return False
-    
+
     user_cte = (
         update(User)
         .where(User.id == current_user.id)
@@ -134,17 +130,13 @@ async def delete_doctor(
     query = (
         delete(Doctor)
         .where(Doctor.id == current_doctor.id)
-        .where(Doctor.user_id == user_cte.c.id) 
+        .where(Doctor.user_id == user_cte.c.id)
     )
 
     await db.execute(query)
     await db.commit()
 
-    await redis.delc(
-        redis.build_key("doctors", "items", current_doctor.id)
-    )
-    await redis.delc(
-        redis.build_key("users", "current", current_user.email)
-    )
+    await redis.delc(redis.build_key("doctors", "items", current_doctor.id))
+    await redis.delc(redis.build_key("users", "current", current_user.email))
 
     return True

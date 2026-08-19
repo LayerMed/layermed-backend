@@ -67,7 +67,7 @@ async def get_doctors_by_filters_handle(
 async def get_doctor_by_id_handle(
     doctor_id: int,
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
     doctor = await get_doctor_by_id(doctor_id, db, redis)
     if doctor is None:
@@ -88,11 +88,13 @@ async def get_doctor_by_id_handle(
 async def update_doctor_basic_handle(
     doctor_data: DoctorUpdate,
     current_doctor: DoctorRead = Depends(get_current_doctor),
-    current_user: UserRead = Depends(get_current_user), 
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    updated_doctor = await update_doctor(doctor_data, current_doctor, current_user, db, redis)
+    updated_doctor = await update_doctor(
+        doctor_data, current_doctor, current_user, db, redis
+    )
     return updated_doctor
 
 
@@ -105,9 +107,9 @@ async def update_doctor_basic_handle(
 async def delete_doctor_account_handle(
     password_data: PasswordConfirm,
     current_doctor: DoctorRead = Depends(get_current_doctor),
-    current_user: UserRead = Depends(get_current_user), 
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> None:
     result = await delete_doctor(password_data, current_doctor, current_user, db, redis)
     if not result:

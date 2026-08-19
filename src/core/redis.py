@@ -25,13 +25,13 @@ class RedisCache:
         if keys:
             await self.redis_client.delete(*keys)
 
-    async def setc(self, key: str, value: Value, ex: int):    
+    async def setc(self, key: str, value: Value, ex: int):
         if isinstance(value, BaseModel):
             value = value.model_dump_json()
         elif isinstance(value, (dict, list)):
             value = json.dumps(value)
         else:
-            value = str(value)      
+            value = str(value)
         await self.redis_client.set(key, value, ex)
 
     async def getc(self, key: str):
@@ -42,11 +42,10 @@ class RedisCache:
             return json.loads(data)
         except (json.JSONDecodeError, TypeError):
             return data
-        
+
     async def delc(self, key: str) -> None:
         await self.redis_client.delete(key)
 
 
-
 async def get_redis() -> RedisCache:
-    return RedisCache(redis_client)    
+    return RedisCache(redis_client)

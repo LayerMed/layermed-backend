@@ -56,7 +56,9 @@ async def get_current_user(
     return user_dto
 
 
-async def get_current_doctor(current_user: UserRead = Depends(get_current_user)) -> DoctorRead:
+async def get_current_doctor(
+    current_user: UserRead = Depends(get_current_user),
+) -> DoctorRead:
     if current_user.role != UserRole.DOCTOR or current_user.doctor is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

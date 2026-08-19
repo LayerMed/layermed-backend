@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.redis import RedisCache, get_redis
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.logs import logger
-from src.modules.cities.models import City
+from src.core.redis import RedisCache, get_redis
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
 from src.modules.cities.service import (
     create_city,

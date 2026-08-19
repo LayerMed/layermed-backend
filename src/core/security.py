@@ -28,4 +28,3 @@ def create_access_token(user_data: dict) -> str:
     data_copy.update({"exp": int(expire.timestamp())})
     encoded_jwt = jwt.encode(data_copy, settings.KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
-

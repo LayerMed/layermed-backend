@@ -1,4 +1,3 @@
-import json
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
