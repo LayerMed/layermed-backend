@@ -4,7 +4,6 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.dependencies import get_user_password
 from src.core.enums import UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PasswordConfirm
@@ -119,11 +118,7 @@ async def update_password(
     db: AsyncSession,
     redis: RedisCache,
 ) -> bool:
-    current_password = await get_user_password(current_user, db)
-    if current_password is None:
-        return False
-
-    if not verify_pwd(password_data.old_password, current_password):
+    if not verify_pwd(password_data.old_password, current_user.password):
         return False
 
     hashed_password = hash_pwd(password_data.new_password)
@@ -144,11 +139,7 @@ async def delete_account(
     db: AsyncSession,
     redis: RedisCache,
 ) -> bool:
-    current_password = await get_user_password(current_user, db)
-    if current_password is None:
-        return False
-
-    if not verify_pwd(password_data.password, current_password):
+    if not verify_pwd(password_data.password, current_user.password):
         return False
 
     query = delete(User).where(User.id == current_user.id)

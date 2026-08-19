@@ -3,16 +3,16 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from src.modules.doctors.schemas import DoctorRead
-from src.core.redis import RedisCache, get_redis
-from src.modules.users.schemas import UserRead
-from src.modules.doctors.models import Doctor
+
 from src.core.config import settings
 from src.core.database import get_session
 from src.core.enums import UserRole
 from src.core.logs import logger
+from src.core.redis import RedisCache, get_redis
 from src.core.security import oauth2_scheme
+from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
+from src.modules.users.schemas import UserRead
 
 credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,13 +75,6 @@ async def get_admin_user(current_user: UserRead = Depends(get_current_user)):
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have enough permissions. Admin only!",
+            detail="You do not have enough permissions",
         )
     return current_user
-
-
-async def get_user_password(current_user: UserRead,  db: AsyncSession):
-    query_password = select(User.password).filter(User.id == current_user.id)
-    result_password = await db.execute(query_password)
-    current_password = result_password.scalar_one_or_none()
-    return current_password
