@@ -2,7 +2,7 @@ from pydantic import EmailStr
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from src.core.enums import UserRole
 from src.core.redis import RedisCache
@@ -96,14 +96,16 @@ async def update_user(
     update_data = user_data.model_dump(exclude_unset=True)
     if not update_data:
         return current_user
-    query = (
-        update(User)
-        .where(User.id == current_user.id)
-        .values(**update_data)
-        .returning(User)
+
+    update_query = update(User).where(User.id == current_user.id).values(**update_data)
+    await db.execute(update_query)
+
+    select_query = (
+        select(User).where(User.id == current_user.id).options(joinedload(User.doctor))
     )
-    result = await db.execute(query)
-    updated_user = result.scalar_one_or_none()
+    result = await db.execute(select_query)
+    updated_user = result.scalar_one()
+
     await db.commit()
 
     cache_key = redis.build_key("users", "current", current_user.email)

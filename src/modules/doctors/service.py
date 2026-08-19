@@ -1,3 +1,4 @@
+import sqlalchemy.exc
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,29 +14,53 @@ from src.modules.doctors.schemas import (
     DoctorRead,
     DoctorUpdate,
 )
+from src.modules.specialties.models import Specialty
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
 
 
-# CREATE
 async def register_doctor(
     new_doctor: DoctorCreate,
-    current_user: User,
+    current_user: UserRead,
     db: AsyncSession,
-) -> DoctorRead:
-    doctor = Doctor(
-        user_id=current_user.id,
-        specialty_id=new_doctor.specialty_id,
-        education=new_doctor.education,
-        experience_years=new_doctor.experience_years,
-        bio=new_doctor.bio,
-    )
-    current_user.role = UserRole.DOCTOR
-    db.add(doctor)
+    redis: RedisCache,
+) -> DoctorRead | None:
+    try:
+        specialties_list = []
 
-    await db.commit()
-    await db.refresh(doctor)
-    return DoctorRead.model_validate(doctor)
+        if new_doctor.specialty_ids:
+            specialties_query = select(Specialty).where(
+                Specialty.id.in_(new_doctor.specialty_ids)
+            )
+            specialties_result = await db.execute(specialties_query)
+            specialties_list = list(specialties_result.scalars().all())
+
+            if len(specialties_list) != len(set(new_doctor.specialty_ids)):
+                return None
+
+        doctor = Doctor(
+            user_id=current_user.id,
+            education=new_doctor.education,
+            experience_years=new_doctor.experience_years,
+            bio=new_doctor.bio,
+            specialties=specialties_list,
+        )
+        db.add(doctor)
+
+        await db.execute(
+            update(User).where(User.id == current_user.id).values(role=UserRole.DOCTOR)
+        )
+
+        await db.commit()
+        await db.refresh(doctor)
+
+        await redis.delc(redis.build_key("users", "current", current_user.email))
+
+        return DoctorRead.model_validate(doctor)
+
+    except sqlalchemy.exc.IntegrityError:
+        await db.rollback()
+        return None
 
 
 # READ

@@ -38,8 +38,15 @@ async def get_current_user(
 
     cache_key = redis.build_key("users", "current", email)
     cached_user = await redis.getc(cache_key)
-    if cached_user:
-        return UserRead.model_validate(cached_user)
+    if cached_user is not None:
+        try:
+            return UserRead.model_validate(cached_user)
+        except Exception:
+            logger.info(
+                "Outdated cache structure for user {email}. Refreshing from database.",
+                email=email,
+            )
+            await redis.delc(cache_key)
 
     query = select(User).where(User.email == email).options(joinedload(User.doctor))
     result = await db.execute(query)

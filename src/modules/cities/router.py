@@ -67,7 +67,7 @@ async def get_city_by_id_handle(
     city = await get_city_by_id(city_id, db, redis)
     if city is None:
         logger.warning(
-            "Failed to fetch city: City with id {city_id} not found",
+            "City with id {city_id} not found",
             city_id=city_id,
         )
         raise HTTPException(

@@ -1,5 +1,5 @@
-
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,10 +13,19 @@ async def create_city(
     new_city: CityCreate, db: AsyncSession, redis: RedisCache
 ) -> CityRead | None:
     try:
-        query = insert(City).values(name=new_city.name).returning(City)
+        query = (
+            insert(City)
+            .on_conflict_do_nothing(index_elements=["name"])
+            .values(name=new_city.name)
+            .returning(City)
+        )
         result = await db.execute(query)
         created_city = result.scalar_one_or_none()
         await db.commit()
+
+        if created_city is None:
+            return None
+
         await redis.invalidate("cities")
         return CityRead.model_validate(created_city)
     except IntegrityError:
@@ -26,6 +35,10 @@ async def create_city(
 
 # READ
 async def get_cities(db: AsyncSession, redis: RedisCache) -> list[CityRead]:
+    cache_key = redis.build_key("cities", "items", "all")
+    cached_cities = await redis.getc(cache_key)
+    if cached_cities:
+        return cached_cities
     query = select(City)
     result = await db.execute(query)
     cities = result.scalars().all()
@@ -33,7 +46,7 @@ async def get_cities(db: AsyncSession, redis: RedisCache) -> list[CityRead]:
         return cities
     cities_dto = [CityRead.model_validate(c) for c in cities]
     await redis.setc(
-        redis.build_key("cities", "items", "all"),
+        cache_key,
         [c.model_dump(mode="json") for c in cities_dto],
         ex=7200,
     )
@@ -45,12 +58,14 @@ async def get_city_by_id(
 ) -> CityRead | None:
     cache_key = redis.build_key("cities", "items", city_id)
     cached_city = await redis.getc(cache_key)
-    if cache_key:
-        return CityRead.model_validate(cached_city)
+    if cached_city is not None:
+        return cached_city
 
     query = select(City).filter(City.id == city_id)
     result = await db.execute(query)
     city = result.scalar_one_or_none()
+    if city is None:
+        return None
 
     city_dto = CityRead.model_validate(city)
     await redis.setc(cache_key, city_dto, 3600)

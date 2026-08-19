@@ -4,18 +4,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DoctorCreate(BaseModel):
-    specialty_id: int
+    specialty_ids: list[int] = Field(default_factory=list)
     education: str
     experience_years: int
     bio: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class DoctorRead(BaseModel):
     id: int
     user_id: int
-    specialty_id: int | None = None
+    specialty_ids: list[int] = Field(default_factory=list)
     education: str
     experience_years: int
     bio: str

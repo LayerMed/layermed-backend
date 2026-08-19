@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from modules.users.schemas import UserRead
 from src.core.database import get_session
 from src.core.dependencies import get_current_doctor, get_current_user
 from src.core.enums import UserRole
@@ -23,7 +22,7 @@ from src.modules.doctors.service import (
     register_doctor,
     update_doctor,
 )
-from src.modules.users.models import User
+from src.modules.users.schemas import UserRead
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
@@ -37,15 +36,23 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
 )
 async def register_doctor_handle(
     new_doctor: DoctorCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
     if current_user.role == UserRole.DOCTOR:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Doctor profile already exists",
         )
-    doctor = await register_doctor(new_doctor, current_user, db)
+
+    doctor = await register_doctor(new_doctor, current_user, db, redis)
+    if doctor is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One or more specialties not found or database conflict",
+        )
+
     return doctor
 
 

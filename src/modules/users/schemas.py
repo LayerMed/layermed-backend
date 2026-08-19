@@ -25,8 +25,8 @@ ValidPassword = Annotated[
 
 class UserCreate(BaseModel):
     name: str
-    city_id: int | None = Field(default=None)
     birth_date: datetime.date | None = None
+    city_id: int | None = Field(default=None)
     email: EmailStr
     password: ValidPassword
 
