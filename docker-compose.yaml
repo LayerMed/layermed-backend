@@ -20,6 +20,28 @@ services:
     ports:
       - '6379:6379'
 
+  backend:
+    build: .
+    container_name: layermed-backend
+    restart: always
+    depends_on:
+      - postgresql-app
+      - redis-app
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: postgresql-app
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      
+      REDIS_HOST: redis-app
+      REDIS_PORT: 6379
+
+      KEY: ${KEY}
+      ALGORITHM: ${ALGORITHM}
+      TOKEN_EXPIRE: ${TOKEN_EXPIRE}
 
 volumes:
   postgresql-db:
