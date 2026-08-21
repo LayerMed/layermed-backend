@@ -30,7 +30,7 @@ async def create_symptom_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
-) -> SymptomRead:  
+) -> SymptomRead:
     created_symptom = await create_symptom(new_symptom, db, redis)
     if created_symptom is None:
         logger.warning(

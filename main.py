@@ -10,6 +10,7 @@ from src.modules.symptoms.router import router as symptom_router
 from src.modules.cities.router import router as city_router
 from src.modules.specialties.router import router as specialty_router
 from src.modules.doctors.router import router as doctor_router
+from src.modules.bookings.router import router as booking_router
 
 import src.core
 
@@ -28,6 +29,7 @@ app.include_router(symptom_router)
 app.include_router(city_router)
 app.include_router(specialty_router)
 app.include_router(doctor_router)
+app.include_router(booking_router)
 
 
 if __name__ == '__main__':

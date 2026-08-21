@@ -19,7 +19,7 @@ from src.modules.specialties.service import (
 )
 from src.modules.users.models import User
 
-router = APIRouter(prefix="/specialties", tags=["specialties"])
+router = APIRouter(prefix="/specialties", tags=["Specialties"])
 
 
 # CREATE

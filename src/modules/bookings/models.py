@@ -4,7 +4,7 @@ from sqlalchemy import TIMESTAMP, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base, Timestamp
-from src.core.enums import BookStatus
+from src.core.enums import BookingStatus
 
 
 class Booking(Base, Timestamp):
@@ -14,7 +14,7 @@ class Booking(Base, Timestamp):
     suggestion_id: Mapped[int] = mapped_column(
         ForeignKey("suggestions.id", ondelete="cascade")
     )
-    status: Mapped[BookStatus] = mapped_column(default=BookStatus.PENDING)
+    status: Mapped[BookingStatus] = mapped_column(default=BookingStatus.PENDING)
     appointment_time: Mapped[datetime.datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False
     )

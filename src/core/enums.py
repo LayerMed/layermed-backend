@@ -7,7 +7,7 @@ class UserRole(str, Enum):
     ADMIN = "admin"
 
 
-class BookStatus(str, Enum):
+class BookingStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
