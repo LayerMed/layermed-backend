@@ -3,16 +3,16 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.core.enums import UserRole
+from src.core.redis import RedisCache
+from src.core.schemas import PasswordConfirm
+from src.core.security import verify_pwd
 from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
     DoctorProfileAlreadyExistsError,
     IncorrectPasswordError,
     SpecialtiesNotFoundError,
 )
-from src.core.enums import UserRole
-from src.core.redis import RedisCache
-from src.core.schemas import PasswordConfirm
-from src.core.security import verify_pwd
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import (
     DoctorCreate,

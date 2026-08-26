@@ -4,16 +4,16 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from src.core.enums import UserRole
+from src.core.redis import RedisCache
+from src.core.schemas import PasswordConfirm
+from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.exceptions import (
     IncorrectPasswordError,
     InvalidCredentialsError,
     UserAlreadyExistsError,
     UserNotFoundError,
 )
-from src.core.enums import UserRole
-from src.core.redis import RedisCache
-from src.core.schemas import PasswordConfirm
-from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     UserCreate,

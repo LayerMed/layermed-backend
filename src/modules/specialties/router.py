@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
-from src.core.logs import logger
 from src.core.redis import RedisCache, get_redis
 from src.modules.specialties.schemas import (
     SpecialtyCreate,

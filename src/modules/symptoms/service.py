@@ -2,11 +2,11 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.redis import RedisCache
 from src.modules.symptoms.exceptions import (
     SymptomAlreadyExistsError,
     SymptomNotFoundError,
 )
-from src.core.redis import RedisCache
 from src.modules.symptoms.models import Symptom
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 

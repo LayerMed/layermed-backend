@@ -2,11 +2,11 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.redis import RedisCache
 from src.modules.specialties.exceptions import (
     SpecialtyAlreadyExistsError,
     SpecialtyNotFoundError,
 )
-from src.core.redis import RedisCache
 from src.modules.specialties.models import Specialty
 from src.modules.specialties.schemas import (
     SpecialtyCreate,
