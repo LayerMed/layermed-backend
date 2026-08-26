@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
@@ -29,8 +29,7 @@ async def create_booking_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> BookingRead:
-    created_booking = await create_booking(new_booking, current_user, db, redis)    
-    return created_booking
+    return await create_booking(new_booking, current_user, db, redis)
 
 
 # READ
@@ -44,8 +43,7 @@ async def get_current_bookings_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[BookingRead]:
-    bookings = await get_current_bookings(current_user, db, redis)
-    return bookings
+    return await get_current_bookings(current_user, db, redis)
 
 
 @router.get(
@@ -59,8 +57,7 @@ async def get_booking_by_id_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> BookingRead:
-    booking = await get_booking_by_id(booking_id, current_user, db, redis)
-    return booking
+    return await get_booking_by_id(booking_id, current_user, db, redis)
 
 
 # UPDATE
@@ -74,6 +71,5 @@ async def cancel_booking_handle(
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
-) -> BookingRead:    
-    canceled_booking = await cancel_booking(booking_id, current_user, db, redis)
-    return canceled_booking
+) -> BookingRead:
+    return await cancel_booking(booking_id, current_user, db, redis)

@@ -23,3 +23,7 @@ class Doctor(Base, Timestamp):
     specialties: Mapped[list["Specialty"]] = relationship(
         back_populates="doctors", secondary="doctor_specialties"
     )
+
+    @property
+    def specialty_ids(self) -> list[int]:
+        return [s.id for s in self.specialties] if self.specialties else []

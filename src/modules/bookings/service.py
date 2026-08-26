@@ -1,10 +1,15 @@
-from fastapi import HTTPException, status
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.core.enums import BookingStatus, UserRole
 from src.core.redis import RedisCache
+from src.modules.bookings.exceptions import (
+    BookingAccessDeniedError,
+    BookingCannotBeCancelledError,
+    BookingNotFoundError,
+    SuggestionNotFoundError,
+)
 from src.modules.bookings.models import Booking
 from src.modules.bookings.schemas import BookingCreate, BookingRead
 from src.modules.suggestions.models import Suggestion
@@ -24,10 +29,7 @@ async def create_booking(
     result = await db.execute(query_suggestion)
     suggestion = result.scalar_one_or_none()
     if suggestion is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Suggestion is not found or it is inactive",
-        )
+        raise SuggestionNotFoundError()
 
     query = (
         insert(Booking)
@@ -83,12 +85,9 @@ async def get_booking_by_id(
             booking_dto.user_id != current_user.id
             and current_user.role != UserRole.ADMIN
         ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied",
-            )
+            raise BookingAccessDeniedError()
 
-        return booking_dto    
+        return booking_dto
 
     query = (
         select(Booking)
@@ -100,12 +99,13 @@ async def get_booking_by_id(
     booking = result.scalar_one_or_none()
 
     if not booking:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Booking not found",
-        )    
+        raise BookingNotFoundError()
 
     booking_dto = BookingRead.model_validate(booking)
+
+    if booking_dto.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        raise BookingAccessDeniedError()
+
     await redis.setc(cache_key, booking_dto.model_dump(mode="json"), 3600)
 
     return booking_dto
@@ -125,10 +125,7 @@ async def cancel_booking(
         BookingStatus.COMPLETED,
         BookingStatus.NO_SHOW,
     ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot cancel booking with status: {booking.status}",
-        )
+        raise BookingCannotBeCancelledError(booking.status)
 
     stmt = (
         update(Booking)

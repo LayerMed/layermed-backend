@@ -32,14 +32,6 @@ async def create_symptom_handle(
     admin: User = Depends(get_admin_user),
 ) -> SymptomRead:
     created_symptom = await create_symptom(new_symptom, db, redis)
-    if created_symptom is None:
-        logger.warning(
-            "Symptom with this name: {name} already exists", name=new_symptom.name
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Symptom with this name already exists",
-        )
     return created_symptom
 
 
@@ -68,14 +60,6 @@ async def get_symptom_by_id_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> SymptomRead:
     symptom = await get_symptom_by_id(symptom_id, db, redis)
-    if symptom is None:
-        logger.warning(
-            "Symptom with id {symptom_id} not found",
-            symptom_id=symptom_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
-        )
     return symptom
 
 
@@ -93,14 +77,6 @@ async def update_symptom_by_id_handle(
     admin: User = Depends(get_admin_user),
 ) -> SymptomRead:
     updated_symptom = await update_symptom(symptom_id, symptom_data, db, redis)
-    if updated_symptom is None:
-        logger.warning(
-            "Symptom with id {symptom_id} not found",
-            symptom_id=symptom_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Symptom not found"
-        )
     return updated_symptom
 
 
@@ -116,12 +92,4 @@ async def delete_symptom_handle(
     redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
 ) -> None:
-    success = await delete_symptom(symptom_id, db, redis)
-    if not success:
-        logger.info(
-            "A symptom with this id does not exist: {symptom_id}", symptom_id=symptom_id
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="A symptom does not exist",
-        )
+    await delete_symptom(symptom_id, db, redis)

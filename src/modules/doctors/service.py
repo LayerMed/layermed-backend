@@ -3,6 +3,12 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.modules.doctors.exceptions import (
+    DoctorNotFoundError,
+    DoctorProfileAlreadyExistsError,
+    IncorrectPasswordError,
+    SpecialtiesNotFoundError,
+)
 from src.core.enums import UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PasswordConfirm
@@ -24,7 +30,7 @@ async def register_doctor(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> DoctorRead | None:
+) -> DoctorRead:
     try:
         specialties_list = []
 
@@ -36,7 +42,7 @@ async def register_doctor(
             specialties_list = list(specialties_result.scalars().all())
 
             if len(specialties_list) != len(set(new_doctor.specialty_ids)):
-                return None
+                raise SpecialtiesNotFoundError()
 
         doctor = Doctor(
             user_id=current_user.id,
@@ -60,7 +66,7 @@ async def register_doctor(
 
     except sqlalchemy.exc.IntegrityError:
         await db.rollback()
-        return None
+        raise DoctorProfileAlreadyExistsError()
 
 
 # READ
@@ -71,7 +77,9 @@ async def get_doctors_by_filters(
     query = select(Doctor).options(selectinload(Doctor.user))
 
     if filters.specialty_id is not None:
-        query = query.where(Doctor.specialties == filters.specialty_id)
+        query = query.where(
+            Doctor.specialties.any(Specialty.id == filters.specialty_id)
+        )
     if filters.min_experience is not None:
         query = query.where(Doctor.experience_years >= filters.min_experience)
 
@@ -84,7 +92,7 @@ async def get_doctors_by_filters(
 
 async def get_doctor_by_id(
     doctor_id: int, db: AsyncSession, redis: RedisCache
-) -> DoctorRead | None:
+) -> DoctorRead:
     cache_key = redis.build_key("doctors", "items", doctor_id)
     cached_doctor = await redis.getc(cache_key)
     if cached_doctor:
@@ -96,7 +104,7 @@ async def get_doctor_by_id(
     result = await db.execute(query)
     doctor = result.scalar_one_or_none()
     if doctor is None:
-        return None
+        raise DoctorNotFoundError()
 
     doctor_dto = DoctorRead.model_validate(doctor)
     await redis.setc(cache_key, doctor_dto, 900)
@@ -124,7 +132,9 @@ async def update_doctor(
         .returning(Doctor)
     )
     result = await db.execute(query)
-    updated_doctor = result.scalar_one()
+    updated_doctor = result.scalar_one_or_none()
+    if updated_doctor is None:
+        raise DoctorNotFoundError()
 
     await db.commit()
 
@@ -141,27 +151,25 @@ async def delete_doctor(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> bool:
-    if not verify_pwd(password_data.password, current_user.password):
-        return False
+) -> None:
+    user_query = select(User).where(User.id == current_user.id)
+    user_result = await db.execute(user_query)
+    user_obj = user_result.scalar_one_or_none()
 
-    user_cte = (
-        update(User)
-        .where(User.id == current_user.id)
-        .values(role=UserRole.CLIENT)
-        .returning(User.id)
-    ).cte("updated_user")
+    if user_obj is None or not verify_pwd(password_data.password, user_obj.password):
+        raise IncorrectPasswordError()
 
-    query = (
-        delete(Doctor)
-        .where(Doctor.id == current_doctor.id)
-        .where(Doctor.user_id == user_cte.c.id)
+    query = delete(Doctor).where(Doctor.id == current_doctor.id).returning(Doctor)
+    result = await db.execute(query)
+    deleted_doctor = result.scalar_one_or_none()
+    if deleted_doctor is None:
+        raise DoctorNotFoundError()
+
+    await db.execute(
+        update(User).where(User.id == current_user.id).values(role=UserRole.CLIENT)
     )
 
-    await db.execute(query)
     await db.commit()
 
     await redis.delc(redis.build_key("doctors", "items", current_doctor.id))
     await redis.delc(redis.build_key("users", "current", current_user.email))
-
-    return True

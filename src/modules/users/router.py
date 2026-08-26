@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.users.exceptions import IncorrectPasswordError, InvalidCredentialsError
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_user
 from src.core.logs import logger
@@ -42,13 +43,7 @@ async def register_user_handle(
     new_user: UserCreate,
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
-    user_id = await create_user(new_user, db)
-    if user_id is None:
-        logger.warning("Email {email} already exists", email=new_user.email)
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User with this email already exists",
-        )
+    await create_user(new_user, db)
     token = create_access_token({"sub": new_user.email})
     return TokenResponse(access_token=token)
 
@@ -63,25 +58,8 @@ async def login_user_handle(
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     user = await get_user_by_email(form_data.username, db)
-    if user is None:
-        logger.warning(
-            "User with email {email} does not exist", email=form_data.username
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
-
     if not verify_pwd(form_data.password, user.password):
-        logger.warning(
-            "Invalid password for user_id={user_id} (email={email})",
-            user_id=user.id,
-            email=user.email,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-        )
+        raise InvalidCredentialsError()
 
     token = create_access_token({"sub": form_data.username})
     return TokenResponse(access_token=token)
@@ -113,14 +91,6 @@ async def get_user_by_id_handle(
     admin: User = Depends(get_admin_user),
 ) -> User:
     user = await get_user_by_id(user_id, db)
-    if user is None:
-        logger.warning(
-            "User with id {user_id} not found",
-            user_id=user_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
     return user
 
 
@@ -160,13 +130,7 @@ async def update_user_password_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> dict[str, str]:
-    result = await update_password(password_data, current_user, db, redis)
-    if not result:
-        logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect current password",
-        )
+    await update_password(password_data, current_user, db, redis)
     return {"message": "Password successfully updated"}
 
 
@@ -182,10 +146,4 @@ async def delete_user_account_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> None:
-    success = await delete_account(password_data, current_user, db, redis)
-    if not success:
-        logger.debug("User with ID: {id}, entered wrong password", id=current_user.id)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect password",
-        )
+    await delete_account(password_data, current_user, db, redis)
