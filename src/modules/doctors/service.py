@@ -3,7 +3,6 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.modules.users.service import get_user_password
 from src.core.enums import DoctorStatus, UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PasswordConfirm
@@ -26,6 +25,7 @@ from src.modules.doctors.schemas import (
 from src.modules.specialties.models import Specialty
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
+from src.modules.users.service import get_user_password
 
 
 def check_doctor_status(current_doctor: DoctorRead) -> None:

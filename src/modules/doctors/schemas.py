@@ -10,9 +10,9 @@ class DoctorCreate(BaseModel):
     education: str
     degree: str
     experience_years: int
-    bio: str    
+    bio: str
     clinic: str
-    avatar_url: str | None = None  
+    avatar_url: str | None = None
 
 
 class DoctorRead(BaseModel):

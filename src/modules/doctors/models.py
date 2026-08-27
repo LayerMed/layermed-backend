@@ -1,8 +1,8 @@
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.enums import DoctorStatus
 from src.core.database import Base, Timestamp
+from src.core.enums import DoctorStatus
 
 
 class Doctor(Base, Timestamp):
@@ -31,7 +31,7 @@ class Doctor(Base, Timestamp):
     suggestions: Mapped[list["Suggestion"]] = relationship(back_populates="doctor")
     specialties: Mapped[list["Specialty"]] = relationship(
         back_populates="doctors", secondary="doctor_specialties"
-    )    
+    )
     reviews: Mapped[list["Review"]] = relationship(
         back_populates="doctor", cascade="all, delete-orphan"
     )
