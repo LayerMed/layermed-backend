@@ -45,7 +45,11 @@ class DoctorUpdate(BaseModel):
 
 class DoctorFilterParams(BaseModel):
     specialty_id: int | None = None
-    min_experience: int | None = Field(default=None, ge=0)
+    experience_years: int | None = Field(default=None, ge=0)
+    max_price: int | None = None
+    rating_avg: int | None = Field(default=None, ge=0, le=5)
+    status: DoctorStatus | None = None
+
     limit: int = Field(default=10, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
 

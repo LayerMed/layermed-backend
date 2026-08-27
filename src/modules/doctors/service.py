@@ -86,18 +86,31 @@ async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     db: AsyncSession,
 ) -> list[DoctorRead]:
+    target_status = filters.status or DoctorStatus.APPROVED
+
     query = (
         select(Doctor)
-        .where(Doctor.status == DoctorStatus.APPROVED)
+        .where(Doctor.status == target_status) 
         .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
-
+    
     if filters.specialty_id is not None:
         query = query.where(
             Doctor.specialties.any(Specialty.id == filters.specialty_id)
         )
-    if filters.min_experience is not None:
-        query = query.where(Doctor.experience_years >= filters.min_experience)
+    if filters.experience_years is not None:
+        query = query.where(Doctor.experience_years >= filters.experience_years)
+    if filters.max_price is not None:
+        query = query.where(Doctor.min_price <= filters.max_price)    
+    if filters.rating_avg is not None:
+        query = query.where(Doctor.rating_avg >= filters.rating_avg)        
+    if filters.status is not None:
+        if filters.status == DoctorStatus.PENDING:
+            query = query.where(Doctor.status == DoctorStatus.PENDING)
+        if filters.status == DoctorStatus.REJECTED:
+            query = query.where(Doctor.status == DoctorStatus.REJECTED)
+        if filters.status == DoctorStatus.APPROVED:
+            query = query.where(Doctor.status == DoctorStatus.APPROVED)
 
     query = query.offset(filters.offset).limit(filters.limit)
 
