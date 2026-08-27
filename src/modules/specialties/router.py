@@ -5,6 +5,7 @@ from src.core.database import get_session
 from src.core.dependencies import get_admin_user
 from src.core.redis import RedisCache, get_redis
 from src.modules.specialties.schemas import (
+    SpecialtyCountRead,
     SpecialtyCreate,
     SpecialtyRead,
     SpecialtyUpdate,
@@ -13,6 +14,7 @@ from src.modules.specialties.service import (
     create_specialty,
     delete_specialty,
     get_specialties,
+    get_specialties_count,
     get_specialty_by_id,
     update_specialty,
 )
@@ -51,6 +53,18 @@ async def get_specialties_handle(
 ) -> list[SpecialtyRead]:
     specialties = await get_specialties(ids, db, redis)
     return specialties
+
+
+@router.get(
+    "/count",
+    response_model=list[SpecialtyCountRead],
+    summary="Get numbers of specialties"
+)
+async def get_specialties_count_handle(
+    db: AsyncSession = Depends(get_session),    
+    redis: RedisCache = Depends(get_redis),
+) -> list[SpecialtyCountRead]:
+    return await get_specialties_count(db, redis)
 
 
 @router.get(

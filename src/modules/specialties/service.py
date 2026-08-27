@@ -1,7 +1,8 @@
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.doctors.models import Doctor
 from src.core.redis import RedisCache
 from src.modules.specialties.exceptions import (
     SpecialtyAlreadyExistsError,
@@ -9,6 +10,7 @@ from src.modules.specialties.exceptions import (
 )
 from src.modules.specialties.models import Specialty
 from src.modules.specialties.schemas import (
+    SpecialtyCountRead,
     SpecialtyCreate,
     SpecialtyRead,
     SpecialtyUpdate,
@@ -43,7 +45,7 @@ async def get_specialties(
     redis: RedisCache,
 ) -> list[SpecialtyRead]:
     if ids is None:
-        cache_key = redis.build_key("specialties", "item", "all")
+        cache_key = redis.build_key("specialties", "items", "all")
         cached_specialties = await redis.getc(cache_key)
 
         if cached_specialties:
@@ -66,10 +68,37 @@ async def get_specialties(
         return [SpecialtyRead.model_validate(s) for s in specialties]
 
 
+async def get_specialties_count(
+    db: AsyncSession,
+    redis: RedisCache
+) -> list[SpecialtyCountRead]:
+    cache_key = redis.build_key("specialties", "items", "count")
+    cached_count = await redis.getc(cache_key)
+    if cached_count:
+        return [SpecialtyCountRead.model_validate(s) for s in cached_count] 
+    
+    query = (
+        select (
+            Specialty.id,
+            Specialty.name, 
+            func.count(Doctor.id).label("doctors_count")
+        )         
+        .outerjoin(Specialty.doctors)
+        .group_by(Specialty.id, Specialty.name)
+        .order_by(Specialty.name) 
+    )
+    result = await db.execute(query)
+    specialties = result.all()
+    specialties_dto = [SpecialtyCountRead.model_validate(s) for s in specialties]
+
+    await redis.setc(cache_key, specialties_dto, 3600)
+    return specialties_dto
+
+
 async def get_specialty_by_id(
     specialty_id: int, db: AsyncSession, redis: RedisCache
 ) -> SpecialtyRead:
-    cache_key = redis.build_key("specialties", "item", specialty_id)
+    cache_key = redis.build_key("specialties", "items", specialty_id)
     cached_specialty = await redis.getc(cache_key)
     if cached_specialty:
         return SpecialtyRead.model_validate(cached_specialty)

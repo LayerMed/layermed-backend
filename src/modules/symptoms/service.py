@@ -42,7 +42,7 @@ async def get_symptoms(db: AsyncSession, redis: RedisCache) -> list[SymptomRead]
     symptoms = result.scalars().all()
 
     symptoms_dto = [SymptomRead.model_validate(s) for s in symptoms]
-    await redis.setc(cache_key, [s.model_dump(mode="json") for s in symptoms_dto], 3600)
+    await redis.setc(cache_key, symptoms_dto, 3600)
 
     return symptoms_dto
 

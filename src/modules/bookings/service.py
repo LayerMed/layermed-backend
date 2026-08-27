@@ -66,7 +66,7 @@ async def get_current_bookings(
     bookings = result.scalars().all()
 
     bookings_dto = [BookingRead.model_validate(b) for b in bookings]
-    await redis.setc(cache_key, [s.model_dump(mode="json") for s in bookings_dto], 3600)
+    await redis.setc(cache_key, bookings_dto, 3600)
 
     return bookings_dto
 

@@ -39,11 +39,7 @@ async def get_cities(db: AsyncSession, redis: RedisCache) -> list[CityRead]:
     cities = result.scalars().all()
 
     cities_dto = [CityRead.model_validate(c) for c in cities]
-    await redis.setc(
-        cache_key,
-        [c.model_dump(mode="json") for c in cities_dto],
-        ex=7200,
-    )
+    await redis.setc(cache_key, cities_dto, ex=7200)
     return cities_dto
 
 
