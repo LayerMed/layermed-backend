@@ -24,7 +24,7 @@ class DoctorRead(BaseModel):
 
 
 class DoctorUpdate(BaseModel):
-    specialty_id: int | None = None
+    specialty_ids: list[int] | None = None
     education: str | None = None
     experience_years: int | None = None
     bio: str | None = None

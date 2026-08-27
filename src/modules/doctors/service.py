@@ -3,6 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.modules.users.service import get_user_password
 from src.core.enums import UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PasswordConfirm
@@ -74,7 +75,10 @@ async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     db: AsyncSession,
 ) -> list[DoctorRead]:
-    query = select(Doctor).options(selectinload(Doctor.user))
+    query = select(Doctor).options(
+        selectinload(Doctor.user),
+        selectinload(Doctor.specialties)
+    )
 
     if filters.specialty_id is not None:
         query = query.where(
@@ -120,28 +124,48 @@ async def update_doctor(
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorRead:
-    update_data = doctor_data.model_dump(exclude_unset=True)
-
-    if not update_data:
-        return current_doctor
-
     query = (
-        update(Doctor)
+        select(Doctor)
         .where(Doctor.id == current_doctor.id)
-        .values(**update_data)
-        .returning(Doctor)
+        .options(
+            selectinload(Doctor.user), 
+            selectinload(Doctor.specialties)
+        )
     )
     result = await db.execute(query)
-    updated_doctor = result.scalar_one_or_none()
-    if updated_doctor is None:
+    doctor = result.scalar_one_or_none()
+    
+    if doctor is None:
         raise DoctorNotFoundError()
+
+    update_data = doctor_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return DoctorRead.model_validate(doctor)
+
+    if "specialty_ids" in update_data:
+        new_ids = update_data.pop("specialty_ids")
+        
+        if new_ids:
+            spec_query = select(Specialty).where(Specialty.id.in_(new_ids))
+            spec_result = await db.execute(spec_query)
+            specialties_list = list(spec_result.scalars().all())
+
+            if len(specialties_list) != len(set(new_ids)):
+                raise SpecialtiesNotFoundError()
+            
+            doctor.specialties = specialties_list
+        else:
+            doctor.specialties = []
+    
+    for key, value in update_data.items():
+        setattr(doctor, key, value)
 
     await db.commit()
 
     await redis.delc(redis.build_key("doctors", "items", current_doctor.id))
     await redis.delc(redis.build_key("users", "current", current_user.email))
 
-    return DoctorRead.model_validate(updated_doctor)
+    return DoctorRead.model_validate(doctor)
 
 
 # DELETE
@@ -152,11 +176,9 @@ async def delete_doctor(
     db: AsyncSession,
     redis: RedisCache,
 ) -> None:
-    user_query = select(User).where(User.id == current_user.id)
-    user_result = await db.execute(user_query)
-    user_obj = user_result.scalar_one_or_none()
+    current_password = await get_user_password(current_user, db)
 
-    if user_obj is None or not verify_pwd(password_data.password, user_obj.password):
+    if not verify_pwd(password_data.password, current_password):
         raise IncorrectPasswordError()
 
     query = delete(Doctor).where(Doctor.id == current_doctor.id).returning(Doctor)

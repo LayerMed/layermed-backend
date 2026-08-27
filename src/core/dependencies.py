@@ -14,6 +14,7 @@ from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
 
+
 credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials or token expired",

@@ -24,6 +24,15 @@ from src.modules.users.schemas import (
 )
 
 
+async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
+    query_password = select(User.password).where(User.id == current_user.id)
+    result  = await db.execute(query_password)
+    current_password = result.scalar_one_or_none()
+    if current_password is None:
+        raise UserNotFoundError()
+    return current_password
+
+
 # CREATE
 async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     query = (
@@ -51,7 +60,7 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
 async def get_users_by_filters(
     filters: UserFilterParams,
     db: AsyncSession,
-) -> list[User]:
+) -> list[UserRead]:
     query = (
         select(User)
         .filter(User.role != UserRole.ADMIN)
@@ -76,17 +85,19 @@ async def get_users_by_filters(
         query = query.filter(User.updated_at >= filters.updated_at)
 
     result = await db.execute(query)
-    users = list(result.scalars().all())
-    return users
+
+    users = result.scalars().all()
+    users_dto = [UserRead.model_validate(s) for s in users]
+    return users_dto
 
 
-async def get_user_by_id(user_id: int, db: AsyncSession) -> User:
+async def get_user_by_id(user_id: int, db: AsyncSession) -> UserRead:
     query = select(User).filter(User.id == user_id).options(selectinload(User.doctor))
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     if user is None:
         raise UserNotFoundError()
-    return user
+    return UserRead.model_validate(user)
 
 
 async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User:
@@ -132,7 +143,9 @@ async def update_password(
     db: AsyncSession,
     redis: RedisCache,
 ) -> None:
-    if not verify_pwd(password_data.old_password, current_user.password):
+    current_password = await get_user_password(current_user, db)
+    
+    if not verify_pwd(password_data.old_password, current_password):
         raise IncorrectPasswordError()
 
     hashed_password = hash_pwd(password_data.new_password)
@@ -152,7 +165,9 @@ async def delete_account(
     db: AsyncSession,
     redis: RedisCache,
 ) -> None:
-    if not verify_pwd(password_data.password, current_user.password):
+    current_password = await get_user_password(current_user, db)
+    
+    if not verify_pwd(password_data.password, current_password):
         raise IncorrectPasswordError()
 
     query = delete(User).where(User.id == current_user.id)

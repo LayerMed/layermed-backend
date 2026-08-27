@@ -36,8 +36,7 @@ class UserRead(BaseModel):
     name: str
     birth_date: datetime.date | None = None
     city_id: int | None = None
-    email: EmailStr
-    password: str = Field(exclude=True)
+    email: EmailStr    
     role: str
     created_at: datetime.datetime
     updated_at: datetime.datetime

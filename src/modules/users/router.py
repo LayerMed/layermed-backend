@@ -74,7 +74,7 @@ async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-) -> list[User]:
+) -> list[UserRead]:
     users = await get_users_by_filters(user_params, db)
     return users
 
@@ -88,7 +88,7 @@ async def get_user_by_id_handle(
     user_id: int,
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-) -> User:
+) -> UserRead:
     user = await get_user_by_id(user_id, db)
     return user
 
@@ -98,7 +98,7 @@ async def get_user_by_id_handle(
     response_model=UserRead,
     summary="Get current active user",
 )
-async def get_me_handle(current_user: User = Depends(get_current_user)) -> User:
+async def get_me_handle(current_user: UserRead = Depends(get_current_user)) -> UserRead:
     return current_user
 
 
