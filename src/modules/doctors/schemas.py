@@ -2,6 +2,8 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.core.enums import DoctorStatus
+
 
 class DoctorCreate(BaseModel):
     specialty_ids: list[int] = Field(default_factory=list)
@@ -18,8 +20,16 @@ class DoctorRead(BaseModel):
     user_id: int
     specialty_ids: list[int] = Field(default_factory=list)
     education: str
+    degree: str | None = None
     experience_years: int
     bio: str
+    min_price: int
+    clinic: str
+    avatar_url: str | None = None
+    rating_avg: float
+    reviews_count: int
+    status: DoctorStatus
+    rejection_reason: str | None = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -38,3 +48,7 @@ class DoctorFilterParams(BaseModel):
     min_experience: int | None = Field(default=None, ge=0)
     limit: int = Field(default=10, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
+
+
+class DoctorReject(BaseModel):
+    rejection_reason: str | None = Field(default=None, max_length=255)

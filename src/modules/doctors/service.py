@@ -4,13 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.modules.users.service import get_user_password
-from src.core.enums import UserRole
+from src.core.enums import DoctorStatus, UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PasswordConfirm
 from src.core.security import verify_pwd
 from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
+    DoctorPendingError,
     DoctorProfileAlreadyExistsError,
+    DoctorRejectedError,
     IncorrectPasswordError,
     SpecialtiesNotFoundError,
 )
@@ -26,6 +28,14 @@ from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
 
 
+def check_doctor_status(current_doctor: DoctorRead) -> None:
+    if current_doctor.status == DoctorStatus.PENDING:
+        raise DoctorPendingError()
+    if current_doctor.status == DoctorStatus.REJECTED:
+        raise DoctorRejectedError()
+
+
+# CREATE
 async def register_doctor(
     new_doctor: DoctorCreate,
     current_user: UserRead,
@@ -52,7 +62,7 @@ async def register_doctor(
             experience_years=new_doctor.experience_years,
             bio=new_doctor.bio,
             clinic=new_doctor.clinic,
-            avatar=new_doctor.avatar_url,
+            avatar_url=new_doctor.avatar_url,
             specialties=specialties_list,
         )
         db.add(doctor)
@@ -76,9 +86,10 @@ async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     db: AsyncSession,
 ) -> list[DoctorRead]:
-    query = select(Doctor).options(
-        selectinload(Doctor.user),
-        selectinload(Doctor.specialties)
+    query = (
+        select(Doctor)
+        .where(Doctor.status == DoctorStatus.APPROVED)
+        .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
 
     if filters.specialty_id is not None:
@@ -125,17 +136,15 @@ async def update_doctor(
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorRead:
+    check_doctor_status(current_doctor)
     query = (
         select(Doctor)
         .where(Doctor.id == current_doctor.id)
-        .options(
-            selectinload(Doctor.user), 
-            selectinload(Doctor.specialties)
-        )
+        .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
     result = await db.execute(query)
     doctor = result.scalar_one_or_none()
-    
+
     if doctor is None:
         raise DoctorNotFoundError()
 
@@ -145,7 +154,7 @@ async def update_doctor(
 
     if "specialty_ids" in update_data:
         new_ids = update_data.pop("specialty_ids")
-        
+
         if new_ids:
             spec_query = select(Specialty).where(Specialty.id.in_(new_ids))
             spec_result = await db.execute(spec_query)
@@ -153,11 +162,11 @@ async def update_doctor(
 
             if len(specialties_list) != len(set(new_ids)):
                 raise SpecialtiesNotFoundError()
-            
+
             doctor.specialties = specialties_list
         else:
             doctor.specialties = []
-    
+
     for key, value in update_data.items():
         setattr(doctor, key, value)
 
@@ -169,6 +178,51 @@ async def update_doctor(
     return DoctorRead.model_validate(doctor)
 
 
+async def update_doctor_status(
+    doctor_id: int,
+    status: DoctorStatus,
+    db: AsyncSession,
+    redis: RedisCache,
+    rejection_reason: str | None = None,
+) -> DoctorRead:
+    query = (
+        update(Doctor)
+        .where(Doctor.id == doctor_id)
+        .values(status=status, rejection_reason=rejection_reason)
+        .returning(Doctor)
+    )
+    result = await db.execute(query)
+    updated_doctor = result.scalar_one_or_none()
+
+    if updated_doctor is None:
+        raise DoctorNotFoundError()
+
+    await db.commit()
+    await redis.invalidate("doctors")
+    return DoctorRead.model_validate(updated_doctor)
+
+
+async def approve_doctor(
+    doctor_id: int,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> DoctorRead:
+    return await update_doctor_status(
+        doctor_id, DoctorStatus.APPROVED, db, redis, rejection_reason=None
+    )
+
+
+async def reject_doctor(
+    doctor_id: int,
+    rejection_reason: str | None,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> DoctorRead:
+    return await update_doctor_status(
+        doctor_id, DoctorStatus.REJECTED, db, redis, rejection_reason=rejection_reason
+    )
+
+
 # DELETE
 async def delete_doctor(
     password_data: PasswordConfirm,
@@ -177,6 +231,7 @@ async def delete_doctor(
     db: AsyncSession,
     redis: RedisCache,
 ) -> None:
+    check_doctor_status(current_doctor)
     current_password = await get_user_password(current_user, db)
 
     if not verify_pwd(password_data.password, current_password):

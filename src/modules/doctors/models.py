@@ -1,6 +1,7 @@
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.core.enums import DoctorStatus
 from src.core.database import Base, Timestamp
 
 
@@ -19,6 +20,8 @@ class Doctor(Base, Timestamp):
     avatar_url: Mapped[str | None] = mapped_column(nullable=True, default=None)
     rating_avg: Mapped[float] = mapped_column(default=0.0)
     reviews_count: Mapped[int] = mapped_column(default=0)
+    status: Mapped[DoctorStatus] = mapped_column(default=DoctorStatus.PENDING)
+    rejection_reason: Mapped[str | None] = mapped_column(nullable=True, default=None)
 
     __table_args__ = (
         Index("ix_doctors_speciality_exp", "education", "experience_years"),

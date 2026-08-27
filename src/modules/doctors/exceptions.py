@@ -21,3 +21,13 @@ class SpecialtiesNotFoundError(AppError):
 class IncorrectPasswordError(AppError):
     status_code = status.HTTP_400_BAD_REQUEST
     detail = "Incorrect password"
+
+
+class DoctorPendingError(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = "Your application is under consideration. Please wait for the results"
+
+
+class DoctorRejectedError(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = "Your application was rejected. Please try to submit a new one"
