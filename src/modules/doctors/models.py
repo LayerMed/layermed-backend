@@ -11,8 +11,14 @@ class Doctor(Base, Timestamp):
         ForeignKey("users.id", ondelete="cascade"), unique=True
     )
     education: Mapped[str]
+    degree: Mapped[str | None] = mapped_column(nullable=True, default=None)
     experience_years: Mapped[int]
     bio: Mapped[str]
+    min_price: Mapped[int] = mapped_column(default=0)
+    clinic: Mapped[str]
+    avatar_url: Mapped[str | None] = mapped_column(nullable=True, default=None)
+    rating_avg: Mapped[float] = mapped_column(default=0.0)
+    reviews_count: Mapped[int] = mapped_column(default=0)
 
     __table_args__ = (
         Index("ix_doctors_speciality_exp", "education", "experience_years"),

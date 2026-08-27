@@ -6,8 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class DoctorCreate(BaseModel):
     specialty_ids: list[int] = Field(default_factory=list)
     education: str
+    degree: str
     experience_years: int
-    bio: str
+    bio: str    
+    clinic: str
+    avatar_url: str | None = None  
 
 
 class DoctorRead(BaseModel):

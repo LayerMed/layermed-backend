@@ -48,8 +48,11 @@ async def register_doctor(
         doctor = Doctor(
             user_id=current_user.id,
             education=new_doctor.education,
+            degree=new_doctor.degree,
             experience_years=new_doctor.experience_years,
             bio=new_doctor.bio,
+            clinic=new_doctor.clinic,
+            avatar=new_doctor.avatar_url,
             specialties=specialties_list,
         )
         db.add(doctor)
@@ -62,9 +65,7 @@ async def register_doctor(
         await db.refresh(doctor)
 
         await redis.delc(redis.build_key("users", "current", current_user.email))
-
         return DoctorRead.model_validate(doctor)
-
     except sqlalchemy.exc.IntegrityError:
         await db.rollback()
         raise DoctorProfileAlreadyExistsError()

@@ -42,7 +42,6 @@ async def register_doctor_handle(
 ) -> DoctorRead:
     if current_user.role == UserRole.DOCTOR:
         raise DoctorProfileAlreadyExistsError()
-
     return await register_doctor(new_doctor, current_user, db, redis)
 
 
