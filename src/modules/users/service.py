@@ -8,6 +8,12 @@ from src.core.enums import UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PasswordConfirm
 from src.core.security import hash_pwd, verify_pwd
+from src.modules.users.exceptions import (
+    IncorrectPasswordError,
+    InvalidCredentialsError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from src.modules.users.models import User
 from src.modules.users.schemas import (
     UserCreate,
@@ -18,10 +24,20 @@ from src.modules.users.schemas import (
 )
 
 
+async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
+    query_password = select(User.password).where(User.id == current_user.id)
+    result  = await db.execute(query_password)
+    current_password = result.scalar_one_or_none()
+    if current_password is None:
+        raise UserNotFoundError()
+    return current_password
+
+
 # CREATE
 async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     query = (
         insert(User)
+        .on_conflict_do_nothing()
         .values(
             name=new_user.name,
             city_id=new_user.city_id,
@@ -34,8 +50,8 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     result = await db.execute(query)
     user_id = result.scalar_one_or_none()
 
-    if user_id is not None:
-        await db.commit()
+    if user_id is None:
+        raise UserAlreadyExistsError()
 
     return user_id
 
@@ -44,7 +60,7 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
 async def get_users_by_filters(
     filters: UserFilterParams,
     db: AsyncSession,
-) -> list[User]:
+) -> list[UserRead]:
     query = (
         select(User)
         .filter(User.role != UserRole.ADMIN)
@@ -69,20 +85,27 @@ async def get_users_by_filters(
         query = query.filter(User.updated_at >= filters.updated_at)
 
     result = await db.execute(query)
-    users = list(result.scalars().all())
-    return users
+
+    users = result.scalars().all()
+    users_dto = [UserRead.model_validate(s) for s in users]
+    return users_dto
 
 
-async def get_user_by_id(user_id: int, db: AsyncSession) -> User | None:
+async def get_user_by_id(user_id: int, db: AsyncSession) -> UserRead:
     query = select(User).filter(User.id == user_id).options(selectinload(User.doctor))
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise UserNotFoundError()
+    return UserRead.model_validate(user)
 
 
-async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User | None:
+async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User:
     query = select(User).filter(User.email == username)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
+    if user is None:
+        raise InvalidCredentialsError()
     return user
 
 
@@ -119,9 +142,11 @@ async def update_password(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> bool:
-    if not verify_pwd(password_data.old_password, current_user.password):
-        return False
+) -> None:
+    current_password = await get_user_password(current_user, db)
+    
+    if not verify_pwd(password_data.old_password, current_password):
+        raise IncorrectPasswordError()
 
     hashed_password = hash_pwd(password_data.new_password)
     query = (
@@ -131,7 +156,6 @@ async def update_password(
     await db.commit()
     cache_key = redis.build_key("users", "current", current_user.email)
     await redis.delc(cache_key)
-    return True
 
 
 # DELETE
@@ -140,9 +164,11 @@ async def delete_account(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> bool:
-    if not verify_pwd(password_data.password, current_user.password):
-        return False
+) -> None:
+    current_password = await get_user_password(current_user, db)
+    
+    if not verify_pwd(password_data.password, current_password):
+        raise IncorrectPasswordError()
 
     query = delete(User).where(User.id == current_user.id)
     await db.execute(query)
@@ -150,5 +176,3 @@ async def delete_account(
 
     cache_key = redis.build_key("users", "current", current_user.email)
     await redis.delc(cache_key)
-
-    return True

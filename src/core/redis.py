@@ -30,7 +30,13 @@ class RedisCache:
 
     async def setc(self, key: str, value: Value, ex: int) -> None:
         if isinstance(value, BaseModel):
-            value = value.model_dump_json()
+            value = value.model_dump_json()    
+        elif isinstance(value, list):
+            formatted_list = [
+                item.model_dump(mode="json") if isinstance(item, BaseModel) else item
+                for item in value
+            ]
+            value = json.dumps(formatted_list)
         elif isinstance(value, (dict, list)):
             value = json.dumps(value)
         else:

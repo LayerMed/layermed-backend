@@ -29,6 +29,8 @@ services:
       - redis-app
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
     environment:
       POSTGRES_HOST: postgresql-app
       POSTGRES_PORT: 5432

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user
-from src.core.logs import logger
 from src.core.redis import RedisCache, get_redis
 from src.modules.specialties.schemas import (
+    SpecialtyCountRead,
     SpecialtyCreate,
     SpecialtyRead,
     SpecialtyUpdate,
@@ -14,12 +14,13 @@ from src.modules.specialties.service import (
     create_specialty,
     delete_specialty,
     get_specialties,
+    get_specialties_count,
     get_specialty_by_id,
     update_specialty,
 )
 from src.modules.users.models import User
 
-router = APIRouter(prefix="/specialties", tags=["specialties"])
+router = APIRouter(prefix="/specialties", tags=["Specialties"])
 
 
 # CREATE
@@ -36,15 +37,6 @@ async def create_specialty_handle(
     admin: User = Depends(get_admin_user),
 ) -> SpecialtyRead:
     created_specialty = await create_specialty(new_specialty, db, redis)
-    if created_specialty is None:
-        logger.warning(
-            "Specialty with this name: {name} already exists",
-            name=new_specialty.name,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Specialty with this name already exists",
-        )
     return created_specialty
 
 
@@ -64,6 +56,18 @@ async def get_specialties_handle(
 
 
 @router.get(
+    "/count",
+    response_model=list[SpecialtyCountRead],
+    summary="Get numbers of specialties"
+)
+async def get_specialties_count_handle(
+    db: AsyncSession = Depends(get_session),    
+    redis: RedisCache = Depends(get_redis),
+) -> list[SpecialtyCountRead]:
+    return await get_specialties_count(db, redis)
+
+
+@router.get(
     "/{specialty_id}",
     response_model=SpecialtyRead,
     summary="Get specialty by id",
@@ -73,16 +77,7 @@ async def get_specialty_by_id_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> SpecialtyRead:
-
     specialty = await get_specialty_by_id(specialty_id, db, redis)
-    if specialty is None:
-        logger.warning(
-            "Specialty with id {specialty_id} not found",
-            specialty_id=specialty_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
-        )
     return specialty
 
 
@@ -100,14 +95,6 @@ async def update_specialty_by_id_handle(
     admin: User = Depends(get_admin_user),
 ) -> SpecialtyRead:
     updated_specialty = await update_specialty(specialty_id, specialty_data, db, redis)
-    if updated_specialty is None:
-        logger.warning(
-            "Specialty with id {specialty_id} not found",
-            specialty_id=specialty_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Specialty not found"
-        )
     return updated_specialty
 
 
@@ -123,13 +110,4 @@ async def delete_specialty_handle(
     redis: RedisCache = Depends(get_redis),
     admin: User = Depends(get_admin_user),
 ) -> None:
-    deleted_specialty = await delete_specialty(specialty_id, db, redis)
-    if not deleted_specialty:
-        logger.info(
-            "A specialty with this id does not exist: {specialty_id}",
-            specialty_id=specialty_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"A specialty with this id does not exist: {specialty_id}",
-        )
+    await delete_specialty(specialty_id, db, redis)
