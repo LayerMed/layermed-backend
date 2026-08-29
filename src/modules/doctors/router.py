@@ -7,7 +7,7 @@ from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
 from src.core.enums import UserRole
 from src.core.redis import RedisCache, get_redis
-from src.core.schemas import PasswordConfirm
+from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
 from src.modules.doctors.schemas import (
     DoctorCreate,
@@ -57,7 +57,7 @@ async def register_doctor_handle(
 async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-) -> list[DoctorRead]:
+) -> PaginatedResponse[DoctorRead]:
     return await get_doctors_by_filters(filters, db)
 
 

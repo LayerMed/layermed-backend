@@ -6,13 +6,13 @@ from sqlalchemy import func, select, update, insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.reviews.exceptions import ReviewAlreadyLeft
 from src.modules.reviews.models import Review
 from src.modules.reviews.schemas import (
     ReviewCreate,
-    ReviewFilterParams,
-    ReviewPaginatedResponse,
+    ReviewFilterParams,    
     ReviewRead,
 )
 from src.modules.users.schemas import UserRead
@@ -65,22 +65,17 @@ async def create_review(
 # READ
 async def get_reviews_by_filter(
     doctor_id: int, filters: ReviewFilterParams, db: AsyncSession
-) -> ReviewPaginatedResponse:
+) -> PaginatedResponse:
 
     query = select(Review).where(Review.doctor_id == doctor_id)
 
     if filters.rating is not None:
         query = query.where(Review.rating == filters.rating)
-
     if filters.is_positive is not None:
         if filters.is_positive:
             query = query.where(Review.rating >= 4)
         else:
             query = query.where(Review.rating <= 3)
-
-    count_query = select(func.count()).select_from(query.subquery())
-    count_result = await db.execute(count_query)
-    total_count = count_result.scalar_one()
 
     query = (
         query.order_by(Review.created_at.desc())
@@ -91,9 +86,8 @@ async def get_reviews_by_filter(
     result = await db.execute(query)
     reviews = result.scalars().all()
 
-    return ReviewPaginatedResponse(
-        items=[ReviewRead.model_validate(r) for r in reviews],
-        total=total_count,
+    return PaginatedResponse[ReviewRead](
+        items=[ReviewRead.model_validate(r) for r in reviews],        
         limit=filters.limit,
         offset=filters.offset,
     )

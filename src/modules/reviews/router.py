@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.schemas import PaginatedResponse
 from src.modules.reviews.schemas import ReviewCreate, ReviewFilterParams, ReviewRead
 from src.modules.reviews.service import create_review, get_reviews_by_filter
 from src.modules.users.schemas import UserRead
@@ -31,7 +32,11 @@ async def create_review_handle(
 
 
 # READ
-@router.get("/", response_model=list[ReviewRead], summary="Get doctor reviews")
+@router.get(
+    "/{doctor_id}", 
+    response_model=PaginatedResponse[ReviewRead], 
+    summary="Get doctor reviews"
+)
 async def get_reviews_by_filter_handle(
     doctor_id: int,
     filters: ReviewFilterParams,

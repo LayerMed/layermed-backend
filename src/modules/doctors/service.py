@@ -1,11 +1,11 @@
 import sqlalchemy.exc
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.enums import DoctorStatus, UserRole
 from src.core.redis import RedisCache
-from src.core.schemas import PasswordConfirm
+from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
 from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
@@ -85,7 +85,7 @@ async def register_doctor(
 async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     db: AsyncSession,
-) -> list[DoctorRead]:
+) -> PaginatedResponse[DoctorRead]:
     target_status = filters.status or DoctorStatus.APPROVED
 
     query = (
@@ -112,11 +112,15 @@ async def get_doctors_by_filters(
         if filters.status == DoctorStatus.APPROVED:
             query = query.where(Doctor.status == DoctorStatus.APPROVED)
 
-    query = query.offset(filters.offset).limit(filters.limit)
-
+    query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
     doctors = result.scalars().all()
-    return [DoctorRead.model_validate(d) for d in doctors]
+
+    return PaginatedResponse[DoctorRead](
+        items=[DoctorRead.model_validate(d) for d in doctors],
+        limit=filters.limit,
+        offset=filters.offset,
+    )
 
 
 async def get_doctor_by_id(
