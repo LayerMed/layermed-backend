@@ -26,7 +26,7 @@ from src.modules.users.schemas import (
 
 async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
     query_password = select(User.password).where(User.id == current_user.id)
-    result  = await db.execute(query_password)
+    result = await db.execute(query_password)
     current_password = result.scalar_one_or_none()
     if current_password is None:
         raise UserNotFoundError()
@@ -148,7 +148,7 @@ async def update_password(
     redis: RedisCache,
 ) -> None:
     current_password = await get_user_password(current_user, db)
-    
+
     if not verify_pwd(password_data.old_password, current_password):
         raise IncorrectPasswordError()
 
@@ -170,7 +170,7 @@ async def delete_account(
     redis: RedisCache,
 ) -> None:
     current_password = await get_user_password(current_user, db)
-    
+
     if not verify_pwd(password_data.password, current_password):
         raise IncorrectPasswordError()
 

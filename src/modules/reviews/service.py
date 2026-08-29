@@ -12,7 +12,7 @@ from src.modules.reviews.exceptions import ReviewAlreadyLeft
 from src.modules.reviews.models import Review
 from src.modules.reviews.schemas import (
     ReviewCreate,
-    ReviewFilterParams,    
+    ReviewFilterParams,
     ReviewRead,
 )
 from src.modules.users.schemas import UserRead
@@ -87,7 +87,7 @@ async def get_reviews_by_filter(
     reviews = result.scalars().all()
 
     return PaginatedResponse[ReviewRead](
-        items=[ReviewRead.model_validate(r) for r in reviews],        
+        items=[ReviewRead.model_validate(r) for r in reviews],
         limit=filters.limit,
         offset=filters.offset,
     )

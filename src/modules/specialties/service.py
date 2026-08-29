@@ -69,23 +69,20 @@ async def get_specialties(
 
 
 async def get_specialties_count(
-    db: AsyncSession,
-    redis: RedisCache
+    db: AsyncSession, redis: RedisCache
 ) -> list[SpecialtyCountRead]:
     cache_key = redis.build_key("specialties", "items", "count")
     cached_count = await redis.getc(cache_key)
     if cached_count:
-        return [SpecialtyCountRead.model_validate(s) for s in cached_count] 
-    
+        return [SpecialtyCountRead.model_validate(s) for s in cached_count]
+
     query = (
-        select (
-            Specialty.id,
-            Specialty.name, 
-            func.count(Doctor.id).label("doctors_count")
-        )         
+        select(
+            Specialty.id, Specialty.name, func.count(Doctor.id).label("doctors_count")
+        )
         .outerjoin(Specialty.doctors)
         .group_by(Specialty.id, Specialty.name)
-        .order_by(Specialty.name) 
+        .order_by(Specialty.name)
     )
     result = await db.execute(query)
     specialties = result.all()

@@ -90,10 +90,10 @@ async def get_doctors_by_filters(
 
     query = (
         select(Doctor)
-        .where(Doctor.status == target_status) 
+        .where(Doctor.status == target_status)
         .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
-    
+
     if filters.specialty_id is not None:
         query = query.where(
             Doctor.specialties.any(Specialty.id == filters.specialty_id)
@@ -101,9 +101,9 @@ async def get_doctors_by_filters(
     if filters.experience_years is not None:
         query = query.where(Doctor.experience_years >= filters.experience_years)
     if filters.max_price is not None:
-        query = query.where(Doctor.min_price <= filters.max_price)    
+        query = query.where(Doctor.min_price <= filters.max_price)
     if filters.rating_avg is not None:
-        query = query.where(Doctor.rating_avg >= filters.rating_avg)        
+        query = query.where(Doctor.rating_avg >= filters.rating_avg)
     if filters.status is not None:
         if filters.status == DoctorStatus.PENDING:
             query = query.where(Doctor.status == DoctorStatus.PENDING)

@@ -25,4 +25,3 @@ class ReviewRead(BaseModel):
 class ReviewFilterParams(PaginationParams):
     rating: int | None = Field(default=None, ge=1, le=5)
     is_positive: bool | None = Field(default=None)
-

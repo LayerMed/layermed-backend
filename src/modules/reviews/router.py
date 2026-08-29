@@ -33,9 +33,9 @@ async def create_review_handle(
 
 # READ
 @router.get(
-    "/{doctor_id}", 
-    response_model=PaginatedResponse[ReviewRead], 
-    summary="Get doctor reviews"
+    "/{doctor_id}",
+    response_model=PaginatedResponse[ReviewRead],
+    summary="Get doctor reviews",
 )
 async def get_reviews_by_filter_handle(
     doctor_id: int,
