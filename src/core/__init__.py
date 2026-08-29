@@ -6,6 +6,7 @@ from src.modules.specialties.models import DoctorSpecialty, Specialty
 from src.modules.suggestions.models import Suggestion
 from src.modules.symptoms.models import Symptom
 from src.modules.users.models import User
+from src.modules.reviews.models import Review
 
 __all__ = [
     "Base",
@@ -17,4 +18,5 @@ __all__ = [
     "Suggestion",
     "Symptom",
     "User",
+    "Review"
 ]

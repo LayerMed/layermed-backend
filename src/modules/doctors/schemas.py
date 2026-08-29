@@ -44,7 +44,7 @@ class DoctorUpdate(BaseModel):
 
 
 class DoctorFilterParams(BaseModel):
-    specialty_id: int | None = None
+    specialty_id: int | None = None # переиминовать в связи с изменением логики специальностей
     experience_years: int | None = Field(default=None, ge=0)
     max_price: int | None = None
     rating_avg: int | None = Field(default=None, ge=0, le=5)
