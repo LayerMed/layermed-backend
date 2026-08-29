@@ -3,7 +3,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.enums import DoctorStatus, UserRole
+from src.core.enums import CacheTTL, DoctorStatus, UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
@@ -140,7 +140,7 @@ async def get_doctor_by_id(
         raise DoctorNotFoundError()
 
     doctor_dto = DoctorRead.model_validate(doctor)
-    await redis.setc(cache_key, doctor_dto, 900)
+    await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
 

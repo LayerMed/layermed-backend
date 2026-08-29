@@ -2,7 +2,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.core.enums import BookingStatus, UserRole
+from src.core.enums import BookingStatus, CacheTTL, UserRole
 from src.core.redis import RedisCache
 from src.modules.bookings.exceptions import (
     BookingAccessDeniedError,
@@ -66,7 +66,7 @@ async def get_current_bookings(
     bookings = result.scalars().all()
 
     bookings_dto = [BookingRead.model_validate(b) for b in bookings]
-    await redis.setc(cache_key, bookings_dto, 3600)
+    await redis.setc(cache_key, bookings_dto, CacheTTL.FAST)
 
     return bookings_dto
 
@@ -106,7 +106,7 @@ async def get_booking_by_id(
     if booking_dto.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise BookingAccessDeniedError()
 
-    await redis.setc(cache_key, booking_dto.model_dump(mode="json"), 3600)
+    await redis.setc(cache_key, booking_dto.model_dump(mode="json"), CacheTTL.FAST)
 
     return booking_dto
 

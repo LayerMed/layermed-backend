@@ -2,6 +2,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.enums import CacheTTL
 from src.modules.doctors.models import Doctor
 from src.core.redis import RedisCache
 from src.modules.specialties.exceptions import (
@@ -58,7 +59,7 @@ async def get_specialties(
         specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
 
         await redis.setc(
-            cache_key, [s.model_dump(mode="json") for s in specialties_dto], ex=3600
+            cache_key, [s.model_dump(mode="json") for s in specialties_dto], ex=CacheTTL.STATIC
         )
         return specialties_dto
     else:
@@ -88,7 +89,7 @@ async def get_specialties_count(
     specialties = result.all()
     specialties_dto = [SpecialtyCountRead.model_validate(s) for s in specialties]
 
-    await redis.setc(cache_key, specialties_dto, 3600)
+    await redis.setc(cache_key, specialties_dto, CacheTTL.STATIC)
     return specialties_dto
 
 
@@ -108,7 +109,7 @@ async def get_specialty_by_id(
         raise SpecialtyNotFoundError()
 
     specialty_dto = SpecialtyRead.model_validate(specialty)
-    await redis.setc(cache_key, specialty_dto, ex=3600)
+    await redis.setc(cache_key, specialty_dto, ex=CacheTTL.STATIC)
 
     return specialty_dto
 
