@@ -14,7 +14,14 @@ class BookingStatus(str, Enum):
     COMPLETED = "completed"
     NO_SHOW = "no_show"
 
+
 class DoctorStatus(str, Enum):
+    APPROVED = "approved"
+    PENDING = "pending"
+    REJECTED = "rejected"
+
+
+class ReviewStatus(str, Enum):
     APPROVED = "approved"
     PENDING = "pending"
     REJECTED = "rejected"
