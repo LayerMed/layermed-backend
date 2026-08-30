@@ -1,12 +1,17 @@
-from sqlalchemy import delete, select, update, insert
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.doctors.schemas import DoctorRead
 from src.core.enums import ReviewStatus
+from src.core.redis import RedisCache
 from src.core.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
-from src.modules.reviews.exceptions import ReviewAccessDeletionError, ReviewAlreadyLeft, ReviewNotFoundError
+from src.modules.doctors.schemas import DoctorRead
+from src.modules.reviews.exceptions import (
+    ReviewAccessDeletionError,
+    ReviewAlreadyLeft,
+    ReviewNotFoundError,
+)
 from src.modules.reviews.models import Review
 from src.modules.reviews.schemas import (
     ReviewCreate,
@@ -14,23 +19,18 @@ from src.modules.reviews.schemas import (
     ReviewRead,
 )
 from src.modules.users.schemas import UserRead
-from src.core.redis import RedisCache
 
 
 async def recalculate_doctor_rating(
-    doctor_id: int,
-    rating_change: int,
-    is_addition: bool,
-    db: AsyncSession
+    doctor_id: int, rating_change: int, is_addition: bool, db: AsyncSession
 ) -> None:
     query_doctor = select(Doctor).where(Doctor.id == doctor_id)
     doctor_result = await db.execute(query_doctor)
     doctor = doctor_result.scalar_one()
 
     if is_addition:
-        new_rating_avg = (
-            (doctor.rating_avg * doctor.reviews_count + rating_change)
-            / (doctor.reviews_count + 1)
+        new_rating_avg = (doctor.rating_avg * doctor.reviews_count + rating_change) / (
+            doctor.reviews_count + 1
         )
         new_reviews_count = doctor.reviews_count + 1
     else:
@@ -66,7 +66,7 @@ async def create_review(
                 doctor_id=new_review.doctor_id,
                 rating=new_review.rating,
                 comment=new_review.comment,
-                status=ReviewStatus.APPROVED
+                status=ReviewStatus.APPROVED,
             )
             .returning(Review)
         )
@@ -77,9 +77,9 @@ async def create_review(
             doctor_id=new_review.doctor_id,
             rating_change=new_review.rating,
             is_addition=True,
-            db=db
+            db=db,
         )
-        
+
         await db.commit()
         await redis.delc(redis.build_key("doctors", "items", new_review.doctor_id))
 
@@ -88,6 +88,7 @@ async def create_review(
     except IntegrityError:
         await db.rollback()
         raise ReviewAlreadyLeft()
+
 
 # READ
 async def get_reviews_by_filter(
@@ -144,14 +145,14 @@ async def update_review_status(
             doctor_id=review.doctor_id,
             rating_change=review.rating,
             is_addition=False,
-            db=db
+            db=db,
         )
     elif status == ReviewStatus.APPROVED and old_status == ReviewStatus.REJECTED:
         await recalculate_doctor_rating(
             doctor_id=review.doctor_id,
             rating_change=review.rating,
             is_addition=True,
-            db=db
+            db=db,
         )
 
     await db.commit()
@@ -159,11 +160,8 @@ async def update_review_status(
     return ReviewRead.model_validate(review)
 
 
-async def remove_review_request(    
-    review_id: int,
-    current_doctor: DoctorRead,
-    db: AsyncSession,
-    redis: RedisCache
+async def remove_review_request(
+    review_id: int, current_doctor: DoctorRead, db: AsyncSession, redis: RedisCache
 ) -> ReviewRead:
     query = select(Review).where(Review.id == review_id)
     result = await db.execute(query)
@@ -177,11 +175,9 @@ async def remove_review_request(
 
     return await update_review_status(review_id, ReviewStatus.PENDING, db, redis)
 
+
 async def remove_review_by_user(
-    review_id: int,
-    current_user: UserRead,
-    db: AsyncSession,
-    redis: RedisCache     
+    review_id: int, current_user: UserRead, db: AsyncSession, redis: RedisCache
 ) -> None:
     query_review = select(Review).where(Review.id == review_id)
     result = await db.execute(query_review)
@@ -199,13 +195,8 @@ async def remove_review_by_user(
         doctor_id=review.doctor_id,
         rating_change=review.rating,
         is_addition=False,
-        db=db
+        db=db,
     )
 
     await db.commit()
     await redis.delc(redis.build_key("doctors", "items", review.doctor_id))
-
-
-
-
-

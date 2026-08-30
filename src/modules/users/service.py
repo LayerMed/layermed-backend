@@ -53,6 +53,7 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     if user_id is None:
         raise UserAlreadyExistsError()
 
+    await db.commit()
     return user_id
 
 

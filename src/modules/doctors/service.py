@@ -1,5 +1,5 @@
 import sqlalchemy.exc
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -132,7 +132,9 @@ async def get_doctor_by_id(
         return DoctorRead.model_validate(cached_doctor)
 
     query = (
-        select(Doctor).where(Doctor.id == doctor_id).options(selectinload(Doctor.user))
+        select(Doctor)
+        .where(Doctor.id == doctor_id)
+        .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
     result = await db.execute(query)
     doctor = result.scalar_one_or_none()

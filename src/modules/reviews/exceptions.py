@@ -1,5 +1,6 @@
-from src.core.exceptions import AppError
 from fastapi import status
+
+from src.core.exceptions import AppError
 
 
 class ReviewAlreadyLeft(AppError):

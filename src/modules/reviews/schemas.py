@@ -9,10 +9,11 @@ from src.core.schemas import PaginationParams
 class ReviewCreate(BaseModel):
     doctor_id: int
     rating: int = Field(ge=1, le=5)
-    comment: str = Field(max_length=350)    
+    comment: str = Field(max_length=350)
 
 
 class ReviewRead(BaseModel):
+    id: int
     user_id: int
     doctor_id: int
     rating: int

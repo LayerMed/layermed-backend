@@ -51,7 +51,7 @@ async def register_doctor_handle(
 # READ
 @router.get(
     "/",
-    response_model=list[DoctorRead],
+    response_model=PaginatedResponse[DoctorRead],
     summary="Get all doctor from databse by filters",
 )
 async def get_doctors_by_filters_handle(

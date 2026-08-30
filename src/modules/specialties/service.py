@@ -3,8 +3,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.enums import CacheTTL
-from src.modules.doctors.models import Doctor
 from src.core.redis import RedisCache
+from src.modules.doctors.models import Doctor
 from src.modules.specialties.exceptions import (
     SpecialtyAlreadyExistsError,
     SpecialtyNotFoundError,
@@ -59,7 +59,9 @@ async def get_specialties(
         specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
 
         await redis.setc(
-            cache_key, [s.model_dump(mode="json") for s in specialties_dto], ex=CacheTTL.STATIC
+            cache_key,
+            [s.model_dump(mode="json") for s in specialties_dto],
+            ex=CacheTTL.STATIC,
         )
         return specialties_dto
     else:

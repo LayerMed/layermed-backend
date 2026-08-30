@@ -41,7 +41,7 @@ class RedisCache:
             value = json.dumps(value)
         else:
             value = str(value)
-        await self.redis_client.set(key, value, ex)
+        await self.redis_client.set(key, value, ex=int(ex))
 
     async def getc(self, key: str) -> Any:
         data = await self.redis_client.get(key)
