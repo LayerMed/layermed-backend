@@ -1,14 +1,18 @@
 
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.users.schemas import UserRead
+from src.core.schemas import PaginatedResponse
 from src.core.database import get_session
-from src.core.dependencies import get_current_doctor
+from src.core.dependencies import get_current_doctor, get_optional_user
 from src.core.redis import RedisCache, get_redis
 from src.modules.doctors.schemas import DoctorRead
-from src.modules.offers.schemas import OfferCreate, OfferRead
-from src.modules.offers.service import create_offer
+from src.modules.offers.schemas import OfferCreate, OfferFilterParams, OfferRead
+from src.modules.offers.service import create_offer, get_all_offers
 
 
 router = APIRouter(prefix='/offers', tags=["Offers"])
@@ -30,3 +34,16 @@ async def create_offer_handle(
     return await create_offer(new_offer, current_doctor, db, redis)
 
 
+# READ
+@router.get(
+    "/",
+    response_model=PaginatedResponse[OfferRead],
+    summary="Get all offers"
+)
+async def get_all_offers_handle(    
+    filters: Annotated[OfferFilterParams, Depends()],
+    current_user: UserRead | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis)    
+) -> PaginatedResponse[OfferRead]:
+    return await get_all_offers(current_user, filters, db, redis)

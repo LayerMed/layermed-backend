@@ -21,5 +21,5 @@ class PaginationParams(BaseModel):
 
 class PaginatedResponse(BaseModel, Generic[T]):
     items: list[T]    
-    limit: int
+    limit: int 
     offset: int

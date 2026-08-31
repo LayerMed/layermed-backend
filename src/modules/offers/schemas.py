@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from src.core.schemas import PaginatedResponse
+from src.modules.doctors.schemas import DoctorFilterParams
 from src.core.enums import ModerationStatus, OfferFormat
 
 class OfferCreate(BaseModel):
@@ -20,5 +22,20 @@ class OfferRead(BaseModel):
     status: ModerationStatus
     offer_format: OfferFormat
     images: list[str] | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OfferFilterParams(BaseModel):    
+    city_id: int | None = None    
+    cost: int | None = None
+    status: ModerationStatus | None = None
+    offer_format: OfferFormat | None = None  
+
+    doctor_experience_years: int | None = Field(default=None, ge=0)
+    doctor_rating_avg: int | None = Field(default=None, ge=0, le=5) 
+
+    limit: int = Field(default=10, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
 
     model_config = ConfigDict(from_attributes=True)
