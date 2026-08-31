@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.enums import ReviewStatus
+from src.core.enums import ModerationStatus
 from src.core.schemas import PaginationParams
 
 
@@ -18,7 +18,7 @@ class ReviewRead(BaseModel):
     doctor_id: int
     rating: int
     comment: str
-    status: ReviewStatus
+    status: ModerationStatus
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -28,4 +28,4 @@ class ReviewRead(BaseModel):
 class ReviewFilterParams(PaginationParams):
     rating: int | None = Field(default=None, ge=1, le=5)
     is_positive: bool | None = Field(default=None)
-    status: ReviewStatus
+    status: ModerationStatus
