@@ -3,9 +3,9 @@ from fastapi import status
 from src.core.exceptions import AppError
 
 
-class SuggestionNotFoundError(AppError):
+class OfferNotFoundError(AppError):
     status_code = status.HTTP_404_NOT_FOUND
-    detail = "Suggestion is not found or it is inactive"
+    detail = "Offer is not found or it is inactive"
 
 
 class BookingNotFoundError(AppError):

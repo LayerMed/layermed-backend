@@ -4,8 +4,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.core.database import Base, Timestamp
 
 
-class Suggestion(Base, Timestamp):
-    __tablename__ = "suggestions"
+class Offer(Base, Timestamp):
+    __tablename__ = "offers"
 
     doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id", ondelete="cascade"))
     city_id: Mapped[int] = mapped_column(ForeignKey("cities.id"))
@@ -18,7 +18,7 @@ class Suggestion(Base, Timestamp):
 
     __table_args__ = (
         Index(
-            "ix_suggestions_title_cost_format",
+            "ix_offers_title_cost_format",
             "city_id",
             "title",
             "cost",
@@ -26,6 +26,6 @@ class Suggestion(Base, Timestamp):
         ),
     )
 
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="suggestion")
-    doctor: Mapped["Doctor"] = relationship(back_populates="suggestions")
-    city: Mapped["City"] = relationship(back_populates="suggestion")
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="offers")
+    doctor: Mapped["Doctor"] = relationship(back_populates="offers")
+    city: Mapped["City"] = relationship(back_populates="offers")

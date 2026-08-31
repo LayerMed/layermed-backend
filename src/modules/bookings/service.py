@@ -8,11 +8,11 @@ from src.modules.bookings.exceptions import (
     BookingAccessDeniedError,
     BookingCannotBeCancelledError,
     BookingNotFoundError,
-    SuggestionNotFoundError,
+    OfferNotFoundError,
 )
 from src.modules.bookings.models import Booking
 from src.modules.bookings.schemas import BookingCreate, BookingRead
-from src.modules.suggestions.models import Suggestion
+from src.modules.offers.models import Offer
 from src.modules.users.schemas import UserRead
 
 
@@ -23,19 +23,19 @@ async def create_booking(
     db: AsyncSession,
     redis: RedisCache,
 ) -> BookingRead:
-    query_suggestion = select(Suggestion).where(
-        Suggestion.id == new_booking.suggestion_id, Suggestion.is_active == True
+    query_offer = select(Offer).where(
+        Offer.id == new_booking.offer_id, Offer.is_active == True
     )
-    result = await db.execute(query_suggestion)
-    suggestion = result.scalar_one_or_none()
-    if suggestion is None:
-        raise SuggestionNotFoundError()
+    result = await db.execute(query_offer)
+    offer = result.scalar_one_or_none()
+    if offer is None:
+        raise OfferNotFoundError()
 
     query = (
         insert(Booking)
         .values(
             user_id=current_user.id,
-            suggestion_id=new_booking.suggestion_id,
+            offer_id=new_booking.offer_id,
             appointment_time=new_booking.appointment_time,
         )
         .returning(Booking)
@@ -91,7 +91,7 @@ async def get_booking_by_id(
 
     query = (
         select(Booking)
-        .options(joinedload(Booking.suggestion))
+        .options(joinedload(Booking.offer))
         .where(Booking.id == booking_id)
     )
 
