@@ -1,9 +1,10 @@
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.offers.exceptions import OfferNotFoundError
 from src.core.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
-from src.core.enums import ModerationStatus, UserRole
+from src.core.enums import CacheTTL, ModerationStatus, UserRole
 from src.modules.users.schemas import UserRead
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
@@ -43,6 +44,10 @@ async def get_all_offers(
     redis: RedisCache,
 ) -> PaginatedResponse[OfferRead]:
     is_admin = current_user and current_user.role == UserRole.ADMIN
+    # cache_key = redis.build_key("offers", "items", "all")
+    # cached_offers = await redis.getc(cache_key)
+    # if cached_offers:
+    # Сделать кеш везде где есть offset и limit. добавить total
     query = select(Offer)
 
     if is_admin:        
@@ -75,3 +80,35 @@ async def get_all_offers(
         limit=filters.limit,
         offset=filters.offset,
     )
+
+
+async def get_offer_by_id(
+    offer_id: int,
+    current_user: UserRead | None,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> OfferRead:
+    cache_key = redis.build_key("offers", "items", offer_id)
+    is_admin = current_user and current_user.role == UserRole.ADMIN
+    
+    if not is_admin:
+        cached_offer = await redis.getc(cache_key)
+        if cached_offer:
+            return OfferRead.model_validate(cached_offer)
+    
+    query = select(Offer).where(Offer.id == offer_id)
+    result = await db.execute(query)
+    offer = result.scalar_one_or_none()
+
+    if not offer:
+        raise OfferNotFoundError()
+
+    if not is_admin and offer.status != ModerationStatus.APPROVED:
+        raise OfferNotFoundError()
+
+    offer_dto = OfferRead.model_validate(offer)
+    
+    if offer.status == ModerationStatus.APPROVED:
+        await redis.setc(cache_key, offer_dto, ex=CacheTTL.SLOW) 
+
+    return offer_dto
