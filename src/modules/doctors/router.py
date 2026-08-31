@@ -13,6 +13,7 @@ from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
     DoctorRead,
+    DoctorReadDetailed,
     DoctorReject,
     DoctorUpdate,
 )
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
 # CREATE
 @router.post(
     "/register",
-    response_model=DoctorRead,
+    response_model=DoctorReadDetailed,
     status_code=status.HTTP_201_CREATED,
     summary="Registering a doctor account",
 )
@@ -42,7 +43,7 @@ async def register_doctor_handle(
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     if current_user.role == UserRole.DOCTOR:
         raise DoctorProfileAlreadyExistsError()
     return await register_doctor(new_doctor, current_user, db, redis)
@@ -61,12 +62,14 @@ async def get_doctors_by_filters_handle(
     return await get_doctors_by_filters(filters, db)
 
 
-@router.get("/{doctor_id}", response_model=DoctorRead, summary="Get doctor by id")
+@router.get(
+    "/{doctor_id}", response_model=DoctorReadDetailed, summary="Get doctor by id"
+)
 async def get_doctor_by_id_handle(
     doctor_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     return await get_doctor_by_id(doctor_id, db, redis)
 
 

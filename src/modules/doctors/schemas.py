@@ -3,6 +3,7 @@ import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.enums import DoctorStatus
+from src.modules.specialties.schemas import SpecialtyRead
 
 
 class DoctorCreate(BaseModel):
@@ -18,7 +19,6 @@ class DoctorCreate(BaseModel):
 class DoctorRead(BaseModel):
     id: int
     user_id: int
-    specialty_ids: list[int] = Field(default_factory=list)
     education: str
     degree: str | None = None
     experience_years: int
@@ -34,6 +34,10 @@ class DoctorRead(BaseModel):
     updated_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DoctorReadDetailed(DoctorRead):
+    specialties: list[SpecialtyRead] = Field(default_factory=list)
 
 
 class DoctorUpdate(BaseModel):

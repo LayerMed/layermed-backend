@@ -60,14 +60,24 @@ async def get_specialties(
 
         await redis.setc(
             cache_key,
-            [s.model_dump(mode="json") for s in specialties_dto],
+            specialties_dto,
             ex=CacheTTL.STATIC,
         )
         return specialties_dto
     else:
+        all_cache_key = redis.build_key("specialties", "items", "all")
+        cached_specialties = await redis.getc(all_cache_key)
+
+        if cached_specialties:
+            all_specialties = [
+                SpecialtyRead.model_validate(s) for s in cached_specialties
+            ]
+            return [s for s in all_specialties if s.id in ids]
+
         query = select(Specialty).where(Specialty.id.in_(ids))
         result = await db.execute(query)
         specialties = result.scalars().all()
+
         return [SpecialtyRead.model_validate(s) for s in specialties]
 
 

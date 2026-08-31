@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base, Timestamp
@@ -21,3 +21,5 @@ class SuggestionSymptom(Base):
     symptom_id: Mapped[int] = mapped_column(
         ForeignKey("symptoms.id", ondelete="cascade"), primary_key=True
     )
+
+    __table_args__ = (Index("idx_symptom_suggestion", "symptom_id", "suggestion_id"),)

@@ -19,11 +19,11 @@ async def create_city(
     )
     result = await db.execute(query)
     created_city = result.scalar_one_or_none()
-    await db.commit()
 
     if created_city is None:
         raise CityAlreadyExistsError()
 
+    await db.commit()
     await redis.invalidate("cities")
     return CityRead.model_validate(created_city)
 

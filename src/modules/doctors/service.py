@@ -20,6 +20,7 @@ from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
     DoctorRead,
+    DoctorReadDetailed,
     DoctorUpdate,
 )
 from src.modules.specialties.models import Specialty
@@ -41,7 +42,7 @@ async def register_doctor(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     try:
         specialties_list = []
 
@@ -72,10 +73,17 @@ async def register_doctor(
         )
 
         await db.commit()
-        await db.refresh(doctor)
+        query = (
+            select(Doctor)
+            .where(Doctor.id == doctor.id)
+            .options(selectinload(Doctor.specialties))
+        )
+        result = await db.execute(query)
+        doctor = result.scalar_one()
 
         await redis.delc(redis.build_key("users", "current", current_user.email))
-        return DoctorRead.model_validate(doctor)
+        return DoctorReadDetailed.model_validate(doctor)
+
     except sqlalchemy.exc.IntegrityError:
         await db.rollback()
         raise DoctorProfileAlreadyExistsError()
@@ -125,11 +133,11 @@ async def get_doctors_by_filters(
 
 async def get_doctor_by_id(
     doctor_id: int, db: AsyncSession, redis: RedisCache
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     cache_key = redis.build_key("doctors", "items", doctor_id)
     cached_doctor = await redis.getc(cache_key)
     if cached_doctor:
-        return DoctorRead.model_validate(cached_doctor)
+        return DoctorReadDetailed.model_validate(cached_doctor)
 
     query = (
         select(Doctor)
@@ -141,7 +149,7 @@ async def get_doctor_by_id(
     if doctor is None:
         raise DoctorNotFoundError()
 
-    doctor_dto = DoctorRead.model_validate(doctor)
+    doctor_dto = DoctorReadDetailed.model_validate(doctor)
     await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
