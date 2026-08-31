@@ -2,6 +2,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.enums import CacheTTL
 from src.core.redis import RedisCache
 from src.modules.symptoms.exceptions import (
     SymptomAlreadyExistsError,
@@ -42,7 +43,7 @@ async def get_symptoms(db: AsyncSession, redis: RedisCache) -> list[SymptomRead]
     symptoms = result.scalars().all()
 
     symptoms_dto = [SymptomRead.model_validate(s) for s in symptoms]
-    await redis.setc(cache_key, symptoms_dto, 3600)
+    await redis.setc(cache_key, symptoms_dto, CacheTTL.STATIC)
 
     return symptoms_dto
 
@@ -64,7 +65,7 @@ async def get_symptom_by_id(
         raise SymptomNotFoundError()
 
     symptom_dto = SymptomRead.model_validate(symptom)
-    await redis.setc(cache_key, symptom_dto, 3600)
+    await redis.setc(cache_key, symptom_dto, CacheTTL.STATIC)
 
     return symptom_dto
 

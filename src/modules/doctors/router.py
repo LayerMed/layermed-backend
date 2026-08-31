@@ -7,12 +7,13 @@ from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
 from src.core.enums import UserRole
 from src.core.redis import RedisCache, get_redis
-from src.core.schemas import PasswordConfirm
+from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
 from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
     DoctorRead,
+    DoctorReadDetailed,
     DoctorReject,
     DoctorUpdate,
 )
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
 # CREATE
 @router.post(
     "/register",
-    response_model=DoctorRead,
+    response_model=DoctorReadDetailed,
     status_code=status.HTTP_201_CREATED,
     summary="Registering a doctor account",
 )
@@ -42,7 +43,7 @@ async def register_doctor_handle(
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     if current_user.role == UserRole.DOCTOR:
         raise DoctorProfileAlreadyExistsError()
     return await register_doctor(new_doctor, current_user, db, redis)
@@ -51,22 +52,24 @@ async def register_doctor_handle(
 # READ
 @router.get(
     "/",
-    response_model=list[DoctorRead],
+    response_model=PaginatedResponse[DoctorRead],
     summary="Get all doctor from databse by filters",
 )
 async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-) -> list[DoctorRead]:
+) -> PaginatedResponse[DoctorRead]:
     return await get_doctors_by_filters(filters, db)
 
 
-@router.get("/{doctor_id}", response_model=DoctorRead, summary="Get doctor by id")
+@router.get(
+    "/{doctor_id}", response_model=DoctorReadDetailed, summary="Get doctor by id"
+)
 async def get_doctor_by_id_handle(
     doctor_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     return await get_doctor_by_id(doctor_id, db, redis)
 
 

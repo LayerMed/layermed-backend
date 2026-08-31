@@ -58,10 +58,10 @@ async def get_specialties_handle(
 @router.get(
     "/count",
     response_model=list[SpecialtyCountRead],
-    summary="Get numbers of specialties"
+    summary="Get numbers of specialties",
 )
 async def get_specialties_count_handle(
-    db: AsyncSession = Depends(get_session),    
+    db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SpecialtyCountRead]:
     return await get_specialties_count(db, redis)

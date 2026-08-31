@@ -35,7 +35,3 @@ class Doctor(Base, Timestamp):
     reviews: Mapped[list["Review"]] = relationship(
         back_populates="doctor", cascade="all, delete-orphan"
     )
-
-    @property
-    def specialty_ids(self) -> list[int]:
-        return [s.id for s in self.specialties] if self.specialties else []

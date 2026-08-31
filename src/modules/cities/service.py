@@ -3,6 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.enums import CacheTTL
 from src.core.redis import RedisCache
 from src.modules.cities.exceptions import CityAlreadyExistsError, CityNotFoundError
 from src.modules.cities.models import City
@@ -18,11 +19,11 @@ async def create_city(
     )
     result = await db.execute(query)
     created_city = result.scalar_one_or_none()
-    await db.commit()
 
     if created_city is None:
         raise CityAlreadyExistsError()
 
+    await db.commit()
     await redis.invalidate("cities")
     return CityRead.model_validate(created_city)
 
@@ -39,7 +40,7 @@ async def get_cities(db: AsyncSession, redis: RedisCache) -> list[CityRead]:
     cities = result.scalars().all()
 
     cities_dto = [CityRead.model_validate(c) for c in cities]
-    await redis.setc(cache_key, cities_dto, ex=7200)
+    await redis.setc(cache_key, cities_dto, CacheTTL.STATIC)
     return cities_dto
 
 
@@ -56,7 +57,7 @@ async def get_city_by_id(city_id: int, db: AsyncSession, redis: RedisCache) -> C
         raise CityNotFoundError()
 
     city_dto = CityRead.model_validate(city)
-    await redis.setc(cache_key, city_dto, 3600)
+    await redis.setc(cache_key, city_dto, CacheTTL.STATIC)
 
     return city_dto
 

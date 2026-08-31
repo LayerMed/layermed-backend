@@ -14,6 +14,7 @@ from src.modules.cities.router import router as city_router
 from src.modules.specialties.router import router as specialty_router
 from src.modules.doctors.router import router as doctor_router
 from src.modules.bookings.router import router as booking_router
+from src.modules.reviews.router import router as review_router
 
 import src.core
 
@@ -33,6 +34,7 @@ app.include_router(city_router)
 app.include_router(specialty_router)
 app.include_router(doctor_router)
 app.include_router(booking_router)
+app.include_router(review_router)
 
 
 @app.exception_handler(AppError)

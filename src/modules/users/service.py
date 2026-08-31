@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from src.core.enums import UserRole
 from src.core.redis import RedisCache
-from src.core.schemas import PasswordConfirm
+from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.exceptions import (
     IncorrectPasswordError,
@@ -26,7 +26,7 @@ from src.modules.users.schemas import (
 
 async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
     query_password = select(User.password).where(User.id == current_user.id)
-    result  = await db.execute(query_password)
+    result = await db.execute(query_password)
     current_password = result.scalar_one_or_none()
     if current_password is None:
         raise UserNotFoundError()
@@ -53,6 +53,7 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
     if user_id is None:
         raise UserAlreadyExistsError()
 
+    await db.commit()
     return user_id
 
 
@@ -60,7 +61,7 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
 async def get_users_by_filters(
     filters: UserFilterParams,
     db: AsyncSession,
-) -> list[UserRead]:
+) -> PaginatedResponse[UserRead]:
     query = (
         select(User)
         .filter(User.role != UserRole.ADMIN)
@@ -84,11 +85,15 @@ async def get_users_by_filters(
     if filters.updated_at:
         query = query.filter(User.updated_at >= filters.updated_at)
 
+    query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
-
     users = result.scalars().all()
-    users_dto = [UserRead.model_validate(s) for s in users]
-    return users_dto
+
+    return PaginatedResponse[UserRead](
+        items=[UserRead.model_validate(u) for u in users],
+        limit=filters.limit,
+        offset=filters.offset,
+    )
 
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> UserRead:
@@ -144,7 +149,7 @@ async def update_password(
     redis: RedisCache,
 ) -> None:
     current_password = await get_user_password(current_user, db)
-    
+
     if not verify_pwd(password_data.old_password, current_password):
         raise IncorrectPasswordError()
 
@@ -166,7 +171,7 @@ async def delete_account(
     redis: RedisCache,
 ) -> None:
     current_password = await get_user_password(current_user, db)
-    
+
     if not verify_pwd(password_data.password, current_password):
         raise IncorrectPasswordError()
 

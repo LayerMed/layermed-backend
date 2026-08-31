@@ -3,6 +3,7 @@ import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.enums import DoctorStatus
+from src.modules.specialties.schemas import SpecialtyRead
 
 
 class DoctorCreate(BaseModel):
@@ -18,7 +19,6 @@ class DoctorCreate(BaseModel):
 class DoctorRead(BaseModel):
     id: int
     user_id: int
-    specialty_ids: list[int] = Field(default_factory=list)
     education: str
     degree: str | None = None
     experience_years: int
@@ -36,6 +36,10 @@ class DoctorRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DoctorReadDetailed(DoctorRead):
+    specialties: list[SpecialtyRead] = Field(default_factory=list)
+
+
 class DoctorUpdate(BaseModel):
     specialty_ids: list[int] | None = None
     education: str | None = None
@@ -44,7 +48,9 @@ class DoctorUpdate(BaseModel):
 
 
 class DoctorFilterParams(BaseModel):
-    specialty_id: int | None = None
+    specialty_id: int | None = (
+        None  # переиминовать в связи с изменением логики специальностей
+    )
     experience_years: int | None = Field(default=None, ge=0)
     max_price: int | None = None
     rating_avg: int | None = Field(default=None, ge=0, le=5)

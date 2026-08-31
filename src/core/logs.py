@@ -8,7 +8,6 @@ logger.remove()
 LOG_FORMAT_MODERATE = (
     "{time:YYYY-MM-DD HH:mm:ss} | "
     "<level>{level:<8}</level> | "
-    "{name}:{function}:{line} - "
     "{message}"
 )
 

@@ -3,9 +3,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.enums import DoctorStatus, UserRole
+from src.core.enums import CacheTTL, DoctorStatus, UserRole
 from src.core.redis import RedisCache
-from src.core.schemas import PasswordConfirm
+from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
 from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
@@ -20,6 +20,7 @@ from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
     DoctorRead,
+    DoctorReadDetailed,
     DoctorUpdate,
 )
 from src.modules.specialties.models import Specialty
@@ -41,7 +42,7 @@ async def register_doctor(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     try:
         specialties_list = []
 
@@ -72,10 +73,17 @@ async def register_doctor(
         )
 
         await db.commit()
-        await db.refresh(doctor)
+        query = (
+            select(Doctor)
+            .where(Doctor.id == doctor.id)
+            .options(selectinload(Doctor.specialties))
+        )
+        result = await db.execute(query)
+        doctor = result.scalar_one()
 
         await redis.delc(redis.build_key("users", "current", current_user.email))
-        return DoctorRead.model_validate(doctor)
+        return DoctorReadDetailed.model_validate(doctor)
+
     except sqlalchemy.exc.IntegrityError:
         await db.rollback()
         raise DoctorProfileAlreadyExistsError()
@@ -85,15 +93,15 @@ async def register_doctor(
 async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     db: AsyncSession,
-) -> list[DoctorRead]:
+) -> PaginatedResponse[DoctorRead]:
     target_status = filters.status or DoctorStatus.APPROVED
 
     query = (
         select(Doctor)
-        .where(Doctor.status == target_status) 
+        .where(Doctor.status == target_status)
         .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
-    
+
     if filters.specialty_id is not None:
         query = query.where(
             Doctor.specialties.any(Specialty.id == filters.specialty_id)
@@ -101,9 +109,9 @@ async def get_doctors_by_filters(
     if filters.experience_years is not None:
         query = query.where(Doctor.experience_years >= filters.experience_years)
     if filters.max_price is not None:
-        query = query.where(Doctor.min_price <= filters.max_price)    
+        query = query.where(Doctor.min_price <= filters.max_price)
     if filters.rating_avg is not None:
-        query = query.where(Doctor.rating_avg >= filters.rating_avg)        
+        query = query.where(Doctor.rating_avg >= filters.rating_avg)
     if filters.status is not None:
         if filters.status == DoctorStatus.PENDING:
             query = query.where(Doctor.status == DoctorStatus.PENDING)
@@ -112,31 +120,37 @@ async def get_doctors_by_filters(
         if filters.status == DoctorStatus.APPROVED:
             query = query.where(Doctor.status == DoctorStatus.APPROVED)
 
-    query = query.offset(filters.offset).limit(filters.limit)
-
+    query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
     doctors = result.scalars().all()
-    return [DoctorRead.model_validate(d) for d in doctors]
+
+    return PaginatedResponse[DoctorRead](
+        items=[DoctorRead.model_validate(d) for d in doctors],
+        limit=filters.limit,
+        offset=filters.offset,
+    )
 
 
 async def get_doctor_by_id(
     doctor_id: int, db: AsyncSession, redis: RedisCache
-) -> DoctorRead:
+) -> DoctorReadDetailed:
     cache_key = redis.build_key("doctors", "items", doctor_id)
     cached_doctor = await redis.getc(cache_key)
     if cached_doctor:
-        return DoctorRead.model_validate(cached_doctor)
+        return DoctorReadDetailed.model_validate(cached_doctor)
 
     query = (
-        select(Doctor).where(Doctor.id == doctor_id).options(selectinload(Doctor.user))
+        select(Doctor)
+        .where(Doctor.id == doctor_id)
+        .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
     result = await db.execute(query)
     doctor = result.scalar_one_or_none()
     if doctor is None:
         raise DoctorNotFoundError()
 
-    doctor_dto = DoctorRead.model_validate(doctor)
-    await redis.setc(cache_key, doctor_dto, 900)
+    doctor_dto = DoctorReadDetailed.model_validate(doctor)
+    await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
 

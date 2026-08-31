@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from src.core.config import settings
 from src.core.database import get_session
-from src.core.enums import UserRole
+from src.core.enums import CacheTTL, UserRole
 from src.core.logs import logger
 from src.core.redis import RedisCache, get_redis
 from src.core.security import oauth2_scheme
@@ -60,7 +60,7 @@ async def get_current_user(
         raise credentials_exception
 
     user_dto = UserRead.model_validate(user)
-    await redis.setc(cache_key, user_dto, ex=300)
+    await redis.setc(cache_key, user_dto, ex=CacheTTL.FAST)
     return user_dto
 
 

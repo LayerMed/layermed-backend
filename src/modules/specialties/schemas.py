@@ -21,9 +21,10 @@ class SpecialtyRead(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class SpecialtyCountRead(BaseModel):
     id: int
-    name: str    
+    name: str
     doctors_count: int
 
     model_config = ConfigDict(from_attributes=True)
