@@ -21,6 +21,13 @@ class ModerationStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class OfferFormat(str, Enum):
+    CLINIC = "clinic"
+    ONLINE = "online"
+    HOME_VISIT = "home_visit"
+    CHAT = "chat"
+
+
 class CacheTTL(IntEnum):
     STATIC = 60 * 60 * 24 * 30
     SLOW = 60 * 60 * 12        

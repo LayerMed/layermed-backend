@@ -1,6 +1,7 @@
-from sqlalchemy import ForeignKey, Index
+from sqlalchemy import ARRAY, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.core.enums import ModerationStatus, OfferFormat
 from src.core.database import Base, Timestamp
 
 
@@ -12,9 +13,9 @@ class Offer(Base, Timestamp):
     title: Mapped[str]
     description: Mapped[str]
     cost: Mapped[int]
-    is_active: Mapped[bool] = mapped_column(default=True)
-    suggest_format: Mapped[str]
-    duration: Mapped[int]
+    status: Mapped[ModerationStatus] = mapped_column(default=ModerationStatus.PENDING)
+    offer_format: Mapped[OfferFormat]
+    images: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=None)
 
     __table_args__ = (
         Index(
@@ -22,10 +23,10 @@ class Offer(Base, Timestamp):
             "city_id",
             "title",
             "cost",
-            "suggest_format",
+            "offer_format",
         ),
     )
 
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="offers")
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="offer")
     doctor: Mapped["Doctor"] = relationship(back_populates="offers")
     city: Mapped["City"] = relationship(back_populates="offers")

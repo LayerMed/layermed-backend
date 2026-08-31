@@ -2,7 +2,7 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import ReviewStatus
+from src.core.enums import ModerationStatus
 from src.core.redis import RedisCache
 from src.core.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
@@ -66,7 +66,7 @@ async def create_review(
                 doctor_id=new_review.doctor_id,
                 rating=new_review.rating,
                 comment=new_review.comment,
-                status=ReviewStatus.APPROVED,
+                status=ModerationStatus.APPROVED,
             )
             .returning(Review)
         )
@@ -126,7 +126,7 @@ async def get_reviews_by_filter(
 # UPDATE
 async def update_review_status(
     review_id: int,
-    status: ReviewStatus,
+    status: ModerationStatus,
     db: AsyncSession,
     redis: RedisCache,
 ) -> ReviewRead:
@@ -140,14 +140,14 @@ async def update_review_status(
     old_status = review.status
     review.status = status
 
-    if status == ReviewStatus.REJECTED and old_status != ReviewStatus.REJECTED:
+    if status == ModerationStatus.REJECTED and old_status != ModerationStatus.REJECTED:
         await recalculate_doctor_rating(
             doctor_id=review.doctor_id,
             rating_change=review.rating,
             is_addition=False,
             db=db,
         )
-    elif status == ReviewStatus.APPROVED and old_status == ReviewStatus.REJECTED:
+    elif status == ModerationStatus.APPROVED and old_status == ModerationStatus.REJECTED:
         await recalculate_doctor_rating(
             doctor_id=review.doctor_id,
             rating_change=review.rating,
@@ -173,7 +173,7 @@ async def remove_review_request(
     if review.doctor_id != current_doctor.id:
         raise ReviewAccessDeletionError()
 
-    return await update_review_status(review_id, ReviewStatus.PENDING, db, redis)
+    return await update_review_status(review_id, ModerationStatus.PENDING, db, redis)
 
 
 async def remove_review_by_user(
