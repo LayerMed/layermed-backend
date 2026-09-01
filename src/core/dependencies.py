@@ -78,7 +78,7 @@ async def get_current_doctor(
     return current_user.doctor
 
 
-async def get_admin_user(current_user: UserRead = Depends(get_current_user)):
+async def get_admin_user(current_user: UserRead = Depends(get_current_user)) -> UserRead:
     if current_user.role != UserRole.ADMIN:
         logger.warning(
             "Access denied for user {email} (id={user_id}, role={role}). Admin privileges required.",
