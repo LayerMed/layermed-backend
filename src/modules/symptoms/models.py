@@ -11,15 +11,15 @@ class Symptom(Base, Timestamp):
     description: Mapped[str]
 
 
-class SuggestionSymptom(Base):
-    __tablename__ = "suggestion_symptoms"
+class offerSymptom(Base):
+    __tablename__ = "offer_symptoms"
 
     id = None
-    suggestion_id: Mapped[int] = mapped_column(
-        ForeignKey("suggestions.id", ondelete="cascade"), primary_key=True
+    offer_id: Mapped[int] = mapped_column(
+        ForeignKey("offers.id", ondelete="cascade"), primary_key=True
     )
     symptom_id: Mapped[int] = mapped_column(
-        ForeignKey("symptoms.id", ondelete="cascade"), primary_key=True
+        ForeignKey("offers.id", ondelete="cascade"), primary_key=True
     )
 
-    __table_args__ = (Index("idx_symptom_suggestion", "symptom_id", "suggestion_id"),)
+    __table_args__ = (Index("idx_symptom_offer", "symptom_id", "offer_id"),)

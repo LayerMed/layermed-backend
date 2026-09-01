@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
-from src.core.enums import ReviewStatus
+from src.core.enums import ModerationStatus
 from src.core.redis import RedisCache, get_redis
 from src.core.schemas import PaginatedResponse
 from src.modules.doctors.schemas import DoctorRead
@@ -48,7 +48,7 @@ async def get_reviews_by_filter_handle(
     doctor_id: int,
     filters: Annotated[ReviewFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-):
+) -> PaginatedResponse[ReviewRead]:
     return await get_reviews_by_filter(doctor_id, filters, db)
 
 
@@ -76,7 +76,7 @@ async def admin_approve_deletion_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> ReviewRead:
-    return await update_review_status(review_id, ReviewStatus.REJECTED, db, redis)
+    return await update_review_status(review_id, ModerationStatus.REJECTED, db, redis)
 
 
 @router.patch(
@@ -90,7 +90,7 @@ async def admin_reject_deletion_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> ReviewRead:
-    return await update_review_status(review_id, ReviewStatus.APPROVED, db, redis)
+    return await update_review_status(review_id, ModerationStatus.APPROVED, db, redis)
 
 
 @router.patch(

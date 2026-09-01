@@ -2,7 +2,8 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.enums import DoctorStatus
+from src.core.enums import ModerationStatus
+from src.core.schemas import PaginationParams
 from src.modules.specialties.schemas import SpecialtyRead
 
 
@@ -28,7 +29,7 @@ class DoctorRead(BaseModel):
     avatar_url: str | None = None
     rating_avg: float
     reviews_count: int
-    status: DoctorStatus
+    status: ModerationStatus
     rejection_reason: str | None = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
@@ -47,17 +48,14 @@ class DoctorUpdate(BaseModel):
     bio: str | None = None
 
 
-class DoctorFilterParams(BaseModel):
+class DoctorFilterParams(PaginationParams):
     specialty_id: int | None = (
         None  # переиминовать в связи с изменением логики специальностей
     )
     experience_years: int | None = Field(default=None, ge=0)
     max_price: int | None = None
     rating_avg: int | None = Field(default=None, ge=0, le=5)
-    status: DoctorStatus | None = None
-
-    limit: int = Field(default=10, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)
+    status: ModerationStatus | None = None
 
 
 class DoctorReject(BaseModel):

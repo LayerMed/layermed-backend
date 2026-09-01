@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_user
 from src.core.redis import RedisCache, get_redis
-from src.core.schemas import PasswordConfirm, TokenResponse
+from src.core.schemas import PaginatedResponse, PasswordConfirm, TokenResponse
 from src.core.security import create_access_token, verify_pwd
 from src.modules.users.exceptions import InvalidCredentialsError
 from src.modules.users.models import User
@@ -67,14 +67,14 @@ async def login_user_handle(
 # READ
 @router.get(
     "/",
-    response_model=list[UserRead],
+    response_model=PaginatedResponse[UserRead],
     summary="Get all users",
 )
 async def get_users_by_filters_handle(
     user_params: Annotated[UserFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
     admin: User = Depends(get_admin_user),
-) -> list[UserRead]:
+) -> PaginatedResponse[UserRead]:
     users = await get_users_by_filters(user_params, db)
     return users
 

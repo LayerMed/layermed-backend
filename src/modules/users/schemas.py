@@ -37,7 +37,7 @@ class UserRead(BaseModel):
     birth_date: datetime.date | None = None
     city_id: int | None = None
     email: EmailStr
-    role: str
+    role: UserRole
     created_at: datetime.datetime
     updated_at: datetime.datetime
     doctor: DoctorRead | None = None

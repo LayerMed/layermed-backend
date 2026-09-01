@@ -9,4 +9,4 @@ class City(Base, Timestamp):
     name: Mapped[str] = mapped_column(unique=True)
 
     user: Mapped[list["User"]] = relationship(back_populates="city")
-    suggestion: Mapped[list["Suggestion"]] = relationship(back_populates="city")
+    offers: Mapped[list["Offer"]] = relationship(back_populates="city")

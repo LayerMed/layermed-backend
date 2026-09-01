@@ -1,3 +1,4 @@
+from fastapi.security import OAuth2PasswordBearer
 import jwt
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
@@ -9,7 +10,7 @@ from src.core.database import get_session
 from src.core.enums import CacheTTL, UserRole
 from src.core.logs import logger
 from src.core.redis import RedisCache, get_redis
-from src.core.security import oauth2_scheme
+from src.core.security import oauth2_scheme, optional_oauth2_scheme
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
@@ -20,6 +21,8 @@ credentials_exception = HTTPException(
     detail="Could not validate credentials or token expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
+
 
 
 async def get_current_user(
@@ -88,3 +91,17 @@ async def get_admin_user(current_user: UserRead = Depends(get_current_user)):
             detail="You do not have enough permissions",
         )
     return current_user
+
+
+async def get_optional_user(
+    token: str | None = Depends(optional_oauth2_scheme),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> UserRead | None:
+    if not token:
+        return None
+    try:
+        return await get_current_user(token=token, db=db, redis=redis)
+    except HTTPException:
+        return None
+    

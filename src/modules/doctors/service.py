@@ -3,7 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.enums import CacheTTL, DoctorStatus, UserRole
+from src.core.enums import CacheTTL, ModerationStatus, UserRole
 from src.core.redis import RedisCache
 from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
@@ -11,7 +11,6 @@ from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
     DoctorPendingError,
     DoctorProfileAlreadyExistsError,
-    DoctorRejectedError,
     IncorrectPasswordError,
     SpecialtiesNotFoundError,
 )
@@ -30,10 +29,8 @@ from src.modules.users.service import get_user_password
 
 
 def check_doctor_status(current_doctor: DoctorRead) -> None:
-    if current_doctor.status == DoctorStatus.PENDING:
+    if not current_doctor.status == ModerationStatus.APPROVED:
         raise DoctorPendingError()
-    if current_doctor.status == DoctorStatus.REJECTED:
-        raise DoctorRejectedError()
 
 
 # CREATE
@@ -94,7 +91,7 @@ async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     db: AsyncSession,
 ) -> PaginatedResponse[DoctorRead]:
-    target_status = filters.status or DoctorStatus.APPROVED
+    target_status = filters.status or ModerationStatus.APPROVED
 
     query = (
         select(Doctor)
@@ -113,12 +110,12 @@ async def get_doctors_by_filters(
     if filters.rating_avg is not None:
         query = query.where(Doctor.rating_avg >= filters.rating_avg)
     if filters.status is not None:
-        if filters.status == DoctorStatus.PENDING:
-            query = query.where(Doctor.status == DoctorStatus.PENDING)
-        if filters.status == DoctorStatus.REJECTED:
-            query = query.where(Doctor.status == DoctorStatus.REJECTED)
-        if filters.status == DoctorStatus.APPROVED:
-            query = query.where(Doctor.status == DoctorStatus.APPROVED)
+        if filters.status == ModerationStatus.PENDING:
+            query = query.where(Doctor.status == ModerationStatus.PENDING)
+        if filters.status == ModerationStatus.REJECTED:
+            query = query.where(Doctor.status == ModerationStatus.REJECTED)
+        if filters.status == ModerationStatus.APPROVED:
+            query = query.where(Doctor.status == ModerationStatus.APPROVED)
 
     query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
@@ -207,7 +204,7 @@ async def update_doctor(
 
 async def update_doctor_status(
     doctor_id: int,
-    status: DoctorStatus,
+    status: ModerationStatus,
     db: AsyncSession,
     redis: RedisCache,
     rejection_reason: str | None = None,
@@ -235,7 +232,7 @@ async def approve_doctor(
     redis: RedisCache,
 ) -> DoctorRead:
     return await update_doctor_status(
-        doctor_id, DoctorStatus.APPROVED, db, redis, rejection_reason=None
+        doctor_id, ModerationStatus.APPROVED, db, redis, rejection_reason=None
     )
 
 
@@ -246,7 +243,11 @@ async def reject_doctor(
     redis: RedisCache,
 ) -> DoctorRead:
     return await update_doctor_status(
-        doctor_id, DoctorStatus.REJECTED, db, redis, rejection_reason=rejection_reason
+        doctor_id,
+        ModerationStatus.REJECTED,
+        db,
+        redis,
+        rejection_reason=rejection_reason,
     )
 
 
