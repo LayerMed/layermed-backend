@@ -2,7 +2,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.core.enums import BookingStatus, CacheTTL, UserRole
+from src.core.enums import BookingStatus, CacheTTL, ModerationStatus, UserRole
 from src.core.redis import RedisCache
 from src.modules.bookings.exceptions import (
     BookingAccessDeniedError,
@@ -24,7 +24,7 @@ async def create_booking(
     redis: RedisCache,
 ) -> BookingRead:
     query_offer = select(Offer).where(
-        Offer.id == new_booking.offer_id, Offer.is_active == True
+        Offer.id == new_booking.offer_id, Offer.status == ModerationStatus.APPROVED
     )
     result = await db.execute(query_offer)
     offer = result.scalar_one_or_none()
@@ -37,6 +37,7 @@ async def create_booking(
             user_id=current_user.id,
             offer_id=new_booking.offer_id,
             appointment_time=new_booking.appointment_time,
+            status=BookingStatus.PENDING,
         )
         .returning(Booking)
     )

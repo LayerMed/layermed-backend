@@ -147,7 +147,9 @@ async def update_review_status(
             is_addition=False,
             db=db,
         )
-    elif status == ModerationStatus.APPROVED and old_status == ModerationStatus.REJECTED:
+    elif (
+        status == ModerationStatus.APPROVED and old_status == ModerationStatus.REJECTED
+    ):
         await recalculate_doctor_rating(
             doctor_id=review.doctor_id,
             rating_change=review.rating,

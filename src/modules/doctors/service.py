@@ -11,7 +11,6 @@ from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
     DoctorPendingError,
     DoctorProfileAlreadyExistsError,
-    DoctorRejectedError,
     IncorrectPasswordError,
     SpecialtiesNotFoundError,
 )
@@ -32,7 +31,7 @@ from src.modules.users.service import get_user_password
 def check_doctor_status(current_doctor: DoctorRead) -> None:
     if not current_doctor.status == ModerationStatus.APPROVED:
         raise DoctorPendingError()
-    
+
 
 # CREATE
 async def register_doctor(
@@ -244,7 +243,11 @@ async def reject_doctor(
     redis: RedisCache,
 ) -> DoctorRead:
     return await update_doctor_status(
-        doctor_id, ModerationStatus.REJECTED, db, redis, rejection_reason=rejection_reason
+        doctor_id,
+        ModerationStatus.REJECTED,
+        db,
+        redis,
+        rejection_reason=rejection_reason,
     )
 
 

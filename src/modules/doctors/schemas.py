@@ -2,8 +2,8 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.schemas import PaginationParams
 from src.core.enums import ModerationStatus
+from src.core.schemas import PaginationParams
 from src.modules.specialties.schemas import SpecialtyRead
 
 

@@ -1,15 +1,20 @@
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.offers.exceptions import OfferAccessDenied, OfferNotFoundError
+from src.core.enums import CacheTTL, ModerationStatus, UserRole
+from src.core.redis import RedisCache
 from src.core.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
-from src.core.enums import CacheTTL, ModerationStatus, UserRole
-from src.modules.users.schemas import UserRead
 from src.modules.doctors.schemas import DoctorRead
+from src.modules.offers.exceptions import OfferAccessDenied, OfferNotFoundError
 from src.modules.offers.models import Offer
-from src.modules.offers.schemas import OfferCreate, OfferFilterParams, OfferRead, OfferUpdate
-from src.core.redis import RedisCache
+from src.modules.offers.schemas import (
+    OfferCreate,
+    OfferFilterParams,
+    OfferRead,
+    OfferUpdate,
+)
+from src.modules.users.schemas import UserRead
 
 
 # CREATE
@@ -21,10 +26,7 @@ async def create_offer(
 ) -> OfferRead:
     query = (
         insert(Offer)
-        .values(
-            doctor_id=current_doctor.id,
-            **new_offer.model_dump()
-        )
+        .values(doctor_id=current_doctor.id, **new_offer.model_dump())
         .returning(Offer)
     )
     result = await db.execute(query)
@@ -37,7 +39,7 @@ async def create_offer(
 
 
 # READ
-async def get_all_offers(    
+async def get_all_offers(
     current_user: UserRead | None,
     filters: OfferFilterParams,
     db: AsyncSession,
@@ -50,7 +52,7 @@ async def get_all_offers(
     # Сделать кеш везде где есть offset и limit. добавить total
     query = select(Offer)
 
-    if is_admin:        
+    if is_admin:
         if filters.status is not None:
             query = query.filter(Offer.status == filters.status)
     else:
@@ -67,7 +69,9 @@ async def get_all_offers(
     if filters.doctor_experience_years or filters.doctor_rating_avg:
         query = query.join(Offer.doctor)
         if filters.doctor_experience_years:
-            query = query.where(Doctor.experience_years >= filters.doctor_experience_years)
+            query = query.where(
+                Doctor.experience_years >= filters.doctor_experience_years
+            )
         if filters.doctor_rating_avg:
             query = query.where(Doctor.rating_avg >= filters.doctor_rating_avg)
 
@@ -88,11 +92,11 @@ async def get_offer_by_id(
     redis: RedisCache,
 ) -> OfferRead:
     cache_key = redis.build_key("offers", "items", offer_id)
-    
+
     cached_offer = await redis.getc(cache_key)
     if cached_offer:
         return OfferRead.model_validate(cached_offer)
-    
+
     query = select(Offer).where(Offer.id == offer_id)
     result = await db.execute(query)
     offer = result.scalar_one_or_none()
@@ -101,9 +105,9 @@ async def get_offer_by_id(
         raise OfferNotFoundError()
 
     offer_dto = OfferRead.model_validate(offer)
-    
+
     if offer.status == ModerationStatus.APPROVED:
-        await redis.setc(cache_key, offer_dto, ex=CacheTTL.SLOW) 
+        await redis.setc(cache_key, offer_dto, ex=CacheTTL.SLOW)
 
     return offer_dto
 
@@ -122,10 +126,7 @@ async def update_offer_by_id(
     query = (
         update(Offer)
         .where(Offer.id == offer_id)
-        .values(
-            **update_data, 
-            status=ModerationStatus.PENDING
-        )
+        .values(**update_data, status=ModerationStatus.PENDING)
         .returning(Offer)
     )
     result = await db.execute(query)
@@ -139,11 +140,11 @@ async def update_offer_by_id(
 
 # ВЫНЕСТИ ЛОГИКУ МОДЕРАЦИИ ИЗ DOCTORS , REVIEWS И OFFERS В ОТДЕЛЬНЫЙ МОДУЛЬ
 async def update_offer_status(
-    offer_id: int, 
+    offer_id: int,
     status: ModerationStatus,
     db: AsyncSession,
     redis: RedisCache,
-    rejection_reason: str | None = None
+    rejection_reason: str | None = None,
 ) -> OfferRead:
     query = (
         update(Offer)
@@ -179,7 +180,11 @@ async def reject_offrer(
     redis: RedisCache,
 ) -> OfferRead:
     return await update_offer_status(
-        offer_id, ModerationStatus.REJECTED, db, redis, rejection_reason=rejection_reason
+        offer_id,
+        ModerationStatus.REJECTED,
+        db,
+        redis,
+        rejection_reason=rejection_reason,
     )
 
 

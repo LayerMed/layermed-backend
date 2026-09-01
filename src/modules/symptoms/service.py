@@ -91,7 +91,7 @@ async def update_symptom(
         raise SymptomNotFoundError()
     await db.commit()
 
-    await redis.invalidate("symptoms")    
+    await redis.invalidate("symptoms")
     return SymptomRead.model_validate(updated_symptom)
 
 
