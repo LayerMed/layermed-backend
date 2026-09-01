@@ -14,6 +14,7 @@ class OfferCreate(BaseModel):
 
 
 class OfferRead(BaseModel):
+    id: int
     doctor_id: int
     city_id: int
     title: str
@@ -39,3 +40,17 @@ class OfferFilterParams(BaseModel):
     offset: int = Field(default=0, ge=0)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OfferUpdate(BaseModel):
+    city_id: int | None = None
+    title: str | None = Field(default=None, min_length=2, max_length=100)
+    description: str | None = Field(default=None, min_length=2, max_length=500)
+    cost: int | None = Field(gt=0)    
+    offer_format: OfferFormat | None
+    images: list[str] | None = None    
+
+
+class OfferReject(BaseModel):
+    rejection_reason: str | None = Field(default=None, max_length=255)
+

@@ -8,11 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.users.schemas import UserRead
 from src.core.schemas import PaginatedResponse
 from src.core.database import get_session
-from src.core.dependencies import get_current_doctor, get_optional_user
+from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
 from src.core.redis import RedisCache, get_redis
 from src.modules.doctors.schemas import DoctorRead
-from src.modules.offers.schemas import OfferCreate, OfferFilterParams, OfferRead
-from src.modules.offers.service import create_offer, get_all_offers, get_offer_by_id
+from src.modules.offers.schemas import OfferCreate, OfferFilterParams, OfferRead, OfferReject, OfferUpdate
+from src.modules.offers.service import approve_offrer, create_offer, delete_offer, get_all_offers, get_offer_by_id, reject_offrer, update_offer_by_id, update_offer_status
 
 
 router = APIRouter(prefix='/offers', tags=["Offers"])
@@ -56,9 +56,67 @@ async def get_all_offers_handle(
 )
 async def get_offer_by_id_handle(
     offer_id: int,
-    current_user: UserRead | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis) 
 ) -> OfferRead:
-    return await get_offer_by_id(offer_id, current_user, db, redis)
+    return await get_offer_by_id(offer_id, db, redis)
 
+
+# UPDATE
+@router.patch(
+    "/{offer_id}",
+    response_model=OfferRead,
+    summary="Update offer by id"
+)
+async def update_offer_by_id_handle(
+    offer_id: int, 
+    offer_data: OfferUpdate,
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis) 
+) -> OfferRead:
+    return await update_offer_by_id(offer_id, offer_data, db, redis)
+
+
+
+@router.patch(
+    "/{offer_id}/approve",
+    response_model=OfferRead,
+    summary="Approve doctor application (Admin only)",
+)
+async def approve_doctor_handle(
+    offer_id: int,
+    admin: UserRead = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> OfferRead:
+    return await approve_offrer(offer_id, db, redis)
+
+
+@router.patch(
+    "/{offer_id}/reject",
+    response_model=OfferRead,
+    summary="Reject doctor application (Admin only)",
+)
+async def reject_doctor_handle(
+    offer_id: int,
+    reject_data: OfferReject,
+    admin: UserRead = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> OfferRead:
+    return await reject_offrer(offer_id, reject_data.rejection_reason, db, redis)
+
+
+# DELETE
+@router.delete(
+    "/{offer_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete offer",
+)
+async def delete_offer_handle(
+    offer_id: int,
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> None:
+    await delete_offer(offer_id, current_doctor, db, redis)

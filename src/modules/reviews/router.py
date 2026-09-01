@@ -48,7 +48,7 @@ async def get_reviews_by_filter_handle(
     doctor_id: int,
     filters: Annotated[ReviewFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
-):
+) -> PaginatedResponse[ReviewRead]:
     return await get_reviews_by_filter(doctor_id, filters, db)
 
 

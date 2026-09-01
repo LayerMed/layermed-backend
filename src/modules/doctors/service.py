@@ -30,11 +30,9 @@ from src.modules.users.service import get_user_password
 
 
 def check_doctor_status(current_doctor: DoctorRead) -> None:
-    if current_doctor.status == ModerationStatus.PENDING:
+    if not current_doctor.status == ModerationStatus.APPROVED:
         raise DoctorPendingError()
-    if current_doctor.status == ModerationStatus.REJECTED:
-        raise DoctorRejectedError()
-
+    
 
 # CREATE
 async def register_doctor(

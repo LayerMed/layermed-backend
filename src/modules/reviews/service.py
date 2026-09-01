@@ -93,7 +93,7 @@ async def create_review(
 # READ
 async def get_reviews_by_filter(
     doctor_id: int, filters: ReviewFilterParams, db: AsyncSession
-) -> PaginatedResponse:
+) -> PaginatedResponse[ReviewRead]:
 
     query = select(Review).where(Review.doctor_id == doctor_id)
 

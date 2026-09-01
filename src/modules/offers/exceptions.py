@@ -11,3 +11,8 @@ class OfferAlreadyExistsError(AppError):
 class OfferNotFoundError(AppError):
     status_code = status.HTTP_404_NOT_FOUND
     detail = "Offer not found"
+
+
+class OfferAccessDenied(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    detail = "You cannot delete another doctor's offer"
