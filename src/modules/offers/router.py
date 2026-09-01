@@ -3,6 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.offers.models import Offer
+from src.core.moderation.service import approve_item, reject_item
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
 from src.core.redis import RedisCache, get_redis
@@ -15,13 +17,11 @@ from src.modules.offers.schemas import (
     OfferReject,
     OfferUpdate,
 )
-from src.modules.offers.service import (
-    approve_offrer,
+from src.modules.offers.service import (    
     create_offer,
     delete_offer,
     get_all_offers,
-    get_offer_by_id,
-    reject_offrer,
+    get_offer_by_id,    
     update_offer_by_id,
 )
 from src.modules.users.schemas import UserRead
@@ -79,30 +79,30 @@ async def update_offer_by_id_handle(
 @router.patch(
     "/{offer_id}/approve",
     response_model=OfferRead,
-    summary="Approve doctor application (Admin only)",
+    summary="Approve offer application (Admin only)",
 )
-async def approve_doctor_handle(
+async def approve_offer_handle(
     offer_id: int,
     admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await approve_offrer(offer_id, db, redis)
+    return await approve_item(Offer, OfferRead, offer_id, db ,redis, "doctors")
 
 
 @router.patch(
     "/{offer_id}/reject",
     response_model=OfferRead,
-    summary="Reject doctor application (Admin only)",
+    summary="Reject offer application (Admin only)",
 )
-async def reject_doctor_handle(
+async def reject_offer_handle(
     offer_id: int,
     reject_data: OfferReject,
     admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await reject_offrer(offer_id, reject_data.rejection_reason, db, redis)
+    return await reject_item(Offer, OfferRead, offer_id, db, redis, "offers")
 
 
 # DELETE

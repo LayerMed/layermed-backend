@@ -138,56 +138,6 @@ async def update_offer_by_id(
     return OfferRead.model_validate(updated_offer)
 
 
-# ВЫНЕСТИ ЛОГИКУ МОДЕРАЦИИ ИЗ DOCTORS , REVIEWS И OFFERS В ОТДЕЛЬНЫЙ МОДУЛЬ
-async def update_offer_status(
-    offer_id: int,
-    status: ModerationStatus,
-    db: AsyncSession,
-    redis: RedisCache,
-    rejection_reason: str | None = None,
-) -> OfferRead:
-    query = (
-        update(Offer)
-        .where(Offer.id == offer_id)
-        .values(status=status, rejection_reason=rejection_reason)
-        .returning(Offer)
-    )
-    result = await db.execute(query)
-    updated_offer = result.scalar_one_or_none()
-
-    if updated_offer is None:
-        raise OfferNotFoundError()
-
-    await db.commit()
-    await redis.invalidate("offers")
-    return OfferRead.model_validate(updated_offer)
-
-
-async def approve_offrer(
-    offer_id: int,
-    db: AsyncSession,
-    redis: RedisCache,
-) -> OfferRead:
-    return await update_offer_status(
-        offer_id, ModerationStatus.APPROVED, db, redis, rejection_reason=None
-    )
-
-
-async def reject_offrer(
-    offer_id: int,
-    rejection_reason: str | None,
-    db: AsyncSession,
-    redis: RedisCache,
-) -> OfferRead:
-    return await update_offer_status(
-        offer_id,
-        ModerationStatus.REJECTED,
-        db,
-        redis,
-        rejection_reason=rejection_reason,
-    )
-
-
 # DELETE
 async def delete_offer(
     offer_id: int,

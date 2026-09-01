@@ -3,9 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.moderation.service import approve_item, reject_item
+from src.modules.doctors.models import Doctor
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
-from src.core.enums import UserRole
+from src.core.enums import ModerationStatus, UserRole
 from src.core.redis import RedisCache, get_redis
 from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
@@ -17,13 +19,11 @@ from src.modules.doctors.schemas import (
     DoctorReject,
     DoctorUpdate,
 )
-from src.modules.doctors.service import (
-    approve_doctor,
+from src.modules.doctors.service import (   
     delete_doctor,
     get_doctor_by_id,
     get_doctors_by_filters,
     register_doctor,
-    reject_doctor,
     update_doctor,
 )
 from src.modules.users.schemas import UserRead
@@ -98,7 +98,7 @@ async def approve_doctor_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    return await approve_doctor(doctor_id, db, redis)
+    return await approve_item(Doctor, DoctorRead, doctor_id, db, redis, "doctors")
 
 
 @router.patch(
@@ -113,7 +113,7 @@ async def reject_doctor_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    return await reject_doctor(doctor_id, reject_data.rejection_reason, db, redis)
+    return await reject_item(Doctor, DoctorRead, doctor_id, db, redis, "doctors")
 
 
 # DELETE

@@ -202,55 +202,6 @@ async def update_doctor(
     return DoctorRead.model_validate(doctor)
 
 
-async def update_doctor_status(
-    doctor_id: int,
-    status: ModerationStatus,
-    db: AsyncSession,
-    redis: RedisCache,
-    rejection_reason: str | None = None,
-) -> DoctorRead:
-    query = (
-        update(Doctor)
-        .where(Doctor.id == doctor_id)
-        .values(status=status, rejection_reason=rejection_reason)
-        .returning(Doctor)
-    )
-    result = await db.execute(query)
-    updated_doctor = result.scalar_one_or_none()
-
-    if updated_doctor is None:
-        raise DoctorNotFoundError()
-
-    await db.commit()
-    await redis.invalidate("doctors")
-    return DoctorRead.model_validate(updated_doctor)
-
-
-async def approve_doctor(
-    doctor_id: int,
-    db: AsyncSession,
-    redis: RedisCache,
-) -> DoctorRead:
-    return await update_doctor_status(
-        doctor_id, ModerationStatus.APPROVED, db, redis, rejection_reason=None
-    )
-
-
-async def reject_doctor(
-    doctor_id: int,
-    rejection_reason: str | None,
-    db: AsyncSession,
-    redis: RedisCache,
-) -> DoctorRead:
-    return await update_doctor_status(
-        doctor_id,
-        ModerationStatus.REJECTED,
-        db,
-        redis,
-        rejection_reason=rejection_reason,
-    )
-
-
 # DELETE
 async def delete_doctor(
     password_data: PasswordConfirm,
