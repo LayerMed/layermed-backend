@@ -3,13 +3,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.offers.models import Offer
-from src.core.moderation.service import approve_item, reject_item
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
+from src.core.moderation.service import approve_item, reject_item
 from src.core.redis import RedisCache, get_redis
 from src.core.schemas import PaginatedResponse
 from src.modules.doctors.schemas import DoctorRead
+from src.modules.offers.models import Offer
 from src.modules.offers.schemas import (
     OfferCreate,
     OfferFilterParams,
@@ -17,11 +17,11 @@ from src.modules.offers.schemas import (
     OfferReject,
     OfferUpdate,
 )
-from src.modules.offers.service import (    
+from src.modules.offers.service import (
     create_offer,
     delete_offer,
     get_all_offers,
-    get_offer_by_id,    
+    get_offer_by_id,
     update_offer_by_id,
 )
 from src.modules.users.schemas import UserRead
@@ -87,7 +87,7 @@ async def approve_offer_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await approve_item(Offer, OfferRead, offer_id, db ,redis, "doctors")
+    return await approve_item(Offer, OfferRead, offer_id, db, redis, "doctors")
 
 
 @router.patch(
@@ -102,7 +102,15 @@ async def reject_offer_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await reject_item(Offer, OfferRead, offer_id, db, redis, "offers")
+    return await reject_item(
+        Offer,
+        OfferRead,
+        offer_id,
+        db,
+        redis,
+        reject_data.rejection_reason,
+        "offers",
+    )
 
 
 # DELETE

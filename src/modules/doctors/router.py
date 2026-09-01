@@ -3,14 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.moderation.service import approve_item, reject_item
-from src.modules.doctors.models import Doctor
 from src.core.database import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
-from src.core.enums import ModerationStatus, UserRole
+from src.core.enums import UserRole
+from src.core.moderation.service import approve_item, reject_item
 from src.core.redis import RedisCache, get_redis
 from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
+from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
@@ -19,7 +19,7 @@ from src.modules.doctors.schemas import (
     DoctorReject,
     DoctorUpdate,
 )
-from src.modules.doctors.service import (   
+from src.modules.doctors.service import (
     delete_doctor,
     get_doctor_by_id,
     get_doctors_by_filters,
@@ -113,7 +113,15 @@ async def reject_doctor_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    return await reject_item(Doctor, DoctorRead, doctor_id, db, redis, "doctors")
+    return await reject_item(
+        Doctor,
+        DoctorRead,
+        doctor_id,
+        db,
+        redis,
+        reject_data.rejection_reason,
+        "doctors",
+    )
 
 
 # DELETE

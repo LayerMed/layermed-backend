@@ -48,7 +48,6 @@ async def approve_item(
     db: AsyncSession,
     redis: RedisCache,
     cache_namespace: str,
-    rejection_reason: str | None = None,
 ) -> SchemaT:
     return await update_moderation_status(
         model,
@@ -58,17 +57,17 @@ async def approve_item(
         db,
         redis,
         cache_namespace,
-        rejection_reason,
     )
 
 
 async def reject_item(
     model: type[ModelT],
     schema: type[SchemaT],
-    item_id: int,    
+    item_id: int,
     db: AsyncSession,
     redis: RedisCache,
-    cache_namespace: str,    
+    rejection_reason: str,
+    cache_namespace: str,
 ) -> SchemaT:
     return await update_moderation_status(
         model,
@@ -78,6 +77,5 @@ async def reject_item(
         db,
         redis,
         cache_namespace,
-        rejection_reason=None
+        rejection_reason,
     )
-

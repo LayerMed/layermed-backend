@@ -59,4 +59,4 @@ class DoctorFilterParams(PaginationParams):
 
 
 class DoctorReject(BaseModel):
-    rejection_reason: str | None = Field(default=None, max_length=255)
+    rejection_reason: str = Field(max_length=255)
