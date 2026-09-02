@@ -37,12 +37,10 @@ async def update_moderation_status(
         raise ItemNotFoundError(detail=f"{model.__name__} not found")
 
     namespaces = (
-        [cache_namespaces]
-        if isinstance(cache_namespaces, str)
-        else cache_namespaces
+        [cache_namespaces] if isinstance(cache_namespaces, str) else cache_namespaces
     )
     for ns in namespaces:
-        await redis.invalidate(ns)    
+        await redis.invalidate(ns)
 
     await db.commit()
     return schema.model_validate(updated_item)

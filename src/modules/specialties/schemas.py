@@ -1,5 +1,6 @@
 import datetime
 from typing import Annotated
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.schemas import BaseFilterParams

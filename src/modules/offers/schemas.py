@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.schemas import BaseFilterParams
 from src.core.enums import ModerationStatus, OfferFormat
+from src.core.schemas import BaseFilterParams
 
 
 class OfferCreate(BaseModel):

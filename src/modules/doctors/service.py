@@ -91,7 +91,7 @@ async def get_doctors_by_filters(
     filters: DoctorFilterParams,
     specialty_ids: list[int] | None,
     db: AsyncSession,
-    redis: RedisCache
+    redis: RedisCache,
 ) -> PaginatedResponse[DoctorRead]:
     is_default = filters.is_default_page()
     cache_key = redis.build_key("doctors", "list", "default")
@@ -109,9 +109,7 @@ async def get_doctors_by_filters(
     )
 
     if specialty_ids:
-        query = query.where(
-            Doctor.specialties.any(Specialty.id.in_(specialty_ids))
-        )
+        query = query.where(Doctor.specialties.any(Specialty.id.in_(specialty_ids)))
     if filters.experience_years is not None:
         query = query.where(Doctor.experience_years >= filters.experience_years)
     if filters.max_price is not None:
@@ -161,7 +159,7 @@ async def get_doctor_by_id(
 # UPDATE
 async def update_doctor(
     doctor_data: DoctorUpdate,
-    current_doctor: DoctorRead,    
+    current_doctor: DoctorRead,
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorRead:
@@ -202,7 +200,7 @@ async def update_doctor(
     await db.commit()
 
     await redis.invalidate("doctors")
-    await redis.invalidate("users")    
+    await redis.invalidate("users")
 
     return DoctorRead.model_validate(doctor)
 
@@ -235,4 +233,3 @@ async def delete_doctor(
 
     await redis.invalidate("doctors")
     await redis.invalidate("users")
-    

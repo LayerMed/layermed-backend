@@ -53,7 +53,7 @@ async def get_offers_by_filters(
         cached = await redis.getc(cache_key)
         if cached:
             return PaginatedResponse[OfferRead].model_validate(cached)
-        
+
     query = select(Offer)
 
     if is_admin:

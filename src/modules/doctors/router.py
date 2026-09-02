@@ -57,9 +57,9 @@ async def register_doctor_handle(
 )
 async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
-    specialty_ids: Annotated[list[int] | None, Query()] = None, 
+    specialty_ids: Annotated[list[int] | None, Query()] = None,
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis)
+    redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[DoctorRead]:
     return await get_doctors_by_filters(filters, specialty_ids, db, redis)
 
@@ -81,7 +81,7 @@ async def get_doctor_by_id_handle(
 )
 async def update_doctor_basic_handle(
     doctor_data: DoctorUpdate,
-    current_doctor: DoctorRead = Depends(get_current_doctor),    
+    current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
@@ -99,7 +99,9 @@ async def approve_doctor_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    return await approve_item(Doctor, DoctorRead, doctor_id, db, redis, ["doctors", "users"])
+    return await approve_item(
+        Doctor, DoctorRead, doctor_id, db, redis, ["doctors", "users"]
+    )
 
 
 @router.patch(

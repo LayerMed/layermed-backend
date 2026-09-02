@@ -1,6 +1,5 @@
 import datetime
 
-from fastapi import Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.enums import ModerationStatus

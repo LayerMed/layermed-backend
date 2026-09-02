@@ -20,8 +20,8 @@ from src.modules.offers.schemas import (
 from src.modules.offers.service import (
     create_offer,
     delete_offer,
-    get_offers_by_filters,
     get_offer_by_id,
+    get_offers_by_filters,
     update_offer_by_id,
 )
 from src.modules.users.schemas import UserRead
