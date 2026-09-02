@@ -78,7 +78,7 @@ async def register_doctor(
         result = await db.execute(query)
         doctor = result.scalar_one()
 
-        await redis.delc(redis.build_key("users", "current", current_user.email))
+        await redis.invalidate("doctors")
         return DoctorReadDetailed.model_validate(doctor)
 
     except sqlalchemy.exc.IntegrityError:
@@ -89,19 +89,28 @@ async def register_doctor(
 # READ
 async def get_doctors_by_filters(
     filters: DoctorFilterParams,
+    specialty_ids: list[int] | None,
     db: AsyncSession,
+    redis: RedisCache
 ) -> PaginatedResponse[DoctorRead]:
-    target_status = filters.status or ModerationStatus.APPROVED
+    is_default = filters.is_default_page()
+    cache_key = redis.build_key("doctors", "list", "default")
 
+    if is_default:
+        cached = await redis.getc(cache_key)
+        if cached:
+            return PaginatedResponse[DoctorRead].model_validate(cached)
+
+    target_status = filters.status or ModerationStatus.APPROVED
     query = (
         select(Doctor)
         .where(Doctor.status == target_status)
         .options(selectinload(Doctor.user), selectinload(Doctor.specialties))
     )
 
-    if filters.specialty_id is not None:
+    if specialty_ids:
         query = query.where(
-            Doctor.specialties.any(Specialty.id == filters.specialty_id)
+            Doctor.specialties.any(Specialty.id.in_(specialty_ids))
         )
     if filters.experience_years is not None:
         query = query.where(Doctor.experience_years >= filters.experience_years)
@@ -109,23 +118,20 @@ async def get_doctors_by_filters(
         query = query.where(Doctor.min_price <= filters.max_price)
     if filters.rating_avg is not None:
         query = query.where(Doctor.rating_avg >= filters.rating_avg)
-    if filters.status is not None:
-        if filters.status == ModerationStatus.PENDING:
-            query = query.where(Doctor.status == ModerationStatus.PENDING)
-        if filters.status == ModerationStatus.REJECTED:
-            query = query.where(Doctor.status == ModerationStatus.REJECTED)
-        if filters.status == ModerationStatus.APPROVED:
-            query = query.where(Doctor.status == ModerationStatus.APPROVED)
 
     query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
     doctors = result.scalars().all()
-
-    return PaginatedResponse[DoctorRead](
+    doctors_dto = PaginatedResponse[DoctorRead](
         items=[DoctorRead.model_validate(d) for d in doctors],
         limit=filters.limit,
         offset=filters.offset,
     )
+
+    if is_default:
+        await redis.setc(cache_key, doctors_dto, CacheTTL.FAST)
+
+    return doctors_dto
 
 
 async def get_doctor_by_id(
@@ -155,8 +161,7 @@ async def get_doctor_by_id(
 # UPDATE
 async def update_doctor(
     doctor_data: DoctorUpdate,
-    current_doctor: DoctorRead,
-    current_user: UserRead,
+    current_doctor: DoctorRead,    
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorRead:
@@ -196,8 +201,8 @@ async def update_doctor(
 
     await db.commit()
 
-    await redis.delc(redis.build_key("doctors", "items", current_doctor.id))
-    await redis.delc(redis.build_key("users", "current", current_user.email))
+    await redis.invalidate("doctors")
+    await redis.invalidate("users")    
 
     return DoctorRead.model_validate(doctor)
 
@@ -228,5 +233,6 @@ async def delete_doctor(
 
     await db.commit()
 
-    await redis.delc(redis.build_key("doctors", "items", current_doctor.id))
-    await redis.delc(redis.build_key("users", "current", current_user.email))
+    await redis.invalidate("doctors")
+    await redis.invalidate("users")
+    

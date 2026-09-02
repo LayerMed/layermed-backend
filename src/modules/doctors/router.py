@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_session
@@ -57,9 +57,11 @@ async def register_doctor_handle(
 )
 async def get_doctors_by_filters_handle(
     filters: Annotated[DoctorFilterParams, Depends()],
+    specialty_ids: Annotated[list[int] | None, Query()] = None, 
     db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis)
 ) -> PaginatedResponse[DoctorRead]:
-    return await get_doctors_by_filters(filters, db)
+    return await get_doctors_by_filters(filters, specialty_ids, db, redis)
 
 
 @router.get(
@@ -79,12 +81,11 @@ async def get_doctor_by_id_handle(
 )
 async def update_doctor_basic_handle(
     doctor_data: DoctorUpdate,
-    current_doctor: DoctorRead = Depends(get_current_doctor),
-    current_user: UserRead = Depends(get_current_user),
+    current_doctor: DoctorRead = Depends(get_current_doctor),    
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    return await update_doctor(doctor_data, current_doctor, current_user, db, redis)
+    return await update_doctor(doctor_data, current_doctor, db, redis)
 
 
 @router.patch(
@@ -98,7 +99,7 @@ async def approve_doctor_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorRead:
-    return await approve_item(Doctor, DoctorRead, doctor_id, db, redis, "doctors")
+    return await approve_item(Doctor, DoctorRead, doctor_id, db, redis, ["doctors", "users"])
 
 
 @router.patch(
@@ -120,7 +121,7 @@ async def reject_doctor_handle(
         db,
         redis,
         reject_data.rejection_reason,
-        "doctors",
+        ["doctors", "users"],
     )
 
 

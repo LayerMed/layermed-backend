@@ -20,7 +20,7 @@ from src.modules.offers.schemas import (
 from src.modules.offers.service import (
     create_offer,
     delete_offer,
-    get_all_offers,
+    get_offers_by_filters,
     get_offer_by_id,
     update_offer_by_id,
 )
@@ -47,13 +47,13 @@ async def create_offer_handle(
 
 # READ
 @router.get("/", response_model=PaginatedResponse[OfferRead], summary="Get all offers")
-async def get_all_offers_handle(
+async def get_offers_by_filters_handle(
     filters: Annotated[OfferFilterParams, Depends()],
     current_user: UserRead | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[OfferRead]:
-    return await get_all_offers(current_user, filters, db, redis)
+    return await get_offers_by_filters(current_user, filters, db, redis)
 
 
 @router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")
@@ -87,7 +87,7 @@ async def approve_offer_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await approve_item(Offer, OfferRead, offer_id, db, redis, "doctors")
+    return await approve_item(Offer, OfferRead, offer_id, db, redis, "offers")
 
 
 @router.patch(

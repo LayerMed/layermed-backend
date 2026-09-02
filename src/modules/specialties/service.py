@@ -13,6 +13,7 @@ from src.modules.specialties.models import Specialty
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
     SpecialtyCreate,
+    SpecialtyFilterParams,
     SpecialtyRead,
     SpecialtyUpdate,
 )
@@ -41,44 +42,32 @@ async def create_specialty(
 
 # READ
 async def get_specialties(
-    ids: list[int] | None,
+    filters: SpecialtyFilterParams,
     db: AsyncSession,
     redis: RedisCache,
 ) -> list[SpecialtyRead]:
-    if ids is None:
-        cache_key = redis.build_key("specialties", "items", "all")
-        cached_specialties = await redis.getc(cache_key)
-
-        if cached_specialties:
-            return [SpecialtyRead.model_validate(s) for s in cached_specialties]
-
-        query = select(Specialty)
+    if filters.ids:
+        query = select(Specialty).where(Specialty.id.in_(filters.ids))
         result = await db.execute(query)
-        specialties = result.scalars().all()
+        return [SpecialtyRead.model_validate(s) for s in result.scalars().all()]
 
-        specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
+    is_default = filters.is_default_page()
+    cache_key = redis.build_key("specialties", "list", "default")
 
-        await redis.setc(
-            cache_key,
-            specialties_dto,
-            ex=CacheTTL.STATIC,
-        )
-        return specialties_dto
-    else:
-        all_cache_key = redis.build_key("specialties", "items", "all")
-        cached_specialties = await redis.getc(all_cache_key)
+    if is_default:
+        cached = await redis.getc(cache_key)
+        if cached:
+            return [SpecialtyRead.model_validate(s) for s in cached]
 
-        if cached_specialties:
-            all_specialties = [
-                SpecialtyRead.model_validate(s) for s in cached_specialties
-            ]
-            return [s for s in all_specialties if s.id in ids]
+    query = select(Specialty).limit(filters.limit).offset(filters.offset)
+    result = await db.execute(query)
+    specialties = result.scalars().all()
+    specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
 
-        query = select(Specialty).where(Specialty.id.in_(ids))
-        result = await db.execute(query)
-        specialties = result.scalars().all()
+    if is_default:
+        await redis.setc(cache_key, specialties_dto, ex=CacheTTL.STATIC)
 
-        return [SpecialtyRead.model_validate(s) for s in specialties]
+    return specialties_dto
 
 
 async def get_specialties_count(

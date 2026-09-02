@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.core.schemas import BaseFilterParams
 from src.core.enums import ModerationStatus, OfferFormat
 
 
@@ -26,7 +27,7 @@ class OfferRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class OfferFilterParams(BaseModel):
+class OfferFilterParams(BaseFilterParams):
     city_id: int | None = None
     cost: int | None = None
     status: ModerationStatus | None = None
@@ -34,9 +35,6 @@ class OfferFilterParams(BaseModel):
 
     doctor_experience_years: int | None = Field(default=None, ge=0)
     doctor_rating_avg: int | None = Field(default=None, ge=0, le=5)
-
-    limit: int = Field(default=10, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)
 
     model_config = ConfigDict(from_attributes=True)
 
