@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.enums import CacheTTL
-from src.core.redis import RedisCache
+from src.core.storage.redis import RedisCache
 from src.modules.symptoms.exceptions import (
     SymptomAlreadyExistsError,
     SymptomNotFoundError,

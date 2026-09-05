@@ -7,7 +7,7 @@ import uvicorn
 
 from src.core.logs import logger
 from src.core.exceptions import AppError
-from src.core.redis import redis_client
+from core.storage.redis import redis_client
 
 from src.modules.users.router import router as users_router
 from src.modules.symptoms.router import router as symptom_router

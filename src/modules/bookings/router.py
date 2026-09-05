@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
+from src.core.storage.postgres import get_session
 from src.core.dependencies import get_current_user
-from src.core.redis import RedisCache, get_redis
+from src.core.storage.redis import RedisCache, get_redis
 from src.modules.bookings.schemas import BookingCreate, BookingRead
 from src.modules.bookings.service import (
     cancel_booking,

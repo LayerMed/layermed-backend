@@ -5,8 +5,8 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.moderation.exceptions import ItemNotFoundError
-from src.core.database import Base
-from src.core.redis import RedisCache
+from core.storage.postgres import Base
+from core.storage.redis import RedisCache
 from src.core.enums import ModerationStatus
 
 

@@ -1,4 +1,4 @@
-from src.core.database import Base
+from core.storage.postgres import Base
 from src.modules.bookings.models import Booking
 from src.modules.cities.models import City
 from src.modules.doctors.models import Doctor

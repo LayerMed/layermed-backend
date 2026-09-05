@@ -3,11 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
+from src.core.storage.postgres import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
 from src.core.enums import UserRole
 from src.core.moderation.service import approve_item, reject_item
-from src.core.redis import RedisCache, get_redis
+from src.core.storage.redis import RedisCache, get_redis
 from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
 from src.modules.doctors.models import Doctor

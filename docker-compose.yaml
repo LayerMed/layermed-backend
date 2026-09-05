@@ -2,6 +2,7 @@ services:
   postgresql-app:
     image: postgres:17.10
     container_name: postgresql-db
+    restart: always
     environment:
         # Use password for postgres user
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
