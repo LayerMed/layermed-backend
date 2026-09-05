@@ -18,6 +18,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     items: list[T]    
     limit: int 
     offset: int
+    total: int
 
 
 class BaseFilterParams(BaseModel):

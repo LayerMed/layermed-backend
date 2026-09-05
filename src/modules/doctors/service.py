@@ -1,5 +1,5 @@
 import sqlalchemy.exc
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -120,10 +120,15 @@ async def get_doctors_by_filters(
     query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
     doctors = result.scalars().all()
+
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
     doctors_dto = PaginatedResponse[DoctorRead](
         items=[DoctorRead.model_validate(d) for d in doctors],
         limit=filters.limit,
         offset=filters.offset,
+        total=total
     )
 
     if is_default:

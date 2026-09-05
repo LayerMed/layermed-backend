@@ -1,4 +1,4 @@
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -116,10 +116,14 @@ async def get_reviews_by_filter(
     result = await db.execute(query)
     reviews = result.scalars().all()
 
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
     return PaginatedResponse[ReviewRead](
         items=[ReviewRead.model_validate(r) for r in reviews],
         limit=filters.limit,
         offset=filters.offset,
+        total=total
     )
 
 
