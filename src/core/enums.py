@@ -34,3 +34,7 @@ class CacheTTL(IntEnum):
     FAST = 60 * 15             
     MOMENTARY = 60 * 2         
 
+
+class S3Folders(str, Enum):
+    DOCTORS = "doctors"
+    OFFERS = "offers"

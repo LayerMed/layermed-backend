@@ -25,6 +25,7 @@ dependencies = [
     "ruff>=0.16.1",
     "setuptools>=83.0.0",
     "sqlalchemy>=2.0.51",
+    "types-aiobotocore-s3>=3.9.0",
     "uvicorn>=0.52.3",
 ]
 

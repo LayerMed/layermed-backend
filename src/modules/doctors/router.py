@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.storage.postgres import get_session
@@ -21,10 +21,12 @@ from src.modules.doctors.schemas import (
 )
 from src.modules.doctors.service import (
     delete_doctor,
+    delete_doctor_avatar,
     get_doctor_by_id,
     get_doctors_by_filters,
     register_doctor,
     update_doctor,
+    upload_doctor_avatar,
 )
 from src.modules.users.schemas import UserRead
 
@@ -49,6 +51,21 @@ async def register_doctor_handle(
     return await register_doctor(new_doctor, current_user, db, redis)
 
 
+@router.post(
+    "/avatar",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload doctor avatar"
+)
+async def upload_doctor_avatar_handle(
+    image: UploadFile = File(...),
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> str:
+    image_bytes = await image.read()
+    return await upload_doctor_avatar(image_bytes, current_doctor, db, redis)
+
+    
 # READ
 @router.get(
     "/",
@@ -141,3 +158,16 @@ async def delete_doctor_account_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> None:
     await delete_doctor(password_data, current_doctor, current_user, db, redis)
+
+
+@router.delete(
+    "/avatar",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete doctor avatar",
+)
+async def delete_doctor_avatar_handle(    
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> None:
+    await delete_doctor_avatar(current_doctor, db, redis)

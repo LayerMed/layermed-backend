@@ -1,9 +1,11 @@
+from fastapi import UploadFile
 import sqlalchemy.exc
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.enums import CacheTTL, ModerationStatus, UserRole
+from src.core.storage.s3 import delete_image, upload_image
+from src.core.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
 from src.core.storage.redis import RedisCache
 from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
@@ -84,6 +86,40 @@ async def register_doctor(
     except sqlalchemy.exc.IntegrityError:
         await db.rollback()
         raise DoctorProfileAlreadyExistsError()
+
+
+async def upload_doctor_avatar(
+    image_bytes: bytes, 
+    current_doctor: DoctorRead,
+    db: AsyncSession,
+    redis: RedisCache
+):
+    key = await upload_image(image_bytes, S3Folders.DOCTORS)
+    old_key = current_doctor.avatar_url
+    query = (
+        update(Doctor)
+        .where(Doctor.id == current_doctor.id)
+        .values(
+            avatar_url=key
+        )
+        .returning(Doctor.avatar_url)
+    )
+    result = await db.execute(query)
+    updated_avatar = result.scalar_one_or_none()
+
+    if updated_avatar is None:
+        await db.rollback()
+        await delete_image(key)
+        raise DoctorNotFoundError()
+
+    await delete_image(old_key)
+
+    await db.commit()
+
+    await redis.invalidate("doctors")
+    await redis.invalidate(f"users")
+
+    return updated_avatar
 
 
 # READ
@@ -238,3 +274,26 @@ async def delete_doctor(
 
     await redis.invalidate("doctors")
     await redis.invalidate("users")
+
+
+async def delete_doctor_avatar(
+    current_doctor: DoctorRead,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> None:
+    old_key = current_doctor.avatar_url
+    if not old_key:        
+        return None
+    
+    query = (
+        update(Doctor)
+        .where(Doctor.id == current_doctor.id)
+        .values(avatar_url=None)
+    )
+    await db.execute(query)
+    await db.commit()
+    
+    await redis.invalidate("doctors")
+    await redis.invalidate("users")
+
+    await delete_image(old_key)
