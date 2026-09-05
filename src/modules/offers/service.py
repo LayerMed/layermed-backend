@@ -1,4 +1,4 @@
-from sqlalchemy import insert, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.enums import CacheTTL, ModerationStatus, UserRole
@@ -39,17 +39,21 @@ async def create_offer(
 
 
 # READ
-async def get_all_offers(
+async def get_offers_by_filters(
     current_user: UserRead | None,
     filters: OfferFilterParams,
     db: AsyncSession,
     redis: RedisCache,
 ) -> PaginatedResponse[OfferRead]:
     is_admin = current_user and current_user.role == UserRole.ADMIN
-    # cache_key = redis.build_key("offers", "items", "all")
-    # cached_offers = await redis.getc(cache_key)
-    # if cached_offers:
-    # Сделать кеш везде где есть offset и limit. добавить total
+    is_default = filters.is_default_page(is_admin=bool(is_admin))
+
+    cache_key = redis.build_key("offers", "list", "default")
+    if is_default:
+        cached = await redis.getc(cache_key)
+        if cached:
+            return PaginatedResponse[OfferRead].model_validate(cached)
+
     query = select(Offer)
 
     if is_admin:
@@ -65,7 +69,6 @@ async def get_all_offers(
     if filters.offer_format:
         offer_format = filters.offer_format
         query = query.filter(Offer.offer_format == offer_format)
-
     if filters.doctor_experience_years or filters.doctor_rating_avg:
         query = query.join(Offer.doctor)
         if filters.doctor_experience_years:
@@ -79,11 +82,20 @@ async def get_all_offers(
     result = await db.execute(query)
     offers = result.scalars().all()
 
-    return PaginatedResponse[OfferRead](
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
+    offers_dto = PaginatedResponse[OfferRead](
         items=[OfferRead.model_validate(u) for u in offers],
         limit=filters.limit,
         offset=filters.offset,
+        total=total
     )
+
+    if is_default:
+        await redis.setc(cache_key, offers_dto, CacheTTL.FAST)
+
+    return offers_dto
 
 
 async def get_offer_by_id(
@@ -133,7 +145,7 @@ async def update_offer_by_id(
     updated_offer = result.scalar_one()
 
     await db.commit()
-    await redis.invalidate("offers")
+    await redis.invalidate("offers:items")
 
     return OfferRead.model_validate(updated_offer)
 
@@ -157,4 +169,4 @@ async def delete_offer(
 
     await db.delete(offer)
     await db.commit()
-    await redis.invalidate("offers")
+    await redis.invalidate("offers:items")

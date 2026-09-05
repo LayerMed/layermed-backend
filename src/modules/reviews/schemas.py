@@ -3,7 +3,7 @@ import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.enums import ModerationStatus
-from src.core.schemas import PaginationParams
+from src.core.schemas import BaseFilterParams
 
 
 class ReviewCreate(BaseModel):
@@ -25,7 +25,7 @@ class ReviewRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ReviewFilterParams(PaginationParams):
+class ReviewFilterParams(BaseFilterParams):
     rating: int | None = Field(default=None, ge=1, le=5)
     is_positive: bool | None = Field(default=None)
     status: ModerationStatus

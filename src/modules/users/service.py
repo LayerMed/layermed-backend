@@ -1,5 +1,5 @@
 from pydantic import EmailStr
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -89,10 +89,14 @@ async def get_users_by_filters(
     result = await db.execute(query)
     users = result.scalars().all()
 
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
     return PaginatedResponse[UserRead](
         items=[UserRead.model_validate(u) for u in users],
         limit=filters.limit,
         offset=filters.offset,
+        total=total
     )
 
 

@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import Sequence, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import update
@@ -21,7 +21,7 @@ async def update_moderation_status(
     status: ModerationStatus,
     db: AsyncSession,
     redis: RedisCache,
-    cache_namespace: str,
+    cache_namespaces: Sequence[str] | str,
     rejection_reason: str | None = None,
 ) -> SchemaT:
     query = (
@@ -36,8 +36,13 @@ async def update_moderation_status(
     if updated_item is None:
         raise ItemNotFoundError(detail=f"{model.__name__} not found")
 
+    namespaces = (
+        [cache_namespaces] if isinstance(cache_namespaces, str) else cache_namespaces
+    )
+    for ns in namespaces:
+        await redis.invalidate(ns)
+
     await db.commit()
-    await redis.invalidate(cache_namespace)
     return schema.model_validate(updated_item)
 
 
@@ -47,7 +52,7 @@ async def approve_item(
     item_id: int,
     db: AsyncSession,
     redis: RedisCache,
-    cache_namespace: str,
+    cache_namespaces: Sequence[str] | str,
 ) -> SchemaT:
     return await update_moderation_status(
         model,
@@ -56,7 +61,7 @@ async def approve_item(
         ModerationStatus.APPROVED,
         db,
         redis,
-        cache_namespace,
+        cache_namespaces,
     )
 
 
@@ -67,7 +72,7 @@ async def reject_item(
     db: AsyncSession,
     redis: RedisCache,
     rejection_reason: str,
-    cache_namespace: str,
+    cache_namespaces: Sequence[str] | str,
 ) -> SchemaT:
     return await update_moderation_status(
         model,
@@ -76,6 +81,6 @@ async def reject_item(
         ModerationStatus.REJECTED,
         db,
         redis,
-        cache_namespace,
+        cache_namespaces,
         rejection_reason,
     )

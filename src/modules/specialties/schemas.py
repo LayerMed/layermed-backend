@@ -3,6 +3,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.core.schemas import BaseFilterParams
+
 SpecialtyName = Annotated[str, Field(min_length=2, max_length=50)]
 SpecialtyDescription = Annotated[str, Field(min_length=8, max_length=100)]
 
@@ -33,3 +35,7 @@ class SpecialtyCountRead(BaseModel):
 class SpecialtyUpdate(BaseModel):
     name: SpecialtyName | None = None
     description: SpecialtyDescription | None = None
+
+
+class SpecialtyFilterParams(BaseFilterParams):
+    ids: list[int] | None = None

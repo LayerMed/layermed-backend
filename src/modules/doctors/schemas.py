@@ -3,7 +3,7 @@ import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.enums import ModerationStatus
-from src.core.schemas import PaginationParams
+from src.core.schemas import BaseFilterParams
 from src.modules.specialties.schemas import SpecialtyRead
 
 
@@ -48,10 +48,7 @@ class DoctorUpdate(BaseModel):
     bio: str | None = None
 
 
-class DoctorFilterParams(PaginationParams):
-    specialty_id: int | None = (
-        None  # переиминовать в связи с изменением логики специальностей
-    )
+class DoctorFilterParams(BaseFilterParams):
     experience_years: int | None = Field(default=None, ge=0)
     max_price: int | None = None
     rating_avg: int | None = Field(default=None, ge=0, le=5)
