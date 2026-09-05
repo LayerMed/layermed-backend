@@ -89,7 +89,7 @@ async def get_offers_by_filters(
         items=[OfferRead.model_validate(u) for u in offers],
         limit=filters.limit,
         offset=filters.offset,
-        total=total
+        total=total,
     )
 
     if is_default:

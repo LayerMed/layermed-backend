@@ -123,7 +123,7 @@ async def get_reviews_by_filter(
         items=[ReviewRead.model_validate(r) for r in reviews],
         limit=filters.limit,
         offset=filters.offset,
-        total=total
+        total=total,
     )
 
 

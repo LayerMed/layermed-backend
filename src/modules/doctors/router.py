@@ -52,9 +52,7 @@ async def register_doctor_handle(
 
 
 @router.post(
-    "/avatar",
-    status_code=status.HTTP_201_CREATED,
-    summary="Upload doctor avatar"
+    "/avatar", status_code=status.HTTP_201_CREATED, summary="Upload doctor avatar"
 )
 async def upload_doctor_avatar_handle(
     image: UploadFile = File(...),
@@ -65,7 +63,7 @@ async def upload_doctor_avatar_handle(
     image_bytes = await image.read()
     return await upload_doctor_avatar(image_bytes, current_doctor, db, redis)
 
-    
+
 # READ
 @router.get(
     "/",
@@ -165,7 +163,7 @@ async def delete_doctor_account_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete doctor avatar",
 )
-async def delete_doctor_avatar_handle(    
+async def delete_doctor_avatar_handle(
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),

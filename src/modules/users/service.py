@@ -96,7 +96,7 @@ async def get_users_by_filters(
         items=[UserRead.model_validate(u) for u in users],
         limit=filters.limit,
         offset=filters.offset,
-        total=total
+        total=total,
     )
 
 

@@ -89,19 +89,14 @@ async def register_doctor(
 
 
 async def upload_doctor_avatar(
-    image_bytes: bytes, 
-    current_doctor: DoctorRead,
-    db: AsyncSession,
-    redis: RedisCache
+    image_bytes: bytes, current_doctor: DoctorRead, db: AsyncSession, redis: RedisCache
 ):
     key = await upload_image(image_bytes, S3Folders.DOCTORS)
     old_key = current_doctor.avatar_url
     query = (
         update(Doctor)
         .where(Doctor.id == current_doctor.id)
-        .values(
-            avatar_url=key
-        )
+        .values(avatar_url=key)
         .returning(Doctor.avatar_url)
     )
     result = await db.execute(query)
@@ -164,7 +159,7 @@ async def get_doctors_by_filters(
         items=[DoctorRead.model_validate(d) for d in doctors],
         limit=filters.limit,
         offset=filters.offset,
-        total=total
+        total=total,
     )
 
     if is_default:
@@ -282,17 +277,13 @@ async def delete_doctor_avatar(
     redis: RedisCache,
 ) -> None:
     old_key = current_doctor.avatar_url
-    if not old_key:        
+    if not old_key:
         return None
-    
-    query = (
-        update(Doctor)
-        .where(Doctor.id == current_doctor.id)
-        .values(avatar_url=None)
-    )
+
+    query = update(Doctor).where(Doctor.id == current_doctor.id).values(avatar_url=None)
     await db.execute(query)
     await db.commit()
-    
+
     await redis.invalidate("doctors")
     await redis.invalidate("users")
 
