@@ -1,6 +1,6 @@
 from fastapi import status
 
-from src.core.exceptions import AppError
+from src.common.exceptions import AppError
 
 
 class OfferAlreadyExistsError(AppError):

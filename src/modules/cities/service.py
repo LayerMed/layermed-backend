@@ -3,8 +3,8 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import CacheTTL
-from src.core.storage.redis import RedisCache
+from src.common.enums import CacheTTL
+from src.services.storage.redis import RedisCache
 from src.modules.cities.exceptions import CityAlreadyExistsError, CityNotFoundError
 from src.modules.cities.models import City
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate

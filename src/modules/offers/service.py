@@ -1,9 +1,9 @@
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import CacheTTL, ModerationStatus, UserRole
-from src.core.storage.redis import RedisCache
-from src.core.schemas import PaginatedResponse
+from src.common.enums import CacheTTL, ModerationStatus, UserRole
+from src.services.storage.redis import RedisCache
+from src.common.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.exceptions import OfferAccessDenied, OfferNotFoundError

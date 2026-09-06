@@ -2,8 +2,8 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.core.enums import BookingStatus, CacheTTL, ModerationStatus, UserRole
-from src.core.storage.redis import RedisCache
+from src.common.enums import BookingStatus, CacheTTL, ModerationStatus, UserRole
+from src.services.storage.redis import RedisCache
 from src.modules.bookings.exceptions import (
     BookingAccessDeniedError,
     BookingCannotBeCancelledError,

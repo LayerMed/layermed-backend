@@ -2,9 +2,9 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import ModerationStatus
-from src.core.storage.redis import RedisCache
-from src.core.schemas import PaginatedResponse
+from src.common.enums import ModerationStatus
+from src.services.storage.redis import RedisCache
+from src.common.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.reviews.exceptions import (

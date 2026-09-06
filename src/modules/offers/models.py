@@ -1,8 +1,8 @@
 from sqlalchemy import ARRAY, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.storage.postgres import Base, Timestamp
-from src.core.enums import ModerationStatus, OfferFormat
+from src.services.storage.postgres import Base, Timestamp
+from src.common.enums import ModerationStatus, OfferFormat
 
 
 class Offer(Base, Timestamp):

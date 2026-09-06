@@ -7,7 +7,7 @@ import aioboto3
 from botocore.exceptions import ClientError
 from types_aiobotocore_s3 import S3Client
 
-from src.core.enums import S3Folders
+from src.common.enums import S3Folders
 from src.core.logs import logger
 from src.core.config import settings
 

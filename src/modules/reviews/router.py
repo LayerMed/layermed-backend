@@ -3,11 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.storage.postgres import get_session
+from src.services.storage.postgres import get_session
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
-from src.core.enums import ModerationStatus
-from src.core.storage.redis import RedisCache, get_redis
-from src.core.schemas import PaginatedResponse
+from src.common.enums import ModerationStatus
+from src.services.storage.redis import RedisCache, get_redis
+from src.common.schemas import PaginatedResponse
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.reviews.schemas import ReviewCreate, ReviewFilterParams, ReviewRead
 from src.modules.reviews.service import (

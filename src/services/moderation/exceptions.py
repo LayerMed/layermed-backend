@@ -1,4 +1,4 @@
-from src.core.exceptions import AppError
+from src.common.exceptions import AppError
 from fastapi import status
 
 

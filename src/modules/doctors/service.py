@@ -4,10 +4,10 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.storage.s3 import delete_image, upload_image
-from src.core.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
-from src.core.storage.redis import RedisCache
-from src.core.schemas import PaginatedResponse, PasswordConfirm
+from src.services.storage.s3 import delete_image, upload_image
+from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
+from src.services.storage.redis import RedisCache
+from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
 from src.modules.doctors.exceptions import (
     DoctorNotFoundError,

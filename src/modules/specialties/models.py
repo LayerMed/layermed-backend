@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, Timestamp
 
 
 class Specialty(Base, Timestamp):
