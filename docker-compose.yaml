@@ -2,7 +2,7 @@ services:
   postgresql-app:
     image: postgres:17.10
     container_name: postgresql-db
-    restart: always
+    restart: unless-stopped
     environment:
         # Use password for postgres user
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -16,6 +16,7 @@ services:
   redis-app:
     image: redis:8.10.0-alpine
     container_name: redis-app
+    restart: unless-stopped
     volumes:
       - 'redis-db:/data'
     ports:
@@ -24,7 +25,7 @@ services:
   backend:
     build: .
     container_name: layermed-backend
-    restart: always
+    restart: unless-stopped
     depends_on:
       - postgresql-app
       - redis-app

@@ -7,6 +7,7 @@ import aioboto3
 from botocore.exceptions import ClientError
 from types_aiobotocore_s3 import S3Client
 
+from src.core.enums import S3Folders
 from src.core.logs import logger
 from src.core.config import settings
 
@@ -14,7 +15,7 @@ aioboto = aioboto3.Session()
 
 
 @asynccontextmanager
-async def get_s3_client() -> AsyncGenerator[S3Client]:
+async def get_s3_client() -> AsyncGenerator[S3Client, None]:
     async with aioboto.client(
         service_name="s3",
         endpoint_url=settings.S3_ENDPOINT,
@@ -24,7 +25,7 @@ async def get_s3_client() -> AsyncGenerator[S3Client]:
         yield client
 
 
-async def upload_image(file_bytes: bytes, folder: str, extension: str = "jpg") -> str:
+async def upload_image(file_bytes: bytes, folder: S3Folders, extension: str = "jpg") -> str:
     filename = f"{uuid.uuid4()}.{extension}"
     key = f"{folder}/{filename}"
 

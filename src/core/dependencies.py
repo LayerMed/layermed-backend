@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.core.config import settings
-from core.storage.postgres import get_session
+from src.core.storage.postgres import get_session
 from src.core.enums import CacheTTL, UserRole
 from src.core.logs import logger
-from core.storage.redis import RedisCache, get_redis
+from src.core.storage.redis import RedisCache, get_redis
 from src.core.security import oauth2_scheme, optional_oauth2_scheme
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
