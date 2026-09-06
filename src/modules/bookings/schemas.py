@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from src.core.enums import BookingStatus
+from src.common.enums import BookingStatus
 
 
 class BookingCreate(BaseModel):

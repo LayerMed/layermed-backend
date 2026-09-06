@@ -3,8 +3,8 @@ import datetime
 from sqlalchemy import TIMESTAMP, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.storage.postgres import Base, Timestamp
-from src.core.enums import BookingStatus
+from src.services.storage.postgres import Base, Timestamp
+from src.common.enums import BookingStatus
 
 
 class Booking(Base, Timestamp):

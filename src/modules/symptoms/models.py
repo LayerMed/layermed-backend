@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.core.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, Timestamp
 
 
 class Symptom(Base, Timestamp):

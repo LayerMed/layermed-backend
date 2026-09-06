@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.storage.postgres import get_session
+from src.services.storage.postgres import get_session
 from src.core.dependencies import get_admin_user, get_current_user
-from src.core.storage.redis import RedisCache, get_redis
-from src.core.schemas import PaginatedResponse, PasswordConfirm, TokenResponse
+from src.services.storage.redis import RedisCache, get_redis
+from src.common.schemas import PaginatedResponse, PasswordConfirm, TokenResponse
 from src.core.security import create_access_token, verify_pwd
 from src.modules.users.exceptions import InvalidCredentialsError
 from src.modules.users.models import User

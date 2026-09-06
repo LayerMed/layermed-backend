@@ -1,8 +1,8 @@
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.storage.postgres import Base, Timestamp
-from src.core.enums import ModerationStatus
+from src.services.storage.postgres import Base, Timestamp
+from src.common.enums import ModerationStatus
 
 
 class Doctor(Base, Timestamp):

@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
-from src.core.enums import UserRole
+from src.common.enums import UserRole
 from src.core.security import BAD_PASSWORDS
 from src.modules.doctors.schemas import DoctorRead
 

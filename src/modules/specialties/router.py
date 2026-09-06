@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.storage.postgres import get_session
+from src.services.storage.postgres import get_session
 from src.core.dependencies import get_admin_user
-from src.core.storage.redis import RedisCache, get_redis
+from src.services.storage.redis import RedisCache, get_redis
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
     SpecialtyCreate,

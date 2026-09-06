@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.moderation.exceptions import ItemNotFoundError
-from src.core.storage.postgres import Base
-from src.core.storage.redis import RedisCache
-from src.core.enums import ModerationStatus
+from src.services.moderation.exceptions import ItemNotFoundError
+from src.services.storage.postgres import Base
+from src.services.storage.redis import RedisCache
+from src.common.enums import ModerationStatus
 
 
 ModelT = TypeVar("ModelT", bound=Base)

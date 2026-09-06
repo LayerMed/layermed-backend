@@ -2,8 +2,8 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import CacheTTL
-from src.core.storage.redis import RedisCache
+from src.common.enums import CacheTTL
+from src.services.storage.redis import RedisCache
 from src.modules.doctors.models import Doctor
 from src.modules.specialties.exceptions import (
     SpecialtyAlreadyExistsError,
