@@ -16,3 +16,13 @@ class OfferNotFoundError(AppError):
 class OfferAccessDenied(AppError):
     status_code = status.HTTP_403_FORBIDDEN
     detail = "You cannot delete another doctor's offer"
+
+
+class OfferImagesError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    detail = "Images don't uploaded"
+
+
+class OfferImagesCountError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    detail = "Images count exceeds the limit of 10 pieces"

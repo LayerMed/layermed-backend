@@ -59,7 +59,7 @@ async def upload_doctor_avatar_handle(
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
-) -> str:    
+) -> str:
     return await upload_doctor_avatar(image, current_doctor, db, redis)
 
 

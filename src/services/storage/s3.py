@@ -25,7 +25,9 @@ async def get_s3_client() -> AsyncGenerator[S3Client, None]:
         yield client
 
 
-async def upload_image(file_bytes: bytes, folder: S3Folders, extension: str = "jpg") -> str:
+async def upload_image(
+    file_bytes: bytes, folder: S3Folders, extension: str = "jpg"
+) -> str:
     filename = f"{uuid.uuid4()}.{extension}"
     key = f"{folder}/{filename}"
 

@@ -1,3 +1,4 @@
+from fastapi import UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.common.enums import ModerationStatus, OfferFormat
@@ -10,7 +11,6 @@ class OfferCreate(BaseModel):
     description: str = Field(min_length=2, max_length=500)
     cost: int = Field(gt=0)
     offer_format: OfferFormat
-    images: list[str] | None = None
 
 
 class OfferRead(BaseModel):

@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -15,8 +16,8 @@ class PasswordConfirm(BaseModel):
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    items: list[T]    
-    limit: int 
+    items: list[T]
+    limit: int
     offset: int
     total: int
 
@@ -28,11 +29,9 @@ class BaseFilterParams(BaseModel):
     def is_default_page(self, is_admin: bool = False) -> bool:
         if is_admin:
             return False
-        
+
         filters_applied = self.model_dump(
-            exclude_unset=True, 
-            exclude_none=True,
-            exclude={"limit", "offset", "total"}
+            exclude_unset=True, exclude_none=True, exclude={"limit", "offset", "total"}
         )
 
         return not filters_applied and self.offset == 0 and self.limit == 10

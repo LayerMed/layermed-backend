@@ -18,5 +18,5 @@ __all__ = [
     "Offer",
     "Symptom",
     "User",
-    "Review"
+    "Review",
 ]

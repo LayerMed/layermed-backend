@@ -30,9 +30,9 @@ class OfferFormat(StrEnum):
 
 class CacheTTL(IntEnum):
     STATIC = 60 * 60 * 24 * 30
-    SLOW = 60 * 60 * 12        
-    FAST = 60 * 15             
-    MOMENTARY = 60 * 2         
+    SLOW = 60 * 60 * 12
+    FAST = 60 * 15
+    MOMENTARY = 60 * 2
 
 
 class S3Folders(StrEnum):

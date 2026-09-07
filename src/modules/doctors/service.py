@@ -4,7 +4,11 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.services.images.service import avatar_optimization, avatar_validate
+from src.services.images.service import (
+    avatar_optimization,
+    image_validate,
+    save_and_upload_image,
+)
 from src.services.storage.s3 import delete_image, upload_image
 from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
 from src.services.storage.redis import RedisCache
@@ -93,12 +97,7 @@ async def upload_doctor_avatar(
     image: UploadFile, current_doctor: DoctorRead, db: AsyncSession, redis: RedisCache
 ):
     try:
-        avatar_validate(image)
-        
-        image_bytes = await image.read()
-        optimized_image = avatar_optimization(image_bytes)
-
-        key = await upload_image(optimized_image, S3Folders.DOCTORS)
+        key = await save_and_upload_image(image, S3Folders.DOCTORS, avatar_optimization)
         old_key = current_doctor.avatar_url
 
         query = (

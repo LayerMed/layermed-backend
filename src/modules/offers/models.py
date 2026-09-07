@@ -1,4 +1,5 @@
-from sqlalchemy import ARRAY, ForeignKey, Index, String
+from sqlalchemy import ForeignKey, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.services.storage.postgres import Base, Timestamp
@@ -16,9 +17,7 @@ class Offer(Base, Timestamp):
     status: Mapped[ModerationStatus] = mapped_column(default=ModerationStatus.PENDING)
     rejection_reason: Mapped[str | None] = mapped_column(nullable=True, default=None)
     offer_format: Mapped[OfferFormat]
-    images: Mapped[list[str] | None] = mapped_column(
-        ARRAY(String), nullable=True, default=None
-    )
+    images: Mapped[list[str]] = mapped_column(JSONB, default=list)
 
     __table_args__ = (
         Index(

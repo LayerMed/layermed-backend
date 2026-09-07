@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.storage.postgres import get_session
@@ -23,6 +23,7 @@ from src.modules.offers.service import (
     get_offer_by_id,
     get_offers_by_filters,
     update_offer_by_id,
+    upload_offer_images,
 )
 from src.modules.users.schemas import UserRead
 
@@ -43,6 +44,22 @@ async def create_offer_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
     return await create_offer(new_offer, current_doctor, db, redis)
+
+
+@router.post(
+    "/{offer_id}/images",
+    response_model=list[str],
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload images for doctor offer",
+)
+async def upload_offer_images_handle(
+    offer_id: int,
+    images: list[UploadFile] = File(...),
+    # current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> list[str]:
+    return await upload_offer_images(images, offer_id, db, redis)
 
 
 # READ

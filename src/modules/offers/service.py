@@ -1,12 +1,22 @@
+import asyncio
+
+from fastapi import UploadFile
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.enums import CacheTTL, ModerationStatus, UserRole
+from src.services.storage.s3 import delete_image
+from src.services.images.service import offer_optimization, save_and_upload_image
+from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
 from src.services.storage.redis import RedisCache
 from src.common.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
-from src.modules.offers.exceptions import OfferAccessDenied, OfferNotFoundError
+from src.modules.offers.exceptions import (
+    OfferAccessDenied,
+    OfferImagesCountError,
+    OfferImagesError,
+    OfferNotFoundError,
+)
 from src.modules.offers.models import Offer
 from src.modules.offers.schemas import (
     OfferCreate,
@@ -24,9 +34,14 @@ async def create_offer(
     db: AsyncSession,
     redis: RedisCache,
 ) -> OfferRead:
+    offer_data = new_offer.model_dump()
     query = (
         insert(Offer)
-        .values(doctor_id=current_doctor.id, **new_offer.model_dump())
+        .values(
+            doctor_id=current_doctor.id,
+            images=[],
+            **offer_data,
+        )
         .returning(Offer)
     )
     result = await db.execute(query)
@@ -36,6 +51,69 @@ async def create_offer(
     await redis.invalidate("offers")
 
     return OfferRead.model_validate(created_offer)
+
+
+async def upload_offer_images(
+    images: list[UploadFile],
+    offer_id: int,
+    # current_doctor: DoctorRead,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> list[str]:
+    offer = await db.get(Offer, offer_id)
+
+    if not offer:
+        raise OfferNotFoundError()
+    # if offer.doctor_id != current_doctor.id:
+    #     raise OfferAccessDenied()
+    current_images = offer.images or []
+    if len(current_images) + len(images) > 10:
+        raise OfferImagesCountError()
+
+    try:
+        tasks = [
+            save_and_upload_image(image, S3Folders.OFFERS, offer_optimization)
+            for image in images
+        ]
+        keys = await asyncio.gather(*tasks, return_exceptions=True)
+        uploaded_keys = []
+        has_errors = False
+
+        for key in keys:
+            if isinstance(key, Exception):
+                has_errors = True
+            else:
+                uploaded_keys.append(key)
+
+        if has_errors:
+            if uploaded_keys:
+                await asyncio.gather(*[delete_image(k) for k in uploaded_keys])
+            raise OfferImagesError()
+
+        try:
+            stmt = (
+                update(Offer)
+                .where(Offer.id == offer_id)
+                .values(images=Offer.images.concat(uploaded_keys))
+                .returning(Offer.images)
+            )
+            result = await db.execute(stmt)
+            offer.images = result.scalar_one()
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            await asyncio.gather(*[delete_image(k) for k in uploaded_keys])
+            raise
+
+        await asyncio.gather(
+            redis.invalidate(f"offers:items:{offer_id}"),
+            redis.invalidate("offers:list:default"),
+            return_exceptions=True,
+        )
+        return offer.images
+
+    finally:
+        await asyncio.gather(*[img.close() for img in images])
 
 
 # READ
