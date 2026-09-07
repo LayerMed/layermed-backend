@@ -2,8 +2,8 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.enums import ModerationStatus
-from src.core.schemas import BaseFilterParams
+from src.common.enums import ModerationStatus
+from src.common.schemas import BaseFilterParams
 from src.modules.specialties.schemas import SpecialtyRead
 
 

@@ -1,28 +1,24 @@
-from fastapi.security import OAuth2PasswordBearer
 import jwt
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from src.common.enums import CacheTTL, UserRole
 from src.core.config import settings
-from src.core.database import get_session
-from src.core.enums import CacheTTL, UserRole
 from src.core.logs import logger
-from src.core.redis import RedisCache, get_redis
 from src.core.security import oauth2_scheme, optional_oauth2_scheme
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
-
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials or token expired",
     headers={"WWW-Authenticate": "Bearer"},
 )
-
-
 
 
 async def get_current_user(
@@ -78,7 +74,9 @@ async def get_current_doctor(
     return current_user.doctor
 
 
-async def get_admin_user(current_user: UserRead = Depends(get_current_user)) -> UserRead:
+async def get_admin_user(
+    current_user: UserRead = Depends(get_current_user),
+) -> UserRead:
     if current_user.role != UserRole.ADMIN:
         logger.warning(
             "Access denied for user {email} (id={user_id}, role={role}). Admin privileges required.",
@@ -104,4 +102,3 @@ async def get_optional_user(
         return await get_current_user(token=token, db=db, redis=redis)
     except HTTPException:
         return None
-    

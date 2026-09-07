@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
 from src.core.dependencies import get_admin_user
-from src.core.redis import RedisCache, get_redis
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
 from src.modules.cities.service import (
     create_city,
@@ -13,6 +11,8 @@ from src.modules.cities.service import (
     update_city,
 )
 from src.modules.users.models import User
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/cities", tags=["Cities"])
 

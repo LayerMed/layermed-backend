@@ -1,14 +1,14 @@
-from typing import Sequence, TypeVar
+from collections.abc import Sequence
+from typing import TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.moderation.exceptions import ItemNotFoundError
-from src.core.database import Base
-from src.core.redis import RedisCache
-from src.core.enums import ModerationStatus
-
+from src.common.enums import ModerationStatus
+from src.services.moderation.exceptions import ItemNotFoundError
+from src.services.storage.postgres import Base
+from src.services.storage.redis import RedisCache
 
 ModelT = TypeVar("ModelT", bound=Base)
 SchemaT = TypeVar("SchemaT", bound=BaseModel)

@@ -1,13 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
+from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
-from src.core.moderation.service import approve_item, reject_item
-from src.core.redis import RedisCache, get_redis
-from src.core.schemas import PaginatedResponse
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
 from src.modules.offers.schemas import (
@@ -21,10 +18,15 @@ from src.modules.offers.service import (
     create_offer,
     delete_offer,
     get_offer_by_id,
+    get_offers_by_doctor,
     get_offers_by_filters,
     update_offer_by_id,
+    upload_offer_images,
 )
 from src.modules.users.schemas import UserRead
+from src.services.moderation.service import approve_item, reject_item
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/offers", tags=["Offers"])
 
@@ -45,6 +47,22 @@ async def create_offer_handle(
     return await create_offer(new_offer, current_doctor, db, redis)
 
 
+@router.post(
+    "/{offer_id}/images",
+    response_model=list[str],
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload images for doctor offer",
+)
+async def upload_offer_images_handle(
+    offer_id: int,
+    images: list[UploadFile] = File(...),
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> list[str]:
+    return await upload_offer_images(images, offer_id, current_doctor, db, redis)
+
+
 # READ
 @router.get("/", response_model=PaginatedResponse[OfferRead], summary="Get all offers")
 async def get_offers_by_filters_handle(
@@ -54,6 +72,18 @@ async def get_offers_by_filters_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[OfferRead]:
     return await get_offers_by_filters(current_user, filters, db, redis)
+
+
+@router.get(
+    "/doctor",
+    response_model=list[OfferRead],
+    summary="Get all offers from current doctor",
+)
+async def get_offers_by_doctor_handle(
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+) -> list[OfferRead]:
+    return await get_offers_by_doctor(current_doctor, db)
 
 
 @router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")

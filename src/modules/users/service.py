@@ -4,9 +4,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from src.core.enums import UserRole
-from src.core.redis import RedisCache
-from src.core.schemas import PaginatedResponse, PasswordConfirm
+from src.common.enums import UserRole
+from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.exceptions import (
     IncorrectPasswordError,
@@ -22,6 +21,7 @@ from src.modules.users.schemas import (
     UserRead,
     UserUpdate,
 )
+from src.services.storage.redis import RedisCache
 
 
 async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
@@ -96,7 +96,7 @@ async def get_users_by_filters(
         items=[UserRead.model_validate(u) for u in users],
         limit=filters.limit,
         offset=filters.offset,
-        total=total
+        total=total,
     )
 
 

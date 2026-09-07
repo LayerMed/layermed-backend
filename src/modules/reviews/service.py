@@ -2,9 +2,8 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import ModerationStatus
-from src.core.redis import RedisCache
-from src.core.schemas import PaginatedResponse
+from src.common.enums import ModerationStatus
+from src.common.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.reviews.exceptions import (
@@ -19,6 +18,7 @@ from src.modules.reviews.schemas import (
     ReviewRead,
 )
 from src.modules.users.schemas import UserRead
+from src.services.storage.redis import RedisCache
 
 
 async def recalculate_doctor_rating(
@@ -123,7 +123,7 @@ async def get_reviews_by_filter(
         items=[ReviewRead.model_validate(r) for r in reviews],
         limit=filters.limit,
         offset=filters.offset,
-        total=total
+        total=total,
     )
 
 

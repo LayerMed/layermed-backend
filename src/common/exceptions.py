@@ -2,7 +2,9 @@ class AppError(Exception):
     status_code = 500
     detail = "Internal server error"
 
-    def __init__(self, detail: str | None = None, status_code: int | None = None) -> None:
+    def __init__(
+        self, detail: str | None = None, status_code: int | None = None
+    ) -> None:
         if detail is not None:
             self.detail = detail
         if status_code is not None:

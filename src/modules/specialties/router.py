@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
 from src.core.dependencies import get_admin_user
-from src.core.redis import RedisCache, get_redis
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
     SpecialtyCreate,
+    SpecialtyFilterParams,
     SpecialtyRead,
     SpecialtyUpdate,
 )
@@ -19,6 +18,8 @@ from src.modules.specialties.service import (
     update_specialty,
 )
 from src.modules.users.models import User
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/specialties", tags=["Specialties"])
 
@@ -47,11 +48,11 @@ async def create_specialty_handle(
     summary="Get all specialties",
 )
 async def get_specialties_handle(
-    ids: list[int] | None = Query(default=None),
+    filters: SpecialtyFilterParams,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SpecialtyRead]:
-    specialties = await get_specialties(ids, db, redis)
+    specialties = await get_specialties(db, redis, filters)
     return specialties
 
 

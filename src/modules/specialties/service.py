@@ -2,8 +2,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import CacheTTL
-from src.core.redis import RedisCache
+from src.common.enums import CacheTTL
 from src.modules.doctors.models import Doctor
 from src.modules.specialties.exceptions import (
     SpecialtyAlreadyExistsError,
@@ -17,6 +16,7 @@ from src.modules.specialties.schemas import (
     SpecialtyRead,
     SpecialtyUpdate,
 )
+from src.services.storage.redis import RedisCache
 
 
 # CREATE
@@ -42,31 +42,24 @@ async def create_specialty(
 
 # READ
 async def get_specialties(
-    filters: SpecialtyFilterParams,
-    db: AsyncSession,
-    redis: RedisCache,
+    db: AsyncSession, redis: RedisCache, filters: SpecialtyFilterParams | None = None
 ) -> list[SpecialtyRead]:
-    if filters.ids:
+    if filters is not None and filters.ids:
         query = select(Specialty).where(Specialty.id.in_(filters.ids))
         result = await db.execute(query)
         return [SpecialtyRead.model_validate(s) for s in result.scalars().all()]
 
-    is_default = filters.is_default_page()
-    cache_key = redis.build_key("specialties", "list", "default")
+    cache_key = redis.build_key("specialties", "items", "all")
+    cached = await redis.getc(cache_key)
+    if cached:
+        return [SpecialtyRead.model_validate(s) for s in cached]
 
-    if is_default:
-        cached = await redis.getc(cache_key)
-        if cached:
-            return [SpecialtyRead.model_validate(s) for s in cached]
-
-    query = select(Specialty).limit(filters.limit).offset(filters.offset)
+    query = select(Specialty).order_by(Specialty.name)
     result = await db.execute(query)
     specialties = result.scalars().all()
     specialties_dto = [SpecialtyRead.model_validate(s) for s in specialties]
 
-    if is_default:
-        await redis.setc(cache_key, specialties_dto, ex=CacheTTL.STATIC)
-
+    await redis.setc(cache_key, specialties_dto, ex=CacheTTL.STATIC)
     return specialties_dto
 
 
@@ -97,22 +90,13 @@ async def get_specialties_count(
 async def get_specialty_by_id(
     specialty_id: int, db: AsyncSession, redis: RedisCache
 ) -> SpecialtyRead:
-    cache_key = redis.build_key("specialties", "items", specialty_id)
-    cached_specialty = await redis.getc(cache_key)
-    if cached_specialty:
-        return SpecialtyRead.model_validate(cached_specialty)
+    specialties = await get_specialties(db, redis)
 
-    query = select(Specialty).filter(Specialty.id == specialty_id)
-    result = await db.execute(query)
-    specialty = result.scalar_one_or_none()
+    for specialty in specialties:
+        if specialty.id == specialty_id:
+            return specialty
 
-    if specialty is None:
-        raise SpecialtyNotFoundError()
-
-    specialty_dto = SpecialtyRead.model_validate(specialty)
-    await redis.setc(cache_key, specialty_dto, ex=CacheTTL.STATIC)
-
-    return specialty_dto
+    raise SpecialtyNotFoundError()
 
 
 # UPDATE

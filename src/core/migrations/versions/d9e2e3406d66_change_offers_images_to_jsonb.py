@@ -1,0 +1,45 @@
+"""change offers images to jsonb
+
+Revision ID: d9e2e3406d66
+Revises: 09fac1b6484b
+Create Date: 2026-09-07 14:09:20.709416
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+# revision identifiers, used by Alembic.
+revision: str = 'd9e2e3406d66'
+down_revision: Union[str, Sequence[str], None] = '09fac1b6484b'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+
+def upgrade() -> None:
+    op.alter_column(
+        'offers',
+        'images',
+        existing_type=sa.VARCHAR(), 
+        type_=postgresql.JSONB(astext_type=sa.Text()),
+        postgresql_using="to_jsonb(images)",
+        existing_nullable=False,
+    )
+
+
+def downgrade() -> None:
+    op.alter_column(
+        'offers',
+        'images',
+        existing_type=postgresql.JSONB(astext_type=sa.Text()),
+        type_=postgresql.ARRAY(sa.VARCHAR()),
+        postgresql_using="ARRAY(SELECT jsonb_array_elements_text(images))",
+        existing_nullable=False,
+    )

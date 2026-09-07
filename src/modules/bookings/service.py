@@ -2,8 +2,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.core.enums import BookingStatus, CacheTTL, ModerationStatus, UserRole
-from src.core.redis import RedisCache
+from src.common.enums import BookingStatus, CacheTTL, ModerationStatus, UserRole
 from src.modules.bookings.exceptions import (
     BookingAccessDeniedError,
     BookingCannotBeCancelledError,
@@ -14,6 +13,7 @@ from src.modules.bookings.models import Booking
 from src.modules.bookings.schemas import BookingCreate, BookingRead
 from src.modules.offers.models import Offer
 from src.modules.users.schemas import UserRead
+from src.services.storage.redis import RedisCache
 
 
 # CREATE

@@ -2,14 +2,14 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.enums import CacheTTL
-from src.core.redis import RedisCache
+from src.common.enums import CacheTTL
 from src.modules.symptoms.exceptions import (
     SymptomAlreadyExistsError,
     SymptomNotFoundError,
 )
 from src.modules.symptoms.models import Symptom
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
+from src.services.storage.redis import RedisCache
 
 
 # CREATE
@@ -53,21 +53,13 @@ async def get_symptom_by_id(
     db: AsyncSession,
     redis: RedisCache,
 ) -> SymptomRead:
-    cache_key = redis.build_key("symptoms", "items", symptom_id)
-    cached_symptom = await redis.getc(cache_key)
-    if cached_symptom:
-        return SymptomRead.model_validate(cached_symptom)
+    symptoms = await get_symptoms(db, redis)
 
-    query = select(Symptom).filter(Symptom.id == symptom_id)
-    result = await db.execute(query)
-    symptom = result.scalar_one_or_none()
-    if symptom is None:
-        raise SymptomNotFoundError()
+    for symptom in symptoms:
+        if symptom.id == symptom_id:
+            return symptom
 
-    symptom_dto = SymptomRead.model_validate(symptom)
-    await redis.setc(cache_key, symptom_dto, CacheTTL.STATIC)
-
-    return symptom_dto
+    raise SymptomNotFoundError()
 
 
 # UPDATE

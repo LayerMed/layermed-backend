@@ -1,14 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.database import get_session
+from src.common.enums import UserRole
+from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
-from src.core.enums import UserRole
-from src.core.moderation.service import approve_item, reject_item
-from src.core.redis import RedisCache, get_redis
-from src.core.schemas import PaginatedResponse, PasswordConfirm
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import (
@@ -21,12 +18,17 @@ from src.modules.doctors.schemas import (
 )
 from src.modules.doctors.service import (
     delete_doctor,
+    delete_doctor_avatar,
     get_doctor_by_id,
     get_doctors_by_filters,
     register_doctor,
     update_doctor,
+    upload_doctor_avatar,
 )
 from src.modules.users.schemas import UserRead
+from src.services.moderation.service import approve_item, reject_item
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
@@ -47,6 +49,18 @@ async def register_doctor_handle(
     if current_user.role == UserRole.DOCTOR:
         raise DoctorProfileAlreadyExistsError()
     return await register_doctor(new_doctor, current_user, db, redis)
+
+
+@router.post(
+    "/avatar", status_code=status.HTTP_201_CREATED, summary="Upload doctor avatar"
+)
+async def upload_doctor_avatar_handle(
+    image: UploadFile = File(...),
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> str:
+    return await upload_doctor_avatar(image, current_doctor, db, redis)
 
 
 # READ
@@ -141,3 +155,16 @@ async def delete_doctor_account_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> None:
     await delete_doctor(password_data, current_doctor, current_user, db, redis)
+
+
+@router.delete(
+    "/avatar",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete doctor avatar",
+)
+async def delete_doctor_avatar_handle(
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> None:
+    await delete_doctor_avatar(current_doctor, db, redis)

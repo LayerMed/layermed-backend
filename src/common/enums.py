@@ -1,13 +1,13 @@
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     CLIENT = "client"
     DOCTOR = "doctor"
     ADMIN = "admin"
 
 
-class BookingStatus(str, Enum):
+class BookingStatus(StrEnum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
@@ -15,13 +15,13 @@ class BookingStatus(str, Enum):
     NO_SHOW = "no_show"
 
 
-class ModerationStatus(str, Enum):
+class ModerationStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
 
 
-class OfferFormat(str, Enum):
+class OfferFormat(StrEnum):
     CLINIC = "clinic"
     ONLINE = "online"
     HOME_VISIT = "home_visit"
@@ -30,7 +30,11 @@ class OfferFormat(str, Enum):
 
 class CacheTTL(IntEnum):
     STATIC = 60 * 60 * 24 * 30
-    SLOW = 60 * 60 * 12        
-    FAST = 60 * 15             
-    MOMENTARY = 60 * 2         
+    SLOW = 60 * 60 * 12
+    FAST = 60 * 15
+    MOMENTARY = 60 * 2
 
+
+class S3Folders(StrEnum):
+    DOCTORS = "doctors"
+    OFFERS = "offers"

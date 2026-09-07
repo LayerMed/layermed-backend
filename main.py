@@ -6,8 +6,8 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from src.core.logs import logger
-from src.core.exceptions import AppError
-from src.core.redis import redis_client
+from src.common.exceptions import AppError
+from src.services.storage.redis import redis_client
 
 from src.modules.users.router import router as users_router
 from src.modules.symptoms.router import router as symptom_router
@@ -17,8 +17,6 @@ from src.modules.doctors.router import router as doctor_router
 from src.modules.bookings.router import router as booking_router
 from src.modules.reviews.router import router as review_router
 from src.modules.offers.router import router as offer_router
-
-import src.core
 
 
 @asynccontextmanager
