@@ -37,5 +37,5 @@ class SpecialtyUpdate(BaseModel):
     description: SpecialtyDescription | None = None
 
 
-class SpecialtyFilterParams(BaseFilterParams):
+class SpecialtyFilterParams(BaseModel):
     ids: list[int] | None = None

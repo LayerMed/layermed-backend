@@ -58,7 +58,7 @@ async def create_review(
     db: AsyncSession,
     redis: RedisCache,
 ) -> ReviewRead:
-    try:
+    try:        
         query = (
             insert(Review)
             .values(
