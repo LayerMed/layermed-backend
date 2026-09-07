@@ -2,6 +2,7 @@ import asyncio
 
 from fastapi import UploadFile
 from sqlalchemy import func, insert, select, update
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.storage.s3 import delete_image
@@ -204,10 +205,7 @@ async def get_offer_by_id(
     if cached_offer:
         return OfferRead.model_validate(cached_offer)
 
-    query = select(Offer).where(Offer.id == offer_id)
-    result = await db.execute(query)
-    offer = result.scalar_one_or_none()
-
+    offer = await db.get(Offer, offer_id)
     if not offer:
         raise OfferNotFoundError()
 
@@ -230,19 +228,37 @@ async def update_offer_by_id(
     if not update_data:
         return await get_offer_by_id(offer_id, db, redis)
 
-    query = (
-        update(Offer)
-        .where(Offer.id == offer_id)
-        .values(**update_data, status=ModerationStatus.PENDING)
-        .returning(Offer)
-    )
-    result = await db.execute(query)
-    updated_offer = result.scalar_one()
+    offer = await db.get(Offer, offer_id)
+    if not offer:
+        raise OfferNotFoundError()
+
+    images_to_delete = []
+
+    if "images" in update_data:
+        old_images = set(offer.images)
+        new_images = set(offer_data.images or [])
+        images_to_delete = list(old_images - new_images)
+
+    for field, value in update_data.items():
+        setattr(offer, field, value)
+
+    offer.status = ModerationStatus.PENDING
+
+    if "images" in update_data:
+        flag_modified(offer, "images")
 
     await db.commit()
-    await redis.invalidate("offers:items")
+    await db.refresh(offer)
 
-    return OfferRead.model_validate(updated_offer)
+    if images_to_delete:
+        await asyncio.gather(
+            *[delete_image(key) for key in images_to_delete],
+            return_exceptions=True,
+        )
+    
+    await redis.invalidate("offers")
+
+    return OfferRead.model_validate(offer)
 
 
 # DELETE
