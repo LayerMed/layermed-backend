@@ -4,8 +4,8 @@ from typing import Optional
 from sqlalchemy import Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.services.storage.postgres import Base, Timestamp
 from src.common.enums import UserRole
+from src.services.storage.postgres import Base, Timestamp
 
 
 class User(Base, Timestamp):

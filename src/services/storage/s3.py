@@ -1,15 +1,16 @@
 # pyright: reportGeneralTypeIssues=false
 
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+
 import aioboto3
 from botocore.exceptions import ClientError
 from types_aiobotocore_s3 import S3Client
 
 from src.common.enums import S3Folders
-from src.core.logs import logger
 from src.core.config import settings
+from src.core.logs import logger
 
 aioboto = aioboto3.Session()
 

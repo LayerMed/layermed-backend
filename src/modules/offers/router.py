@@ -3,11 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.storage.postgres import get_session
-from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
-from src.services.moderation.service import approve_item, reject_item
-from src.services.storage.redis import RedisCache, get_redis
 from src.common.schemas import PaginatedResponse
+from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
 from src.modules.offers.schemas import (
@@ -27,6 +24,9 @@ from src.modules.offers.service import (
     upload_offer_images,
 )
 from src.modules.users.schemas import UserRead
+from src.services.moderation.service import approve_item, reject_item
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/offers", tags=["Offers"])
 
@@ -76,12 +76,12 @@ async def get_offers_by_filters_handle(
 
 @router.get(
     "/doctor",
-    response_model=list[OfferRead], 
-    summary="Get all offers from current doctor"
+    response_model=list[OfferRead],
+    summary="Get all offers from current doctor",
 )
 async def get_offers_by_doctor_handle(
     current_doctor: DoctorRead = Depends(get_current_doctor),
-    db: AsyncSession = Depends(get_session),    
+    db: AsyncSession = Depends(get_session),
 ) -> list[OfferRead]:
     return await get_offers_by_doctor(current_doctor, db)
 

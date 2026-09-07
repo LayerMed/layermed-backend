@@ -3,7 +3,6 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import CacheTTL
-from src.services.storage.redis import RedisCache
 from src.modules.doctors.models import Doctor
 from src.modules.specialties.exceptions import (
     SpecialtyAlreadyExistsError,
@@ -17,6 +16,7 @@ from src.modules.specialties.schemas import (
     SpecialtyRead,
     SpecialtyUpdate,
 )
+from src.services.storage.redis import RedisCache
 
 
 # CREATE
@@ -42,9 +42,7 @@ async def create_specialty(
 
 # READ
 async def get_specialties(
-    db: AsyncSession,
-    redis: RedisCache,
-    filters: SpecialtyFilterParams | None = None
+    db: AsyncSession, redis: RedisCache, filters: SpecialtyFilterParams | None = None
 ) -> list[SpecialtyRead]:
     if filters is not None and filters.ids:
         query = select(Specialty).where(Specialty.id.in_(filters.ids))
@@ -93,7 +91,7 @@ async def get_specialty_by_id(
     specialty_id: int, db: AsyncSession, redis: RedisCache
 ) -> SpecialtyRead:
     specialties = await get_specialties(db, redis)
-    
+
     for specialty in specialties:
         if specialty.id == specialty_id:
             return specialty

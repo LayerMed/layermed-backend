@@ -3,12 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.storage.postgres import get_session
-from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
 from src.common.enums import UserRole
-from src.services.moderation.service import approve_item, reject_item
-from src.services.storage.redis import RedisCache, get_redis
 from src.common.schemas import PaginatedResponse, PasswordConfirm
+from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
 from src.modules.doctors.exceptions import DoctorProfileAlreadyExistsError
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import (
@@ -29,6 +26,9 @@ from src.modules.doctors.service import (
     upload_doctor_avatar,
 )
 from src.modules.users.schemas import UserRead
+from src.services.moderation.service import approve_item, reject_item
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 

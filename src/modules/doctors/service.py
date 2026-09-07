@@ -1,17 +1,10 @@
-from fastapi import UploadFile
 import sqlalchemy.exc
+from fastapi import UploadFile
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.services.images.service import (
-    avatar_optimization,
-    image_validate,
-    save_and_upload_image,
-)
-from src.services.storage.s3 import delete_image, upload_image
 from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
-from src.services.storage.redis import RedisCache
 from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
 from src.modules.doctors.exceptions import (
@@ -33,6 +26,12 @@ from src.modules.specialties.models import Specialty
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
 from src.modules.users.service import get_user_password
+from src.services.images.service import (
+    avatar_optimization,
+    save_and_upload_image,
+)
+from src.services.storage.redis import RedisCache
+from src.services.storage.s3 import delete_image
 
 
 def check_doctor_status(current_doctor: DoctorRead) -> None:
@@ -287,7 +286,7 @@ async def delete_doctor_avatar(
 ) -> None:
     old_key = current_doctor.avatar_url
     if not old_key:
-        return None
+        return
 
     query = update(Doctor).where(Doctor.id == current_doctor.id).values(avatar_url=None)
     await db.execute(query)

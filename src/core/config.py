@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
 
-    # S3 
+    # S3
     S3_ENDPOINT: str
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
@@ -23,7 +23,6 @@ class Settings(BaseSettings):
     KEY: str
     ALGORITHM: str
     TOKEN_EXPIRE: int
-
 
     @property
     def pg_psycopg_dsn(self) -> str:

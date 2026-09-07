@@ -2,13 +2,10 @@ import asyncio
 
 from fastapi import UploadFile
 from sqlalchemy import func, insert, select, update
-from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
-from src.services.storage.s3 import delete_image
-from src.services.images.service import offer_optimization, save_and_upload_image
 from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
-from src.services.storage.redis import RedisCache
 from src.common.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
@@ -26,6 +23,9 @@ from src.modules.offers.schemas import (
     OfferUpdate,
 )
 from src.modules.users.schemas import UserRead
+from src.services.images.service import offer_optimization, save_and_upload_image
+from src.services.storage.redis import RedisCache
+from src.services.storage.s3 import delete_image
 
 
 # CREATE
@@ -178,20 +178,17 @@ async def get_offers_by_filters(
 
 
 async def get_offers_by_doctor(
-    current_doctor: DoctorRead, 
-    db: AsyncSession,    
+    current_doctor: DoctorRead,
+    db: AsyncSession,
 ) -> list[OfferRead]:
-    query = (
-        select(Offer)
-        .where(Offer.doctor_id == current_doctor.id)
-    )
+    query = select(Offer).where(Offer.doctor_id == current_doctor.id)
     result = await db.execute(query)
     offers = result.scalars().all()
 
     if not offers:
         raise OfferNotFoundError()
 
-    return [OfferRead.model_validate(offer) for offer in offers] 
+    return [OfferRead.model_validate(offer) for offer in offers]
 
 
 async def get_offer_by_id(
@@ -215,7 +212,7 @@ async def get_offer_by_id(
         await redis.setc(cache_key, offer_dto, ex=CacheTTL.SLOW)
 
     return offer_dto
-       
+
 
 # UPDATE
 async def update_offer_by_id(
@@ -255,7 +252,7 @@ async def update_offer_by_id(
             *[delete_image(key) for key in images_to_delete],
             return_exceptions=True,
         )
-    
+
     await redis.invalidate("offers")
 
     return OfferRead.model_validate(offer)

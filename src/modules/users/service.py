@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from src.common.enums import UserRole
-from src.services.storage.redis import RedisCache
 from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.users.exceptions import (
@@ -22,6 +21,7 @@ from src.modules.users.schemas import (
     UserRead,
     UserUpdate,
 )
+from src.services.storage.redis import RedisCache
 
 
 async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:

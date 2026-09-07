@@ -3,8 +3,6 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.common.schemas import BaseFilterParams
-
 SpecialtyName = Annotated[str, Field(min_length=2, max_length=50)]
 SpecialtyDescription = Annotated[str, Field(min_length=8, max_length=100)]
 

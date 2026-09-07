@@ -1,13 +1,14 @@
 import io
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
-from PIL import Image, UnidentifiedImageError
-from fastapi import UploadFile
 
-from src.services.storage.s3 import upload_image
+from fastapi import UploadFile
+from PIL import Image, UnidentifiedImageError
+
 from src.common.enums import S3Folders
-from src.services.images.exceptions import ImageExtensionError, ImageWeightError
 from src.common.utils import mb_to_bytes
+from src.services.images.exceptions import ImageExtensionError, ImageWeightError
+from src.services.storage.s3 import upload_image
 
 
 def image_validate(image: UploadFile) -> None:

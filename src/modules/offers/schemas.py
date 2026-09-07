@@ -1,4 +1,3 @@
-from fastapi import UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.common.enums import ModerationStatus, OfferFormat

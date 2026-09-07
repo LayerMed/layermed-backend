@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.storage.postgres import get_session
 from src.core.dependencies import get_admin_user
-from src.services.storage.redis import RedisCache, get_redis
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 from src.modules.symptoms.service import (
     create_symptom,
@@ -13,6 +11,8 @@ from src.modules.symptoms.service import (
     update_symptom,
 )
 from src.modules.users.models import User
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/symptoms", tags=["Symptoms"])
 

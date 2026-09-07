@@ -3,13 +3,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import CacheTTL
-from src.services.storage.redis import RedisCache
 from src.modules.symptoms.exceptions import (
     SymptomAlreadyExistsError,
     SymptomNotFoundError,
 )
 from src.modules.symptoms.models import Symptom
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
+from src.services.storage.redis import RedisCache
 
 
 # CREATE
@@ -58,7 +58,7 @@ async def get_symptom_by_id(
     for symptom in symptoms:
         if symptom.id == symptom_id:
             return symptom
-        
+
     raise SymptomNotFoundError()
 
 

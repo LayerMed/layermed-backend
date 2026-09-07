@@ -4,10 +4,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import CacheTTL
-from src.services.storage.redis import RedisCache
 from src.modules.cities.exceptions import CityAlreadyExistsError, CityNotFoundError
 from src.modules.cities.models import City
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
+from src.services.storage.redis import RedisCache
 
 
 # CREATE
@@ -50,7 +50,7 @@ async def get_city_by_id(city_id: int, db: AsyncSession, redis: RedisCache) -> C
     for city in cities:
         if city.id == city_id:
             return city
-    
+
     raise CityNotFoundError()
 
 

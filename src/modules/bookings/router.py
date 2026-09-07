@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.storage.postgres import get_session
 from src.core.dependencies import get_current_user
-from src.services.storage.redis import RedisCache, get_redis
 from src.modules.bookings.schemas import BookingCreate, BookingRead
 from src.modules.bookings.service import (
     cancel_booking,
@@ -12,6 +10,8 @@ from src.modules.bookings.service import (
     get_current_bookings,
 )
 from src.modules.users.schemas import UserRead
+from src.services.storage.postgres import get_session
+from src.services.storage.redis import RedisCache, get_redis
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 

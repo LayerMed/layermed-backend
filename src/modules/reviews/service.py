@@ -3,7 +3,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import ModerationStatus
-from src.services.storage.redis import RedisCache
 from src.common.schemas import PaginatedResponse
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
@@ -19,6 +18,7 @@ from src.modules.reviews.schemas import (
     ReviewRead,
 )
 from src.modules.users.schemas import UserRead
+from src.services.storage.redis import RedisCache
 
 
 async def recalculate_doctor_rating(
@@ -58,7 +58,7 @@ async def create_review(
     db: AsyncSession,
     redis: RedisCache,
 ) -> ReviewRead:
-    try:        
+    try:
         query = (
             insert(Review)
             .values(
