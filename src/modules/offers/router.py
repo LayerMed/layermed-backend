@@ -21,6 +21,7 @@ from src.modules.offers.service import (
     create_offer,
     delete_offer,
     get_offer_by_id,
+    get_offers_by_doctor,
     get_offers_by_filters,
     update_offer_by_id,
     upload_offer_images,
@@ -55,11 +56,11 @@ async def create_offer_handle(
 async def upload_offer_images_handle(
     offer_id: int,
     images: list[UploadFile] = File(...),
-    # current_doctor: DoctorRead = Depends(get_current_doctor),
+    current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[str]:
-    return await upload_offer_images(images, offer_id, db, redis)
+    return await upload_offer_images(images, offer_id, current_doctor, db, redis)
 
 
 # READ
@@ -71,6 +72,18 @@ async def get_offers_by_filters_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[OfferRead]:
     return await get_offers_by_filters(current_user, filters, db, redis)
+
+
+@router.get(
+    "/doctor",
+    response_model=list[OfferRead], 
+    summary="Get all offers from current doctor"
+)
+async def get_offers_by_doctor_handle(
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),    
+) -> list[OfferRead]:
+    return await get_offers_by_doctor(current_doctor, db)
 
 
 @router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")

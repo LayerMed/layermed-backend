@@ -56,7 +56,7 @@ async def create_offer(
 async def upload_offer_images(
     images: list[UploadFile],
     offer_id: int,
-    # current_doctor: DoctorRead,
+    current_doctor: DoctorRead,
     db: AsyncSession,
     redis: RedisCache,
 ) -> list[str]:
@@ -64,8 +64,8 @@ async def upload_offer_images(
 
     if not offer:
         raise OfferNotFoundError()
-    # if offer.doctor_id != current_doctor.id:
-    #     raise OfferAccessDenied()
+    if offer.doctor_id != current_doctor.id:
+        raise OfferAccessDenied()
     current_images = offer.images or []
     if len(current_images) + len(images) > 10:
         raise OfferImagesCountError()
@@ -176,6 +176,23 @@ async def get_offers_by_filters(
     return offers_dto
 
 
+async def get_offers_by_doctor(
+    current_doctor: DoctorRead, 
+    db: AsyncSession,    
+) -> list[OfferRead]:
+    query = (
+        select(Offer)
+        .where(Offer.doctor_id == current_doctor.id)
+    )
+    result = await db.execute(query)
+    offers = result.scalars().all()
+
+    if not offers:
+        raise OfferNotFoundError()
+
+    return [OfferRead.model_validate(offer) for offer in offers] 
+
+
 async def get_offer_by_id(
     offer_id: int,
     db: AsyncSession,
@@ -200,7 +217,7 @@ async def get_offer_by_id(
         await redis.setc(cache_key, offer_dto, ex=CacheTTL.SLOW)
 
     return offer_dto
-
+       
 
 # UPDATE
 async def update_offer_by_id(
