@@ -21,6 +21,8 @@ dependencies = [
     "pydantic[all,email]>=2.13.4",
     "pyjwt>=2.13.0",
     "pyright>=1.1.411",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
     "python-multipart>=0.0.32",
     "redis>=8.1.0",
     "ruff>=0.16.1",
@@ -38,3 +40,7 @@ typeCheckingMode='standard'
 extend-exclude = [
     "migrations"
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
