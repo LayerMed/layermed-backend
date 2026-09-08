@@ -11,3 +11,8 @@ class ImageWeightError(AppError):
 class ImageExtensionError(AppError):
     status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
     detail = "Don't supported data type"
+
+
+class MegabyteNotLessNull(AppError):
+    detail = "The megabyte value must not be less than 0"
+

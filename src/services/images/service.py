@@ -6,11 +6,13 @@ from fastapi import UploadFile
 from PIL import Image, UnidentifiedImageError
 
 from src.common.enums import S3Folders
-from src.services.images.exceptions import ImageExtensionError, ImageWeightError
+from src.services.images.exceptions import ImageExtensionError, ImageWeightError, MegabyteNotLessNull
 from src.services.storage.s3 import upload_image
 
 
 def mb_to_bytes(mb: float) -> int:
+    if mb < 0:
+        raise MegabyteNotLessNull
     return int(mb * 1024 * 1024)
 
 
@@ -34,7 +36,7 @@ def avatar_optimization(image_bytes: bytes, target_size: int = 400) -> bytes:
     try:
         img = Image.open(io.BytesIO(image_bytes))
 
-        if img.mode in ("RGBA", "P"):
+        if img.mode in ("RGBA", "P", "L"):
             img = img.convert("RGB")
 
         width, height = img.size
@@ -52,7 +54,7 @@ def avatar_optimization(image_bytes: bytes, target_size: int = 400) -> bytes:
         img.save(output_buffer, format="JPEG", quality=85)
 
         return output_buffer.getvalue()
-    except UnidentifiedImageError:
+    except (UnidentifiedImageError, OSError):
         raise ImageExtensionError()
 
 
@@ -60,7 +62,7 @@ def offer_optimization(image_bytes: bytes, max_width: int = 1200) -> bytes:
     try:
         img = Image.open(io.BytesIO(image_bytes))
 
-        if img.mode in ("RGBA", "P"):
+        if img.mode in ("RGBA", "P", "L"):
             img = img.convert("RGB")
 
         if img.width > max_width:
@@ -72,7 +74,7 @@ def offer_optimization(image_bytes: bytes, max_width: int = 1200) -> bytes:
         img.save(output_buffer, format="JPEG", quality=85)
 
         return output_buffer.getvalue()
-    except UnidentifiedImageError:
+    except (UnidentifiedImageError, OSError):
         raise ImageExtensionError()
 
 
