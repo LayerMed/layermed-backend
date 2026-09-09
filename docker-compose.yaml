@@ -1,5 +1,5 @@
 services:
-  postgresql-app:
+  postgresql-db:
     image: postgres:17.10
     container_name: postgresql-db
     restart: unless-stopped
@@ -13,9 +13,22 @@ services:
     ports:
       - '5433:5432'
 
-  redis-app:
+  postgresql-test-db:
+    image: postgres:17.10
+    container_name: postgresql-test-db
+    restart: unless-stopped
+    environment:        
+      - POSTGRES_PASSWORD=${TEST_POSTGRES_PASSWORD}
+      - POSTGRES_USER=${TEST_POSTGRES_USER}
+      - POSTGRES_DB=${TEST_POSTGRES_DB}
+    volumes:
+      - 'postgresql-test-db:/var/lib/postgresql/data'
+    ports:
+      - '5434:5432'
+
+  redis-db:
     image: redis:8.10.0-alpine
-    container_name: redis-app
+    container_name: redis-db
     restart: unless-stopped
     volumes:
       - 'redis-db:/data'
@@ -27,20 +40,20 @@ services:
     container_name: layermed-backend
     restart: unless-stopped
     depends_on:
-      - postgresql-app
-      - redis-app
+      - postgresql-db
+      - redis-db
     ports:
       - "8000:8000"
     volumes:
       - .:/app
     environment:
-      POSTGRES_HOST: postgresql-app
+      POSTGRES_HOST: postgresql-db
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       
-      REDIS_HOST: redis-app
+      REDIS_HOST: redis-db
       REDIS_PORT: 6379
 
       KEY: ${KEY}
@@ -49,4 +62,5 @@ services:
 
 volumes:
   postgresql-db:
+  postgresql-test-db:
   redis-db:

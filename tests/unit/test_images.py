@@ -28,7 +28,7 @@ class TestMbToBytes:
 
     def test_error_mb_to_bytes(self):
         with pytest.raises(MegabyteNotLessNull):
-            assert mb_to_bytes(-10)
+            mb_to_bytes(-10)
 
 
 class TestImageValidate:
