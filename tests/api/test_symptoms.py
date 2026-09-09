@@ -6,7 +6,7 @@ from src.modules.symptoms.exceptions import (
 )
 from src.common.enums import CacheTTL
 
-from sqlalchemy import select
+from sqlalchemy import select, update 
 import pytest
 from pydantic import ValidationError
 
@@ -98,7 +98,7 @@ class TestReadSymptom:
         cached_symptoms = await fake_get_redis.getc(cache_key)
         assert cached_symptoms is not None
 
-    async def test_get_symptom_by_id(self, ac, get_test_session, fake_get_admin_user):
+    async def test_get_symptom_by_id(self, ac, fake_get_admin_user):
         response_create = await ac.post("/symptoms/", json=payload)
         assert response_create.status_code == 201
 
@@ -133,4 +133,30 @@ class TestReadSymptom:
         assert cached_symptoms is not None
 
 
+class TestUpadteSymptom:
+    async def test_update_symptom(self, ac, get_test_session, fake_get_redis, fake_get_admin_user):
+        response_create = await ac.post("/symptoms/", json=payload)
+        assert response_create.status_code == 201
+        created_symptom = response_create.json()
+
+        update_payload = {
+            "name": "Updated name",
+            "description": "Updated description",
+        }
         
+        response_update = await ac.put(
+            f"/symptoms/{created_symptom['id']}", json=update_payload
+        )
+
+        assert response_update.status_code == 200
+        data_updated = response_update.json()                
+        assert data_updated["id"] == created_symptom["id"]
+        assert data_updated["name"] == update_payload["name"]
+        assert data_updated["description"] == update_payload["description"]
+
+        query = select(Symptom).where(Symptom.id == created_symptom["id"])
+        result = await get_test_session.execute(query)
+        db_symptom = result.scalar_one()
+
+        assert db_symptom.name == update_payload["name"]
+        assert db_symptom.description == update_payload["description"]
