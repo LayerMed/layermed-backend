@@ -1,6 +1,6 @@
 import datetime
 from typing import Annotated
-
+import zxcvbn
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
 from src.common.enums import UserRole
@@ -13,12 +13,17 @@ def validate_password_rules(value: str) -> str:
         raise ValueError("This password is too easy. Please, use another password")
     if len(set(value)) == 1:
         raise ValueError("Password cannot consist of a single repeating character")
+    results = zxcvbn.zxcvbn(value)  
+    if results['score'] < 3:
+        raise ValueError("Password is too predictable")
+        
     return value
+
 
 
 ValidPassword = Annotated[
     str,
-    Field(min_length=8, max_length=16),
+    Field(min_length=8, max_length=128),
     AfterValidator(validate_password_rules),
 ]
 
@@ -26,7 +31,7 @@ ValidPassword = Annotated[
 class UserCreate(BaseModel):
     name: str
     birth_date: datetime.date | None = None
-    city_id: int | None = Field(default=None)
+    city_id: int | None = None
     email: EmailStr
     password: ValidPassword
 

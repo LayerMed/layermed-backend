@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from typing import AsyncGenerator
-
-import fakeredis.aioredis 
 import pytest
 from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+import fakeredis
 
+from src.core.dependencies import get_current_user
 from src.services.storage.redis import RedisCache, get_redis
 from src.core.dependencies import get_admin_user
 from src.common.enums import UserRole
@@ -29,7 +30,6 @@ test_session_maker = async_sessionmaker(
 )
 
 
-from sqlalchemy import text
 
 
 @pytest.fixture(autouse=True)
@@ -105,3 +105,22 @@ async def fake_get_redis() -> AsyncGenerator[RedisCache, None]:
 
     await fake_client.flushdb()
     app.dependency_overrides.pop(get_redis, None)
+
+
+@pytest.fixture
+def fake_current_user() -> UserRead:
+    now = datetime.now(timezone.utc)
+    return UserRead(
+        id=1,
+        name="TestUser",
+        email="user@test.com",
+        role=UserRole.CLIENT,
+        updated_at=now,
+        created_at=now,   
+    )
+
+@pytest.fixture
+def fake_get_current_user(fake_current_user: UserRead):
+    app.dependency_overrides[get_current_user] = lambda: fake_current_user
+    yield fake_current_user
+    app.dependency_overrides.pop(get_current_user, None)

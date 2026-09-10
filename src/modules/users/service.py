@@ -34,7 +34,7 @@ async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
 
 
 # CREATE
-async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
+async def create_user(new_user: UserCreate, db: AsyncSession) -> None:
     query = (
         insert(User)
         .on_conflict_do_nothing()
@@ -54,7 +54,6 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> int | None:
         raise UserAlreadyExistsError()
 
     await db.commit()
-    return user_id
 
 
 # READ
