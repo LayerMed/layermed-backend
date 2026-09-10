@@ -3,11 +3,11 @@ from sqlalchemy import select
 
 from src.common.enums import CacheTTL
 from src.modules.cities.models import City
-from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
+from src.modules.cities.schemas import CityCreate, CityRead
 
 name = "Pennsylvania"
 payload = {
-    "name": name,    
+    "name": name,
 }
 
 
@@ -25,7 +25,7 @@ class TestCreateCity:
 
         assert response.status_code == 201
         assert data["id"] is not None
-        assert data["name"] == name        
+        assert data["name"] == name
 
         query = select(City).where(City.id == data["id"])
         city = await get_test_session.execute(query)
@@ -111,9 +111,7 @@ class TestReadCity:
 
 class TestUpadteCity:
     async def test_update_city(self, ac, get_test_session, created_city):
-        update_payload = {
-            "name": "Updated name"
-        }
+        update_payload = {"name": "Updated name"}
 
         response_update = await ac.patch(
             f"/cities/{created_city['id']}", json=update_payload
@@ -122,17 +120,17 @@ class TestUpadteCity:
         assert response_update.status_code == 200
         data_updated = response_update.json()
         assert data_updated["id"] == created_city["id"]
-        assert data_updated["name"] == update_payload["name"]        
+        assert data_updated["name"] == update_payload["name"]
 
         query = select(City).where(City.id == created_city["id"])
         result = await get_test_session.execute(query)
         db_city = result.scalar_one()
 
-        assert db_city.name == update_payload["name"]        
+        assert db_city.name == update_payload["name"]
 
     async def test_update_city_cache(self, ac, fake_get_redis, created_city):
         update_payload = {
-            "name": "Updated name",            
+            "name": "Updated name",
         }
         cache_key = fake_get_redis.build_key("cities", "items", "all")
 
