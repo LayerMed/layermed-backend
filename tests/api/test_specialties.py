@@ -7,10 +7,7 @@ from src.modules.specialties.schemas import SpecialtyCreate, SpecialtyRead
 
 name = "otolaryngologist"
 description = "An otolaryngologist is a medical specialist who diagnoses and treats conditions related to the ears, nose, and throat"
-payload = {
-    "name": name,
-    "description": description
-}
+payload = {"name": name, "description": description}
 
 
 @pytest.fixture
@@ -49,7 +46,9 @@ class TestCreatespecialty:
         second = await ac.post("/specialties/", json=payload)
         assert second.status_code == 409
 
-    async def test_create_specialty_cache(self, ac, fake_get_redis, fake_get_admin_user):
+    async def test_create_specialty_cache(
+        self, ac, fake_get_redis, fake_get_admin_user
+    ):
         cache_key = fake_get_redis.build_key("specialties", "items", "all")
 
         await fake_get_redis.setc(
@@ -99,7 +98,9 @@ class TestReadspecialty:
         response_get = await ac.get("/specialties/9999")
         assert response_get.status_code == 404
 
-    async def test_get_specialty_by_id_cache(self, ac, fake_get_redis, created_specialty):
+    async def test_get_specialty_by_id_cache(
+        self, ac, fake_get_redis, created_specialty
+    ):
 
         cache_key = fake_get_redis.build_key("specialties", "items", "all")
 

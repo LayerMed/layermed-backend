@@ -1,30 +1,34 @@
 import io
+
 import pytest
 from fastapi import UploadFile
 from PIL import Image
 
-from src.services.images.service import (
-    mb_to_bytes,
-    image_validate,
-    avatar_optimization,
-    offer_optimization,
-    save_and_upload_image,
-)
 from src.services.images.exceptions import (
-    MegabyteNotLessNull,
-    ImageWeightError,
     ImageExtensionError,
+    ImageWeightError,
+    MegabyteNotLessNull,
+)
+from src.services.images.service import (
+    avatar_optimization,
+    image_validate,
+    mb_to_bytes,
+    offer_optimization,
 )
 
 
 class TestMbToBytes:
     @pytest.mark.parametrize(
         "mb, result",
-        [(1, 1024 * 1024), (10, 10 * 1024 * 1024), (10.5, int(10.5 * 1024 * 1024)), (0, 0)],
+        [
+            (1, 1024 * 1024),
+            (10, 10 * 1024 * 1024),
+            (10.5, int(10.5 * 1024 * 1024)),
+            (0, 0),
+        ],
     )
     def test_mb_to_bytes(self, mb: float, result: int):
         assert mb_to_bytes(mb) == result
-
 
     def test_error_mb_to_bytes(self):
         with pytest.raises(MegabyteNotLessNull):
@@ -44,7 +48,6 @@ class TestImageValidate:
 
         assert image_validate(good_file) is None
 
-
     def test_size_image_validate(self):
         bad_file = UploadFile(
             file=self.content,
@@ -56,9 +59,7 @@ class TestImageValidate:
         with pytest.raises(ImageWeightError):
             image_validate(bad_file)
 
-
     extensions = ["exe", "EXE", "ini", "INI", "com", "msi", "bat"]
-
 
     @pytest.mark.parametrize("mime", extensions)
     def test_mimes_image_validate(self, mime: str):
@@ -71,7 +72,6 @@ class TestImageValidate:
 
         with pytest.raises(ImageExtensionError):
             image_validate(bad_file)
-
 
     @pytest.mark.parametrize("extension", extensions)
     def test__image_validate(self, extension: str):
@@ -87,12 +87,13 @@ class TestImageValidate:
 
 
 class TestOfferValidate:
-    def generate_image_bytes(self, size: tuple[int, int], mode: str, image_format: str) -> bytes:
+    def generate_image_bytes(
+        self, size: tuple[int, int], mode: str, image_format: str
+    ) -> bytes:
         img = Image.new(mode, size, color="blue")
         buffer = io.BytesIO()
         img.save(buffer, format=image_format)
         return buffer.getvalue()
-
 
     @pytest.mark.parametrize(
         "w, h, mode, image_format",
@@ -114,11 +115,9 @@ class TestOfferValidate:
         assert result_image.format == "JPEG"
         assert result_image.mode == "RGB"
 
-
     def test_error_avatar_optimization(self):
         with pytest.raises(ImageExtensionError):
             avatar_optimization(b"not an image at all")
-
 
     @pytest.mark.parametrize(
         "w, h, mode, image_format, expected_w, expected_h",
@@ -131,7 +130,13 @@ class TestOfferValidate:
         ],
     )
     def test_offer_optimization(
-        self, w: int, h: int, mode: str, image_format: str, expected_w: int, expected_h: int
+        self,
+        w: int,
+        h: int,
+        mode: str,
+        image_format: str,
+        expected_w: int,
+        expected_h: int,
     ):
         raw_bytes = self.generate_image_bytes((w, h), mode, image_format)
         offer_bytes = offer_optimization(raw_bytes)
@@ -141,7 +146,6 @@ class TestOfferValidate:
         assert result_image.size == (expected_w, expected_h)
         assert result_image.format == "JPEG"
         assert result_image.mode == "RGB"
-
 
     def test_error_offer_optimization(self):
         with pytest.raises(ImageExtensionError):

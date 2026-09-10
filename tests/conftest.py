@@ -1,25 +1,24 @@
-from datetime import datetime, timezone
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
+
+import fakeredis
 import pytest
-from sqlalchemy.pool import NullPool
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-import fakeredis
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from src.core.dependencies import get_current_user
-from src.services.storage.redis import RedisCache, get_redis
-from src.core.dependencies import get_admin_user
+from main import app
 from src.common.enums import UserRole
+from src.core.config import settings
+from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.schemas import UserRead
 from src.services.storage.postgres import Base, get_session
-from src.core.config import settings
-from main import app
-
+from src.services.storage.redis import RedisCache, get_redis
 
 test_engine = create_async_engine(
     settings.pg_test_asyncpg_dsn,
-    poolclass=NullPool, 
+    poolclass=NullPool,
 )
 
 
@@ -30,21 +29,21 @@ test_session_maker = async_sessionmaker(
 )
 
 
-
-
 @pytest.fixture(autouse=True)
-async def clean_database():    
+async def clean_database():
     yield
     async with test_engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
-            await conn.execute(text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;'))
+            await conn.execute(
+                text(f'TRUNCATE TABLE "{table.name}" RESTART IDENTITY CASCADE;')
+            )
 
 
 @pytest.fixture(scope="session", autouse=True)
 async def prepare_database():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)    
+        await conn.run_sync(Base.metadata.create_all)
 
     yield
 
@@ -71,20 +70,20 @@ async def ac(get_test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
         base_url="http://test",
     ) as client:
         yield client
-    
+
     app.dependency_overrides.pop(get_session, None)
 
 
 @pytest.fixture
 def fake_admin_user() -> UserRead:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return UserRead(
         id=1,
         name="TestAdmin",
         email="admin@test.com",
         role=UserRole.ADMIN,
         updated_at=now,
-        created_at=now,   
+        created_at=now,
     )
 
 
@@ -109,15 +108,16 @@ async def fake_get_redis() -> AsyncGenerator[RedisCache, None]:
 
 @pytest.fixture
 def fake_current_user() -> UserRead:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return UserRead(
         id=1,
         name="TestUser",
         email="user@test.com",
         role=UserRole.CLIENT,
         updated_at=now,
-        created_at=now,   
+        created_at=now,
     )
+
 
 @pytest.fixture
 def fake_get_current_user(fake_current_user: UserRead):
