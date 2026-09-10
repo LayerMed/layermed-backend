@@ -1,15 +1,19 @@
 import datetime
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
+CityName = Annotated[str, Field(max_length=50)]
+
+
 class CityCreate(BaseModel):
-    name: str = Field(min_length=2)
+    name: CityName
 
 
 class CityRead(BaseModel):
     id: int
-    name: str
+    name: CityName
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -17,4 +21,4 @@ class CityRead(BaseModel):
 
 
 class CityUpdate(BaseModel):
-    name: str | None = None
+    name: CityName | None = None

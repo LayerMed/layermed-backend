@@ -1,14 +1,9 @@
-from src.modules.symptoms.schemas import SymptomRead, SymptomCreate
-from src.modules.symptoms.models import Symptom
-from src.modules.symptoms.exceptions import (
-    SymptomAlreadyExistsError,
-    SymptomNotFoundError,
-)
-from src.common.enums import CacheTTL
-
-from sqlalchemy import select, update
 import pytest
-from pydantic import ValidationError
+from sqlalchemy import select
+
+from src.common.enums import CacheTTL
+from src.modules.symptoms.models import Symptom
+from src.modules.symptoms.schemas import SymptomCreate, SymptomRead
 
 name = "Runny nose"
 description = (
@@ -42,11 +37,11 @@ class TestCreateSymptom:
         assert symptom.scalar_one_or_none() is not None
 
     async def test_create_symptom_validation_error(self, ac, fake_get_admin_user):
-        payload = {
+        long_payload = {
             "name": "Runny nose",
             "description": "This text contains more than 100 characters to fully satisfy your request. Writing a short paragraph in English makes it easy to quickly reach and exceed this specific length requirement while keeping the message clear and simple.",
         }
-        response = await ac.post("/symptoms/", json=payload)
+        response = await ac.post("/symptoms/", json=long_payload)
         assert response.status_code == 422
 
     async def test_create_symptom_already_exists_error(self, ac, fake_get_admin_user):
@@ -171,7 +166,7 @@ class TestDeleteSymptom:
         response = await ac.delete(f"/symptoms/{created_symptom['id']}")
         assert response.status_code == 204
 
-    async def test_update_symptom_cache(self, ac, fake_get_redis, created_symptom):
+    async def test_delete_symptom_cache(self, ac, fake_get_redis, created_symptom):
         cache_key = fake_get_redis.build_key("symptoms", "items", "all")
 
         await fake_get_redis.setc(cache_key, payload, CacheTTL.STATIC)
@@ -184,6 +179,6 @@ class TestDeleteSymptom:
         cached_symptom = await fake_get_redis.getc(cache_key)
         assert cached_symptom is None
 
-    async def test_update_symptom_not_found_error(self, ac, fake_get_admin_user):
+    async def test_delete_symptom_not_found_error(self, ac, fake_get_admin_user):
         response = await ac.delete("/symptoms/9999")
         assert response.status_code == 404
