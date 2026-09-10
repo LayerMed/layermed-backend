@@ -11,8 +11,7 @@ from src.modules.specialties.exceptions import (
 from src.modules.specialties.models import Specialty
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
-    SpecialtyCreate,
-    SpecialtyFilterParams,
+    SpecialtyCreate,    
     SpecialtyRead,
     SpecialtyUpdate,
 )
@@ -42,13 +41,8 @@ async def create_specialty(
 
 # READ
 async def get_specialties(
-    db: AsyncSession, redis: RedisCache, filters: SpecialtyFilterParams | None = None
+    db: AsyncSession, redis: RedisCache
 ) -> list[SpecialtyRead]:
-    if filters is not None and filters.ids:
-        query = select(Specialty).where(Specialty.id.in_(filters.ids))
-        result = await db.execute(query)
-        return [SpecialtyRead.model_validate(s) for s in result.scalars().all()]
-
     cache_key = redis.build_key("specialties", "items", "all")
     cached = await redis.getc(cache_key)
     if cached:

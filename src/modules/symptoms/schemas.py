@@ -3,8 +3,10 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SymptomName = Annotated[str, Field(min_length=2, max_length=50)]
-SymptomDescription = Annotated[str, Field(min_length=8, max_length=100)]
+from src.common.enums import TextLength
+
+SymptomName = Annotated[str, Field(min_length=2, max_length=TextLength.SHORT)]
+SymptomDescription = Annotated[str, Field(min_length=8, max_length=TextLength.MEDIUM)]
 
 
 class SymptomCreate(BaseModel):

@@ -33,7 +33,7 @@ class TestCreateCity:
 
     async def test_create_city_validation_error(self, ac, fake_get_admin_user):
         long_payload = {
-            "name": "This text contains more than 100 characters to fully satisfy your request. Writing a short paragraph in English makes it easy to quickly reach and exceed this specific length requirement while keeping the message clear and simple.",
+            "name": "Long" * 100,
         }
         response = await ac.post("/cities/", json=long_payload)
         assert response.status_code == 422
