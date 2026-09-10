@@ -198,6 +198,41 @@ class TestUpadteSymptom:
         )
         assert response.status_code == 404
 
+            
+class TestDeleteSymptom:
+    async def test_delete_symptom(self, ac, fake_get_admin_user):
+        response_create = await ac.post("/symptoms/", json=payload)
+        assert response_create.status_code == 201        
+        created_symptom = response_create.json()
+        
+        response = await ac.delete(f"/symptoms/{created_symptom["id"]}")
+        assert response.status_code == 204
+
+    async def test_update_symptom_cache(self, ac, fake_get_redis, fake_get_admin_user):
+        response_create = await ac.post("/symptoms/", json=payload)
+        assert response_create.status_code == 201        
+        created_symptom = response_create.json()        
+
+        cache_key = fake_get_redis.build_key("symptoms", "items", "all")
+
+        await fake_get_redis.setc(cache_key, payload, CacheTTL.STATIC)
+
+        cached_symptom = await fake_get_redis.getc(cache_key)
+        assert cached_symptom is not None
+                
+        await ac.delete(f"/symptoms/{created_symptom["id"]}")
+
+        cached_symptom = await fake_get_redis.getc(cache_key)
+        assert cached_symptom is None
+        
+                
+    async def test_update_symptom_not_found_error(self, ac, fake_get_admin_user):
+        response_create = await ac.post("/symptoms/", json=payload)
+        assert response_create.status_code == 201        
+
+        response = await ac.delete("/symptoms/9999")
+        assert response.status_code == 404
+
         
         
 
