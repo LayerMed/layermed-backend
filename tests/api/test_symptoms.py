@@ -21,7 +21,7 @@ payload = {
 
 
 class TestCreateSymptom:
-    async def test_create_symptom_success(
+    async def test_create_symptom(
         self, ac, get_test_session, fake_get_admin_user
     ):
         response = await ac.post("/symptoms/", json=payload)
@@ -134,7 +134,7 @@ class TestReadSymptom:
 
 
 class TestUpadteSymptom:
-    async def test_update_symptom(self, ac, get_test_session, fake_get_redis, fake_get_admin_user):
+    async def test_update_symptom(self, ac, get_test_session, fake_get_admin_user):
         response_create = await ac.post("/symptoms/", json=payload)
         assert response_create.status_code == 201
         created_symptom = response_create.json()
@@ -144,7 +144,7 @@ class TestUpadteSymptom:
             "description": "Updated description",
         }
         
-        response_update = await ac.put(
+        response_update = await ac.patch(
             f"/symptoms/{created_symptom['id']}", json=update_payload
         )
 
@@ -160,3 +160,45 @@ class TestUpadteSymptom:
 
         assert db_symptom.name == update_payload["name"]
         assert db_symptom.description == update_payload["description"]
+
+    async def test_update_symptom_cache(self, ac, fake_get_redis, fake_get_admin_user):
+        response_create = await ac.post("/symptoms/", json=payload)
+        assert response_create.status_code == 201
+        created_symptom = response_create.json()
+        
+        update_payload = {
+            "name": "Updated name",
+            "description": "Updated description",
+        }
+        cache_key = fake_get_redis.build_key("symptoms", "items", "all")
+
+        await fake_get_redis.setc(cache_key, payload, CacheTTL.STATIC)
+
+        cached_symptom = await fake_get_redis.getc(cache_key)
+        assert cached_symptom is not None
+        
+        await ac.patch(
+            f"/symptoms/{created_symptom['id']}", json=update_payload
+        )
+
+        cached_symptom = await fake_get_redis.getc(cache_key)
+        assert cached_symptom is None
+                
+    async def test_update_symptom_not_found_error(self, ac, fake_get_admin_user):
+        response_create = await ac.post("/symptoms/", json=payload)
+        assert response_create.status_code == 201        
+        
+        update_payload = {
+            "name": "Updated name",
+            "description": "Updated description",
+        }
+        
+        response = await ac.patch(
+            "/symptoms/9999", json=update_payload
+        )
+        assert response.status_code == 404
+
+        
+        
+
+
