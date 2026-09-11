@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 
 import fakeredis
 import pytest
@@ -13,8 +13,10 @@ from src.common.enums import UserRole
 from src.core.config import settings
 from src.core.dependencies import get_admin_user, get_current_user
 from src.modules.users.schemas import UserRead
+from src.modules.users.models import User
 from src.services.storage.postgres import Base, get_session
 from src.services.storage.redis import RedisCache, get_redis
+from src.core.security import hash_pwd
 
 test_engine = create_async_engine(
     settings.pg_test_asyncpg_dsn,
@@ -107,20 +109,23 @@ async def fake_get_redis() -> AsyncGenerator[RedisCache, None]:
 
 
 @pytest.fixture
-def fake_current_user() -> UserRead:
-    now = datetime.now(UTC)
-    return UserRead(
-        id=1,
+async def fake_get_current_user(get_test_session: AsyncSession,):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+    user = User(        
         name="TestUser",
         email="user@test.com",
+        password=hash_pwd("test_hashed_password"),
         role=UserRole.CLIENT,
-        updated_at=now,
         created_at=now,
+        updated_at=now,
     )
+    get_test_session.add(user)
+    await get_test_session.commit()
+    await get_test_session.refresh(user)
 
-
-@pytest.fixture
-def fake_get_current_user(fake_current_user: UserRead):
-    app.dependency_overrides[get_current_user] = lambda: fake_current_user
-    yield fake_current_user
+    user_read = UserRead.model_validate(user)
+    
+    app.dependency_overrides[get_current_user] = lambda: user_read
+    yield user_read
     app.dependency_overrides.pop(get_current_user, None)

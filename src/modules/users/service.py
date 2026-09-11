@@ -65,8 +65,6 @@ async def get_users_by_filters(
         select(User)
         .filter(User.role != UserRole.ADMIN)
         .options(selectinload(User.doctor))
-        .limit(filters.limit)
-        .offset(filters.offset)
     )
 
     if filters.name:
@@ -84,12 +82,12 @@ async def get_users_by_filters(
     if filters.updated_at:
         query = query.filter(User.updated_at >= filters.updated_at)
 
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
     query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
     users = result.scalars().all()
-
-    count_query = select(func.count()).select_from(query.order_by(None).subquery())
-    total = (await db.execute(count_query)).scalar_one()
 
     return PaginatedResponse[UserRead](
         items=[UserRead.model_validate(u) for u in users],
@@ -135,7 +133,7 @@ async def update_user(
         select(User).where(User.id == current_user.id).options(joinedload(User.doctor))
     )
     result = await db.execute(select_query)
-    updated_user = result.scalar_one()
+    updated_user = result.scalar_one_or_none()
 
     await db.commit()
 
