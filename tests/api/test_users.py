@@ -296,3 +296,40 @@ class TestUpdatrePassword:
         cached_user = await fake_get_redis.getc(cache_key)
         assert cached_user is None
 
+
+class TestDeleteUser:
+    async def test_delete_user(self, ac, fake_get_current_user, get_test_session): 
+        delete_data = {
+            "password": "test_hashed_password"
+        }
+        response = await ac.request("DELETE", "/users/me", json=delete_data)
+        assert response.status_code == 204
+
+        query = select(User).where(User.id == fake_get_current_user.id)
+        result = await get_test_session.execute(query)
+        user = result.scalar_one_or_none()
+
+        assert user is None
+
+    async def test_delete_user_incorrect_password(self, ac, fake_get_current_user):        
+        delete_data = {
+            "password": "wrong_password"
+        }
+        response = await ac.request("DELETE", "/users/me", json=delete_data)
+        assert response.status_code == 400
+
+    async def test_delete_user_cache(self, ac, fake_get_current_user, fake_get_redis):        
+        cache_key = fake_get_redis.build_key("users", "current", fake_get_current_user.email)
+        await fake_get_redis.setc(cache_key, fake_get_current_user, CacheTTL.FAST)
+
+        cached_user = await fake_get_redis.getc(cache_key)
+        assert cached_user is not None
+
+        delete_data = {
+            "password": "test_hashed_password"
+        }
+        response = await ac.request("DELETE", "/users/me", json=delete_data)
+        assert response.status_code == 204
+        
+        cached_user = await fake_get_redis.getc(cache_key)
+        assert cached_user is None
