@@ -109,10 +109,12 @@ async def fake_get_redis() -> AsyncGenerator[RedisCache, None]:
 
 
 @pytest.fixture
-async def fake_get_current_user(get_test_session: AsyncSession,):
+async def fake_get_current_user(
+    get_test_session: AsyncSession,
+):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-        
-    user = User(        
+
+    user = User(
         name="TestUser",
         email="user@test.com",
         password=hash_pwd("test_hashed_password"),
@@ -125,7 +127,7 @@ async def fake_get_current_user(get_test_session: AsyncSession,):
     await get_test_session.refresh(user)
 
     user_read = UserRead.model_validate(user)
-    
+
     app.dependency_overrides[get_current_user] = lambda: user_read
     yield user_read
     app.dependency_overrides.pop(get_current_user, None)
