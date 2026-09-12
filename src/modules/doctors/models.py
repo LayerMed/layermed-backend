@@ -27,11 +27,11 @@ class Doctor(Base, Timestamp):
         Index("ix_doctors_speciality_exp", "education", "experience_years"),
     )
 
-    user: Mapped["User"] = relationship(back_populates="doctor")
-    offers: Mapped[list["Offer"]] = relationship(back_populates="doctor")
+    user: Mapped["User"] = relationship(back_populates="doctor", lazy="joined")
+    offers: Mapped[list["Offer"]] = relationship(back_populates="doctor", lazy="selectin")
     specialties: Mapped[list["Specialty"]] = relationship(
-        back_populates="doctors", secondary="doctor_specialties"
+        back_populates="doctors", secondary="doctor_specialties", lazy="selectin"
     )
     reviews: Mapped[list["Review"]] = relationship(
-        back_populates="doctor", cascade="all, delete-orphan"
+        back_populates="doctor", cascade="all, delete-orphan", lazy="selectin"
     )

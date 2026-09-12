@@ -1,14 +1,14 @@
+import datetime
+
 import jwt
 import pytest
 from sqlalchemy import select
-import datetime
 
-from src.common.enums import UserRole
+from src.common.enums import CacheTTL, UserRole
 from src.core.config import settings
 from src.core.security import hash_pwd, verify_pwd
 from src.modules.cities.models import City
 from src.modules.users.models import User
-from src.common.enums import CacheTTL
 
 
 @pytest.fixture
