@@ -53,7 +53,7 @@ class DoctorUpdate(BaseModel):
 class DoctorFilterParams(BaseFilterParams):
     experience_years: int | None = Field(default=None, ge=0)
     max_price: int | None = None
-    rating_avg: int | None = Field(default=None, ge=0, le=5)
+    rating_avg: float | None = Field(default=None, ge=0, le=5)
     status: ModerationStatus | None = None
 
 
