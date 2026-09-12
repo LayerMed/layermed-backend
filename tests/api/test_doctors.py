@@ -720,7 +720,7 @@ class TestDoctorUpdate:
         app.dependency_overrides[get_current_user] = lambda: user_read
         yield user_read
         app.dependency_overrides.pop(get_current_user, None)
-        
+
     async def test_update_doctor_basic_fields_success(
         self,
         ac,
@@ -923,7 +923,9 @@ class TestDoctorAvatarDelete:
         cache_key = fake_get_redis.build_key("doctors", "items", doctor_id)
         await fake_get_redis.setc(cache_key, {"cached": "data"}, CacheTTL.FAST)
 
-        with patch("src.modules.doctors.service.delete_image", new_callable=AsyncMock) as mock_delete:
+        with patch(
+            "src.modules.doctors.service.delete_image", new_callable=AsyncMock
+        ) as mock_delete:
             mock_delete.return_value = None
 
             response = await ac.delete("/doctors/avatar")
@@ -947,7 +949,9 @@ class TestDoctorAvatarDelete:
         doctor = fake_get_current_user_as_doctor.doctor
         doctor.avatar_url = None
 
-        with patch("src.modules.doctors.service.delete_image", new_callable=AsyncMock) as mock_delete:
+        with patch(
+            "src.modules.doctors.service.delete_image", new_callable=AsyncMock
+        ) as mock_delete:
             response = await ac.delete("/doctors/avatar")
             assert response.status_code == 204
             mock_delete.assert_not_called()
