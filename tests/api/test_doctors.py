@@ -419,12 +419,7 @@ class TestGetDoctorsByFilters:
         assert data["total"] == 1
         assert data["items"][0]["rating_avg"] == 4.8
 
-    async def test_filter_by_status(
-        self,
-        ac,
-        seed_doctors,
-        fake_optional_admin_user
-    ):
+    async def test_filter_by_status(self, ac, seed_doctors, fake_optional_admin_user):
         response = await ac.get("/doctors/?status=pending")
         assert response.status_code == 200
 

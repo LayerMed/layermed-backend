@@ -697,7 +697,8 @@ class TestCancelBooking:
         response = await ac.patch(f"/bookings/{seed_pending_booking.id}")
         assert response.status_code == 400
         assert (
-            response.json()["detail"] == f"Cannot cancel booking with status: {invalid_status}"
+            response.json()["detail"]
+            == f"Cannot cancel booking with status: {invalid_status}"
         )
 
     async def test_cancel_booking_access_denied(

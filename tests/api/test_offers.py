@@ -19,7 +19,9 @@ from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
 
 
-def create_test_image(format: str = "JPEG", size: tuple[int, int] = (100, 100)) -> io.BytesIO:
+def create_test_image(
+    format: str = "JPEG", size: tuple[int, int] = (100, 100)
+) -> io.BytesIO:
     file = io.BytesIO()
     image = Image.new("RGB", size, color="blue")
     image.save(file, format=format)
@@ -37,7 +39,9 @@ class TestCreateOffer:
         return city
 
     @pytest.fixture
-    def fake_doctor_read(self, fake_get_current_user_as_doctor) -> Generator[DoctorRead, None]:
+    def fake_doctor_read(
+        self, fake_get_current_user_as_doctor
+    ) -> Generator[DoctorRead, None]:
         doctor_data = fake_get_current_user_as_doctor.doctor
         doctor_read = DoctorRead.model_validate(doctor_data)
         app.dependency_overrides[get_current_doctor] = lambda: doctor_read
@@ -105,7 +109,7 @@ class TestCreateOffer:
         ac,
         fake_doctor_read,
         seed_city,
-    ):        
+    ):
         payload = {
             "city_id": seed_city.id,
             "title": "A",
@@ -196,14 +200,16 @@ class TestCreateOffer:
         get_test_session.add(offer)
         await get_test_session.commit()
         await get_test_session.refresh(offer)
-        
+
         files = [
             ("images", ("img1.jpg", create_test_image(), "image/jpeg")),
             ("images", ("img2.jpg", create_test_image(), "image/jpeg")),
         ]
         response = await ac.post(f"/offers/{offer.id}/images", files=files)
         assert response.status_code == 400
-        assert response.json()["detail"] == "Images count exceeds the limit of 10 pieces"
+        assert (
+            response.json()["detail"] == "Images count exceeds the limit of 10 pieces"
+        )
 
     async def test_upload_offer_images_access_denied(
         self,
@@ -238,7 +244,7 @@ class TestCreateOffer:
         )
         get_test_session.add(other_doctor)
         await get_test_session.flush()
-        
+
         offer = Offer(
             doctor_id=other_doctor.id,
             city_id=seed_city.id,
@@ -388,7 +394,9 @@ class TestReadOffers:
         data = response.json()
         assert data["total"] == 2
         assert len(data["items"]) == 2
-        assert all(item["status"] == ModerationStatus.APPROVED for item in data["items"])
+        assert all(
+            item["status"] == ModerationStatus.APPROVED for item in data["items"]
+        )
 
         cache_key = fake_get_redis.build_key("offers", "list", "default")
         cached_data = await fake_get_redis.getc(cache_key)
@@ -455,19 +463,21 @@ class TestReadOffers:
         ac,
         seed_offers_setup,
     ):
-        response = await ac.get("/offers/?doctor_experience_years=10&doctor_rating_avg=4")
+        response = await ac.get(
+            "/offers/?doctor_experience_years=10&doctor_rating_avg=4"
+        )
         assert response.status_code == 200
 
         data = response.json()
         assert data["total"] == 2
-        assert all(item["doctor_id"] == seed_offers_setup["doctors"][0].id for item in data["items"])
+        assert all(
+            item["doctor_id"] == seed_offers_setup["doctors"][0].id
+            for item in data["items"]
+        )
 
     async def test_filter_offers_by_status_as_admin(
-        self,
-        ac,
-        seed_offers_setup,
-        fake_optional_admin_user
-    ):                
+        self, ac, seed_offers_setup, fake_optional_admin_user
+    ):
         response = await ac.get(f"/offers/?status={ModerationStatus.PENDING}")
         assert response.status_code == 200
 
@@ -485,7 +495,9 @@ class TestReadOffers:
 
         data = response.json()
         assert data["total"] == 2
-        assert all(item["status"] == ModerationStatus.APPROVED for item in data["items"])
+        assert all(
+            item["status"] == ModerationStatus.APPROVED for item in data["items"]
+        )
 
     async def test_get_offers_by_doctor_success(
         self,
@@ -943,7 +955,9 @@ class TestDeleteOffers:
         try:
             response = await ac.delete(f"/offers/{target_offer.id}")
             assert response.status_code == 403
-            assert response.json()["detail"] == "You cannot delete another doctor's offer"
+            assert (
+                response.json()["detail"] == "You cannot delete another doctor's offer"
+            )
 
             query = select(Offer).where(Offer.id == target_offer.id)
             result = await get_test_session.execute(query)
