@@ -9,7 +9,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from main import app
 from src.common.enums import CacheTTL, ModerationStatus, UserRole
-from src.core.dependencies import get_current_user, get_optional_user
+from src.core.dependencies import get_current_user
 from src.core.security import hash_pwd
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
@@ -333,12 +333,6 @@ class TestGetDoctorsByFilters:
             "doctors": [doc1, doc2, doc3],
             "specialties": [spec_cardio, spec_neuro],
         }
-
-    @pytest.fixture
-    def fake_optional_admin_user(self, fake_admin_user):
-        app.dependency_overrides[get_optional_user] = lambda: fake_admin_user
-        yield fake_admin_user
-        app.dependency_overrides.pop(get_optional_user, None)
 
     async def test_get_doctors_default_list(
         self,

@@ -12,7 +12,7 @@ from sqlalchemy.pool import NullPool
 from main import app
 from src.common.enums import ModerationStatus, UserRole
 from src.core.config import settings
-from src.core.dependencies import get_admin_user, get_current_user
+from src.core.dependencies import get_admin_user, get_current_user, get_optional_user
 from src.core.security import hash_pwd
 from src.modules.doctors.models import Doctor
 from src.modules.users.models import User
@@ -180,3 +180,10 @@ async def fake_get_current_user_as_doctor(
     app.dependency_overrides[get_current_user] = lambda: user_read
     yield user_read
     app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+def fake_optional_admin_user(fake_admin_user):
+    app.dependency_overrides[get_optional_user] = lambda: fake_admin_user
+    yield fake_admin_user
+    app.dependency_overrides.pop(get_optional_user, None)
