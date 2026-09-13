@@ -511,7 +511,7 @@ class TestGetBookings:
         ac,
         fake_get_current_user,
     ):
-        response = await ac.get("/bookings/99999")
+        response = await ac.get("/bookings/9999")
         assert response.status_code == 404
         assert response.json()["detail"] == "Booking not found"
 
@@ -697,8 +697,7 @@ class TestCancelBooking:
         response = await ac.patch(f"/bookings/{seed_pending_booking.id}")
         assert response.status_code == 400
         assert (
-            response.json()["detail"]
-            == f"Cannot cancel booking with status: {invalid_status}"
+            response.json()["detail"] == f"Cannot cancel booking with status: {invalid_status}"
         )
 
     async def test_cancel_booking_access_denied(

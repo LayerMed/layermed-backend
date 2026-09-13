@@ -9,7 +9,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from main import app
 from src.common.enums import CacheTTL, ModerationStatus, UserRole
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_user, get_optional_user
 from src.core.security import hash_pwd
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
@@ -334,6 +334,12 @@ class TestGetDoctorsByFilters:
             "specialties": [spec_cardio, spec_neuro],
         }
 
+    @pytest.fixture
+    def fake_optional_admin_user(self, fake_admin_user):
+        app.dependency_overrides[get_optional_user] = lambda: fake_admin_user
+        yield fake_admin_user
+        app.dependency_overrides.pop(get_optional_user, None)
+
     async def test_get_doctors_default_list(
         self,
         ac,
@@ -423,6 +429,7 @@ class TestGetDoctorsByFilters:
         self,
         ac,
         seed_doctors,
+        fake_optional_admin_user
     ):
         response = await ac.get("/doctors/?status=pending")
         assert response.status_code == 200
@@ -681,46 +688,52 @@ class TestDoctorModeration:
         assert response.status_code == 401
 
 
+@pytest.fixture
+async def pending_doctor_user(get_test_session):
+    now = datetime.now(UTC).replace(tzinfo=None)
+
+    user = User(
+        name="Pending Doctor",
+        email="pending_doc@test.com",
+        password=hash_pwd("fake_password_secret"),
+        role=UserRole.DOCTOR,
+        created_at=now,
+        updated_at=now,
+    )
+    get_test_session.add(user)
+    await get_test_session.flush()
+
+    doctor = Doctor(
+        user_id=user.id,
+        education="Initial Medical University",
+        degree="MD",
+        experience_years=5,
+        bio="Initial bio.",
+        clinic="Main Clinic",
+        status=ModerationStatus.PENDING,
+        created_at=now,
+        updated_at=now,
+    )
+    get_test_session.add(doctor)
+    await get_test_session.commit()
+
+    stmt = select(User).where(User.id == user.id).options(joinedload(User.doctor))
+    res = await get_test_session.execute(stmt)
+    full_user = res.scalar_one()
+
+    user_read = UserRead.model_validate(full_user)
+    doctor_read = DoctorRead.model_validate(doctor)
+
+    from src.core.dependencies import get_current_doctor
+
+    app.dependency_overrides[get_current_user] = lambda: user_read
+    app.dependency_overrides[get_current_doctor] = lambda: doctor_read
+    yield user_read
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_doctor, None)
+
+
 class TestDoctorUpdate:
-    @pytest.fixture
-    async def pending_doctor_user(self, get_test_session):
-        now = datetime.now(UTC).replace(tzinfo=None)
-
-        user = User(
-            name="Pending Doctor",
-            email="pending_doc@test.com",
-            password=hash_pwd("fake_password_secret"),
-            role=UserRole.DOCTOR,
-            created_at=now,
-            updated_at=now,
-        )
-        get_test_session.add(user)
-        await get_test_session.flush()
-
-        doctor = Doctor(
-            user_id=user.id,
-            education="Initial Medical University",
-            degree="MD",
-            experience_years=5,
-            bio="Initial bio.",
-            clinic="Main Clinic",
-            status=ModerationStatus.PENDING,
-            created_at=now,
-            updated_at=now,
-        )
-        get_test_session.add(doctor)
-        await get_test_session.commit()
-
-        stmt = select(User).where(User.id == user.id).options(joinedload(User.doctor))
-        res = await get_test_session.execute(stmt)
-        full_user = res.scalar_one()
-
-        user_read = UserRead.model_validate(full_user)
-
-        app.dependency_overrides[get_current_user] = lambda: user_read
-        yield user_read
-        app.dependency_overrides.pop(get_current_user, None)
-
     async def test_update_doctor_basic_fields_success(
         self,
         ac,
