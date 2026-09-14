@@ -20,7 +20,8 @@ def hash_pwd(pwd: str) -> str:
 
 
 def verify_pwd(plain_pwd: str, hashed_pwd: str) -> bool:
-    return pwd_context.verify(plain_pwd, hashed_pwd)
+    target_pwd = hashed_pwd if hashed_pwd is not None else settings.DUMMY_PASSWORD_HASH
+    return pwd_context.verify(plain_pwd, target_pwd)
 
 
 def create_access_token(user_data: dict) -> str:

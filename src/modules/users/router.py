@@ -47,6 +47,10 @@ async def register_user_handle(
     return TokenResponse(access_token=token)
 
 
+from src.core.config import settings
+from src.core.security import create_access_token, verify_pwd
+
+
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -56,8 +60,12 @@ async def login_user_handle(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
-    user = await get_user_by_email(form_data.username, db)
-    if not verify_pwd(form_data.password, user.password):
+    user = await get_user_by_email(form_data.username, db)   
+
+    target_hash = user.password if user else settings.DUMMY_HASH
+
+    is_password_valid = verify_pwd(form_data.password, target_hash)
+    if not user or not is_password_valid:
         raise InvalidCredentialsError()
 
     token = create_access_token({"sub": form_data.username})

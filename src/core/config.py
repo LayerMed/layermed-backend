@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     ALGORITHM: Literal["HS256"]
     TOKEN_EXPIRE: int
 
+    DUMMY_HASH: str
+
     @property
     def pg_psycopg_dsn(self) -> str:
         return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
