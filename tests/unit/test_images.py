@@ -1,9 +1,13 @@
 import io
+from typing import ClassVar
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import UploadFile
 from PIL import Image
 
+from src.common.enums import S3Folders
+from src.services.images import service as image_service
 from src.services.images.exceptions import (
     ImageExtensionError,
     ImageWeightError,
@@ -14,6 +18,7 @@ from src.services.images.service import (
     image_validate,
     mb_to_bytes,
     offer_optimization,
+    save_and_upload_image,
 )
 
 
@@ -59,7 +64,15 @@ class TestImageValidate:
         with pytest.raises(ImageWeightError):
             image_validate(bad_file)
 
-    extensions = ["exe", "EXE", "ini", "INI", "com", "msi", "bat"]
+    extensions: ClassVar[list[str]] = [
+        "exe",
+        "EXE",
+        "ini",
+        "INI",
+        "com",
+        "msi",
+        "bat",
+    ]
 
     @pytest.mark.parametrize("mime", extensions)
     def test_mimes_image_validate(self, mime: str):
@@ -150,3 +163,21 @@ class TestOfferValidate:
     def test_error_offer_optimization(self):
         with pytest.raises(ImageExtensionError):
             offer_optimization(b"not_an_image")
+
+
+async def test_save_and_upload_image_optimizes_before_upload(monkeypatch):
+    image = UploadFile(
+        file=io.BytesIO(b"raw-image"),
+        filename="offer.png",
+        headers={"content-type": "image/png"},
+        size=len(b"raw-image"),
+    )
+    optimizer = Mock(return_value=b"optimized-image")
+    upload = AsyncMock(return_value="offers/generated.jpg")
+    monkeypatch.setattr(image_service, "upload_image", upload)
+
+    key = await save_and_upload_image(image, S3Folders.OFFERS, optimizer)
+
+    assert key == "offers/generated.jpg"
+    optimizer.assert_called_once_with(b"raw-image")
+    upload.assert_awaited_once_with(b"optimized-image", S3Folders.OFFERS)
