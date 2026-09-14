@@ -178,6 +178,20 @@ async def get_offers_by_filters(
     return offers_dto
 
 
+async def get_offers_by_doctor(
+    current_doctor: DoctorRead,
+    db: AsyncSession,
+) -> list[OfferRead]:    
+    query = select(Offer).where(Offer.doctor_id == current_doctor.id)
+    result = await db.execute(query)
+    offers = result.scalars().all()
+
+    if not offers:
+        raise OfferNotFoundError()
+
+    return [OfferRead.model_validate(offer) for offer in offers]
+
+
 async def get_offer_by_id(
     offer_id: int,
     optional_user: UserRead | None,
@@ -208,20 +222,6 @@ async def get_offer_by_id(
         await redis.setc(cache_key, offer_dto, ex=CacheTTL.SLOW)
 
     return offer_dto
-
-
-async def get_offers_by_doctor(
-    current_doctor: DoctorRead,
-    db: AsyncSession,
-) -> list[OfferRead]:    
-    query = select(Offer).where(Offer.doctor_id == current_doctor.id)
-    result = await db.execute(query)
-    offers = result.scalars().all()
-
-    if not offers:
-        raise OfferNotFoundError()
-
-    return [OfferRead.model_validate(offer) for offer in offers]
 
 
 # UPDATE

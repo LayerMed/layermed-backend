@@ -189,10 +189,10 @@ async def get_doctor_by_id(
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorReadDetailed:
-    is_admin = optional_user is not None and optional_user.role == UserRole.ADMIN
+    is_admin = (optional_user and optional_user.role == UserRole.ADMIN)
     is_owner = (
-        optional_user is not None
-        and optional_user.doctor is not None
+        optional_user
+        and optional_user.doctor
         and optional_user.doctor.id == doctor_id
     )
 
@@ -217,11 +217,14 @@ async def get_doctor_by_id(
         raise DoctorNotFoundError()
 
     doctor_dto = DoctorReadDetailed.model_validate(doctor)
-    if doctor.status == ModerationStatus.APPROVED:
+
+    if not (is_admin or is_owner):
+        doctor_dto.rejection_reason = None
+
+    if doctor.status == ModerationStatus.APPROVED and not (is_admin or is_owner):
         await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
-
 
 # UPDATE
 async def update_doctor(

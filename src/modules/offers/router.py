@@ -76,16 +76,6 @@ async def get_offers_by_filters_handle(
     return await get_offers_by_filters(optional_user, filters, db, redis)
 
 
-@router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")
-async def get_offer_by_id_handle(
-    offer_id: int,
-    optional_user: UserRead | None = Depends(get_optional_user),
-    db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),
-) -> OfferRead:
-    return await get_offer_by_id(offer_id, optional_user, db, redis)
-
-
 @router.get(
     "/doctor",
     response_model=list[OfferRead],
@@ -96,6 +86,16 @@ async def get_offers_by_doctor_handle(
     db: AsyncSession = Depends(get_session),
 ) -> list[OfferRead]:
     return await get_offers_by_doctor(current_doctor, db)
+
+
+@router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")
+async def get_offer_by_id_handle(
+    offer_id: int,
+    optional_user: UserRead | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> OfferRead:
+    return await get_offer_by_id(offer_id, optional_user, db, redis)
 
 
 # UPDATE
