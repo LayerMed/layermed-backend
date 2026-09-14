@@ -1,6 +1,25 @@
-from collections.abc import AsyncGenerator
+import os
+from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
-from typing import Callable
+
+os.environ["POSTGRES_USER"] = "test"
+os.environ["POSTGRES_PASSWORD"] = "test"
+os.environ["POSTGRES_DB"] = "test"
+os.environ["POSTGRES_HOST"] = "localhost"
+os.environ["POSTGRES_PORT"] = "5432"
+os.environ["TEST_POSTGRES_USER"] = "test"
+os.environ["TEST_POSTGRES_PASSWORD"] = "test"
+os.environ["TEST_POSTGRES_DB"] = "test"
+os.environ["TEST_POSTGRES_PORT"] = "5441"
+os.environ["REDIS_HOST"] = "localhost"
+os.environ["REDIS_PORT"] = "6379"
+os.environ["S3_ENDPOINT"] = "http://localhost:9000"
+os.environ["S3_ACCESS_KEY"] = "test"
+os.environ["S3_SECRET_KEY"] = "test"
+os.environ["S3_BUCKET_NAME"] = "test"
+os.environ["KEY"] = "test-secret-key-at-least-32-bytes-long"
+os.environ["ALGORITHM"] = "HS256"
+os.environ["TOKEN_EXPIRE"] = "60"
 
 import fakeredis
 import pytest
@@ -20,7 +39,6 @@ from src.core.dependencies import (
     get_optional_user,
 )
 from src.core.security import hash_pwd
-from src.modules.cities.models import City
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
@@ -39,7 +57,7 @@ test_session_maker = async_sessionmaker(
     expire_on_commit=False,
 )
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 async def clean_database():
     yield
     async with test_engine.begin() as conn:
@@ -49,7 +67,7 @@ async def clean_database():
             )
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 async def prepare_database():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -125,6 +143,7 @@ def create_doctor_factory(get_test_session: AsyncSession, create_user_factory: C
     async def _create_doctor(
         email: str = "doctor@test.com",
         status: ModerationStatus = ModerationStatus.APPROVED,
+        avatar_url: str | None = None,
     ) -> Doctor:
         now = datetime.now(UTC).replace(tzinfo=None)
         user = await create_user_factory(name="TestDoctor", email=email, role=UserRole.DOCTOR)
@@ -137,6 +156,7 @@ def create_doctor_factory(get_test_session: AsyncSession, create_user_factory: C
             bio="Board-certified specialist.",
             min_price=150,
             clinic="Main Clinic",
+            avatar_url=avatar_url,
             rating_avg=5.0,
             reviews_count=10,
             status=status,
@@ -147,10 +167,16 @@ def create_doctor_factory(get_test_session: AsyncSession, create_user_factory: C
         get_test_session.add(doctor)
         await get_test_session.commit()
         
-        stmt = select(User).where(User.id == user.id).options(joinedload(User.doctor))
+        stmt = (
+            select(Doctor)
+            .where(Doctor.id == doctor.id)
+            .options(joinedload(Doctor.user))
+            .execution_options(populate_existing=True)
+        )
         res = await get_test_session.execute(stmt)
-        full_user = res.scalar_one()
-        return full_user.doctor
+        loaded_doctor = res.scalar_one()
+        loaded_doctor.user.doctor = loaded_doctor
+        return loaded_doctor
     return _create_doctor
 
 
@@ -196,7 +222,7 @@ async def fake_get_current_user(create_user_factory: Callable) -> AsyncGenerator
 
 @pytest.fixture
 async def fake_get_current_user_as_doctor(create_doctor_factory: Callable) -> AsyncGenerator[UserRead, None]:
-    doctor = await create_doctor_factory()
+    doctor = await create_doctor_factory(avatar_url="doctors/test-avatar.jpg")
     user_read = UserRead.model_validate(doctor.user)
 
     app.dependency_overrides[get_current_user] = lambda: user_read

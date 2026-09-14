@@ -218,6 +218,5 @@ __marimo__/
 .streamlit/secrets.toml
 
 .logs/
-bad_passwords.txt
 .vscode/
 .python-varsion
