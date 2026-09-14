@@ -107,6 +107,9 @@ async def get_reviews_by_filter(
     if filters.status is not None:
         query = query.where(Review.status == filters.status)
 
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
     query = (
         query.order_by(Review.created_at.desc())
         .limit(filters.limit)
@@ -116,8 +119,6 @@ async def get_reviews_by_filter(
     result = await db.execute(query)
     reviews = result.scalars().all()
 
-    count_query = select(func.count()).select_from(query.order_by(None).subquery())
-    total = (await db.execute(count_query)).scalar_one()
 
     return PaginatedResponse[ReviewRead](
         items=[ReviewRead.model_validate(r) for r in reviews],
@@ -162,6 +163,7 @@ async def update_review_status(
         )
 
     await db.commit()
+    await db.refresh(review)
     await redis.delc(redis.build_key("doctors", "items", review.doctor_id))
     return ReviewRead.model_validate(review)
 

@@ -20,11 +20,12 @@ class OfferRead(BaseModel):
     description: str
     cost: int
     status: ModerationStatus
+    rejection_reason: str | None = None
     offer_format: OfferFormat
     images: list[str] | None
 
     model_config = ConfigDict(from_attributes=True)
-
+    
 
 class OfferFilterParams(BaseFilterParams):
     city_id: int | None = None

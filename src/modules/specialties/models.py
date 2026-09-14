@@ -11,7 +11,7 @@ class Specialty(Base, Timestamp):
     description: Mapped[str]
 
     doctors: Mapped[list["Doctor"]] = relationship(
-        secondary="doctor_specialties", back_populates="specialties"
+        secondary="doctor_specialties", back_populates="specialties", lazy="selectin"
     )
 
 

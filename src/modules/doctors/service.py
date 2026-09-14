@@ -128,19 +128,26 @@ async def upload_doctor_avatar(
 # READ
 async def get_doctors_by_filters(
     filters: DoctorFilterParams,
+    optional_user: UserRead | None,
     specialty_ids: list[int] | None,
     db: AsyncSession,
     redis: RedisCache,
 ) -> PaginatedResponse[DoctorRead]:
-    is_default = filters.is_default_page()
+    is_admin = optional_user is not None and optional_user.role == UserRole.ADMIN
+
+    if is_admin and filters.status is not None:
+        target_status = filters.status
+    else:
+        target_status = ModerationStatus.APPROVED
+
+    is_public_default = filters.is_default_page() and target_status == ModerationStatus.APPROVED
     cache_key = redis.build_key("doctors", "list", "default")
 
-    if is_default:
+    if is_public_default and not is_admin:
         cached = await redis.getc(cache_key)
         if cached:
             return PaginatedResponse[DoctorRead].model_validate(cached)
 
-    target_status = filters.status or ModerationStatus.APPROVED
     query = (
         select(Doctor)
         .where(Doctor.status == target_status)
@@ -156,12 +163,12 @@ async def get_doctors_by_filters(
     if filters.rating_avg is not None:
         query = query.where(Doctor.rating_avg >= filters.rating_avg)
 
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total = (await db.execute(count_query)).scalar_one()
+
     query = query.limit(filters.limit).offset(filters.offset)
     result = await db.execute(query)
     doctors = result.scalars().all()
-
-    count_query = select(func.count()).select_from(query.order_by(None).subquery())
-    total = (await db.execute(count_query)).scalar_one()
 
     doctors_dto = PaginatedResponse[DoctorRead](
         items=[DoctorRead.model_validate(d) for d in doctors],
@@ -170,19 +177,30 @@ async def get_doctors_by_filters(
         total=total,
     )
 
-    if is_default:
+    if is_public_default:
         await redis.setc(cache_key, doctors_dto, CacheTTL.FAST)
 
     return doctors_dto
 
 
 async def get_doctor_by_id(
-    doctor_id: int, db: AsyncSession, redis: RedisCache
+    doctor_id: int,
+    optional_user: UserRead | None,
+    db: AsyncSession,
+    redis: RedisCache,
 ) -> DoctorReadDetailed:
+    is_admin = optional_user is not None and optional_user.role == UserRole.ADMIN
+    is_owner = (
+        optional_user is not None
+        and optional_user.doctor is not None
+        and optional_user.doctor.id == doctor_id
+    )
+
     cache_key = redis.build_key("doctors", "items", doctor_id)
-    cached_doctor = await redis.getc(cache_key)
-    if cached_doctor:
-        return DoctorReadDetailed.model_validate(cached_doctor)
+    if not is_admin and not is_owner:
+        cached_doctor = await redis.getc(cache_key)
+        if cached_doctor:
+            return DoctorReadDetailed.model_validate(cached_doctor)
 
     query = (
         select(Doctor)
@@ -191,11 +209,16 @@ async def get_doctor_by_id(
     )
     result = await db.execute(query)
     doctor = result.scalar_one_or_none()
+
     if doctor is None:
         raise DoctorNotFoundError()
 
+    if doctor.status != ModerationStatus.APPROVED and not (is_admin or is_owner):
+        raise DoctorNotFoundError()
+
     doctor_dto = DoctorReadDetailed.model_validate(doctor)
-    await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
+    if doctor.status == ModerationStatus.APPROVED:
+        await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
 
@@ -242,6 +265,7 @@ async def update_doctor(
         setattr(doctor, key, value)
 
     await db.commit()
+    await db.refresh(doctor)
 
     await redis.invalidate("doctors")
     await redis.invalidate("users")

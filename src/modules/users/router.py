@@ -80,7 +80,16 @@ async def get_users_by_filters_handle(
 
 
 @router.get(
-    "/user/{user_id}",
+    "/me",
+    response_model=UserRead,
+    summary="Get current active user",
+)
+async def get_me_handle(current_user: UserRead = Depends(get_current_user)) -> UserRead:
+    return current_user
+
+
+@router.get(
+    "/{user_id}",
     response_model=UserRead,
     summary="Get user by id",
 )
@@ -91,15 +100,6 @@ async def get_user_by_id_handle(
 ) -> UserRead:
     user = await get_user_by_id(user_id, db)
     return user
-
-
-@router.get(
-    "/me",
-    response_model=UserRead,
-    summary="Get current active user",
-)
-async def get_me_handle(current_user: UserRead = Depends(get_current_user)) -> UserRead:
-    return current_user
 
 
 # UPDATE
@@ -135,7 +135,7 @@ async def update_user_password_handle(
 
 # DELETE
 @router.delete(
-    "/me/delete",
+    "/me",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete current user account",
 )

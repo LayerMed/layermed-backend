@@ -119,6 +119,7 @@ async def cancel_booking(
     db: AsyncSession,
     redis: RedisCache,
 ) -> BookingRead:
+    await get_booking_by_id(booking_id, current_user, db, redis)
     booking = await get_booking_by_id(booking_id, current_user, db, redis)
 
     if booking.status in (

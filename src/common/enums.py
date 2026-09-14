@@ -38,3 +38,9 @@ class CacheTTL(IntEnum):
 class S3Folders(StrEnum):
     DOCTORS = "doctors"
     OFFERS = "offers"
+
+
+class TextLength(IntEnum):
+    SHORT = 100
+    MEDIUM = 160
+    LONG = 300

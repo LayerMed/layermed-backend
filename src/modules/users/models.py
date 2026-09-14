@@ -20,8 +20,8 @@ class User(Base, Timestamp):
     password: Mapped[str]
     role: Mapped[UserRole] = mapped_column(default=UserRole.CLIENT)
 
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="user", lazy="selectin")
     doctor: Mapped[Optional["Doctor"]] = relationship(
-        back_populates="user", uselist=False
+        back_populates="user", uselist=False, lazy="joined"
     )
-    city: Mapped[Optional["City"]] = relationship(back_populates="user")
+    city: Mapped[Optional["City"]] = relationship(back_populates="user", lazy="joined")

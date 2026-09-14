@@ -5,7 +5,6 @@ from src.core.dependencies import get_admin_user
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
     SpecialtyCreate,
-    SpecialtyFilterParams,
     SpecialtyRead,
     SpecialtyUpdate,
 )
@@ -47,12 +46,11 @@ async def create_specialty_handle(
     response_model=list[SpecialtyRead],
     summary="Get all specialties",
 )
-async def get_specialties_handle(
-    filters: SpecialtyFilterParams,
+async def get_specialties_handle(    
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SpecialtyRead]:
-    specialties = await get_specialties(db, redis, filters)
+    specialties = await get_specialties(db, redis)
     return specialties
 
 

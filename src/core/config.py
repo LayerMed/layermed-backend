@@ -4,10 +4,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # PostgreSQL
     POSTGRES_USER: str
-    POSTGRES_DB: str
+    POSTGRES_DB: str    
     POSTGRES_PASSWORD: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
+
+    # PostgreSQL for tests
+    TEST_POSTGRES_USER: str
+    TEST_POSTGRES_DB: str
+    TEST_POSTGRES_PASSWORD: str
+    TEST_POSTGRES_PORT: int
 
     # Redis
     REDIS_HOST: str
@@ -31,6 +37,10 @@ class Settings(BaseSettings):
     @property
     def pg_asyncpg_dsn(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
+    @property
+    def pg_test_asyncpg_dsn(self) -> str:
+        return f"postgresql+asyncpg://{self.TEST_POSTGRES_USER}:{self.TEST_POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.TEST_POSTGRES_PORT}/{self.TEST_POSTGRES_DB}"
 
     @property
     def redis_dsn(self):
