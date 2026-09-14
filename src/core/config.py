@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +20,7 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str
     REDIS_PORT: int
+    REDIS_PASSWORD: int
 
     # S3
     S3_ENDPOINT: str
@@ -27,7 +30,7 @@ class Settings(BaseSettings):
 
     # JWT Settings
     KEY: str
-    ALGORITHM: str
+    ALGORITHM: Literal["HS256"]
     TOKEN_EXPIRE: int
 
     @property
@@ -44,7 +47,7 @@ class Settings(BaseSettings):
 
     @property
     def redis_dsn(self):
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
+        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
