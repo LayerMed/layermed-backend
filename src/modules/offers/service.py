@@ -11,6 +11,7 @@ from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.exceptions import (
     OfferAccessDenied,
+    OfferImageNotFoundError,
     OfferImagesCountError,
     OfferImagesError,
     OfferNotFoundError,
@@ -177,32 +178,27 @@ async def get_offers_by_filters(
     return offers_dto
 
 
-async def get_offers_by_doctor(
-    current_doctor: DoctorRead,
-    db: AsyncSession,
-) -> list[OfferRead]:
-    query = select(Offer).where(Offer.doctor_id == current_doctor.id)
-    result = await db.execute(query)
-    offers = result.scalars().all()
-
-    if not offers:
-        raise OfferNotFoundError()
-
-    return [OfferRead.model_validate(offer) for offer in offers]
-
-
 async def get_offer_by_id(
     offer_id: int,
+    optional_user: UserRead | None,
     db: AsyncSession,
     redis: RedisCache,
 ) -> OfferRead:
+    is_admin = optional_user and optional_user.role == UserRole.ADMIN
+
     cache_key = redis.build_key("offers", "items", offer_id)
+    if not is_admin:
+        cached_offer = await redis.getc(cache_key)
+        if cached_offer:
+            return OfferRead.model_validate(cached_offer)
 
-    cached_offer = await redis.getc(cache_key)
-    if cached_offer:
-        return OfferRead.model_validate(cached_offer)
+    query = select(Offer).where(Offer.id == offer_id)
+    if not is_admin:
+        query = query.where(Offer.status == ModerationStatus.APPROVED)
 
-    offer = await db.get(Offer, offer_id)
+    result = await db.execute(query)
+    offer = result.scalar_one_or_none()
+    
     if not offer:
         raise OfferNotFoundError()
 
@@ -214,10 +210,25 @@ async def get_offer_by_id(
     return offer_dto
 
 
+async def get_offers_by_doctor(
+    current_doctor: DoctorRead,
+    db: AsyncSession,
+) -> list[OfferRead]:    
+    query = select(Offer).where(Offer.doctor_id == current_doctor.id)
+    result = await db.execute(query)
+    offers = result.scalars().all()
+
+    if not offers:
+        raise OfferNotFoundError()
+
+    return [OfferRead.model_validate(offer) for offer in offers]
+
+
 # UPDATE
 async def update_offer_by_id(
     offer_id: int,
     offer_data: OfferUpdate,
+    current_doctor: DoctorRead,
     db: AsyncSession,
     redis: RedisCache,
 ) -> OfferRead:
@@ -228,30 +239,16 @@ async def update_offer_by_id(
     offer = await db.get(Offer, offer_id)
     if not offer:
         raise OfferNotFoundError()
-
-    images_to_delete = []
-
-    if "images" in update_data:
-        old_images = set(offer.images)
-        new_images = set(offer_data.images or [])
-        images_to_delete = list(old_images - new_images)
+    if current_doctor.id != offer.doctor_id:
+        raise OfferAccessDenied()
 
     for field, value in update_data.items():
         setattr(offer, field, value)
 
     offer.status = ModerationStatus.PENDING
 
-    if "images" in update_data:
-        flag_modified(offer, "images")
-
     await db.commit()
     await db.refresh(offer)
-
-    if images_to_delete:
-        await asyncio.gather(
-            *[delete_image(key) for key in images_to_delete],
-            return_exceptions=True,
-        )
 
     await redis.invalidate("offers")
 
@@ -278,3 +275,30 @@ async def delete_offer(
     await db.delete(offer)
     await db.commit()
     await redis.invalidate("offers:items")
+
+
+async def delete_offer_image(
+    offer_id: int,
+    image_key: str,
+    current_doctor: DoctorRead,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> None:
+    offer = await db.get(Offer, offer_id)
+    if not offer:
+        raise OfferNotFoundError()
+    if offer.doctor_id != current_doctor.id:
+        raise OfferAccessDenied()
+
+    current_images = offer.images or []
+    if image_key not in current_images:
+        raise OfferImageNotFoundError()
+
+    updated_images = [key for key in current_images if key != image_key]
+    offer.images = updated_images
+    flag_modified(offer, "images")
+    await db.commit()
+
+    await delete_image(image_key)
+        
+    await redis.invalidate("offers")        

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.users.models import User
 from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
 from src.modules.doctors.schemas import DoctorRead
@@ -17,6 +18,7 @@ from src.modules.offers.schemas import (
 from src.modules.offers.service import (
     create_offer,
     delete_offer,
+    delete_offer_image,
     get_offer_by_id,
     get_offers_by_doctor,
     get_offers_by_filters,
@@ -67,11 +69,21 @@ async def upload_offer_images_handle(
 @router.get("/", response_model=PaginatedResponse[OfferRead], summary="Get all offers")
 async def get_offers_by_filters_handle(
     filters: Annotated[OfferFilterParams, Depends()],
-    current_user: UserRead | None = Depends(get_optional_user),
+    optional_user: UserRead | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[OfferRead]:
-    return await get_offers_by_filters(current_user, filters, db, redis)
+    return await get_offers_by_filters(optional_user, filters, db, redis)
+
+
+@router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")
+async def get_offer_by_id_handle(
+    offer_id: int,
+    optional_user: UserRead | None = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> OfferRead:
+    return await get_offer_by_id(offer_id, optional_user, db, redis)
 
 
 @router.get(
@@ -86,24 +98,16 @@ async def get_offers_by_doctor_handle(
     return await get_offers_by_doctor(current_doctor, db)
 
 
-@router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")
-async def get_offer_by_id_handle(
-    offer_id: int,
-    db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),
-) -> OfferRead:
-    return await get_offer_by_id(offer_id, db, redis)
-
-
 # UPDATE
 @router.patch("/{offer_id}", response_model=OfferRead, summary="Update offer by id")
 async def update_offer_by_id_handle(
     offer_id: int,
     offer_data: OfferUpdate,
+    current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),
+    redis: RedisCache = Depends(get_redis),    
 ) -> OfferRead:
-    return await update_offer_by_id(offer_id, offer_data, db, redis)
+    return await update_offer_by_id(offer_id, offer_data, current_doctor, db, redis)
 
 
 @router.patch(
@@ -113,9 +117,9 @@ async def update_offer_by_id_handle(
 )
 async def approve_offer_handle(
     offer_id: int,
-    admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),
+    redis: RedisCache = Depends(get_redis),    
+    admin: UserRead = Depends(get_admin_user),
 ) -> OfferRead:
     return await approve_item(Offer, OfferRead, offer_id, db, redis, "offers")
 
@@ -128,9 +132,9 @@ async def approve_offer_handle(
 async def reject_offer_handle(
     offer_id: int,
     reject_data: OfferReject,
-    admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
+    admin: UserRead = Depends(get_admin_user),
 ) -> OfferRead:
     return await reject_item(
         Offer,
@@ -153,6 +157,21 @@ async def delete_offer_handle(
     offer_id: int,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),
+    redis: RedisCache = Depends(get_redis),    
 ) -> None:
     await delete_offer(offer_id, current_doctor, db, redis)
+
+
+@router.delete(
+    "/{offer_id}/images/{image_key:path}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete image from offer",
+)
+async def delete_offer_image_handle(
+    offer_id: int,
+    image_key: str,
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> None:
+    await delete_offer_image(offer_id, image_key, current_doctor, db, redis)

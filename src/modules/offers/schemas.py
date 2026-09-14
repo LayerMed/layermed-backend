@@ -44,8 +44,7 @@ class OfferUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=100)
     description: str | None = Field(default=None, min_length=2, max_length=500)
     cost: int | None = Field(default=None, gt=0)
-    offer_format: OfferFormat | None = None
-    images: list[str] | None = None
+    offer_format: OfferFormat | None = None    
 
 
 class OfferReject(BaseModel):
