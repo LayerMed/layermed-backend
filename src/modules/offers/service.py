@@ -232,15 +232,16 @@ async def update_offer_by_id(
     db: AsyncSession,
     redis: RedisCache,
 ) -> OfferRead:
-    update_data = offer_data.model_dump(exclude_unset=True)
-    if not update_data:
-        return await get_offer_by_id(offer_id, db, redis)
-
     offer = await db.get(Offer, offer_id)
+
     if not offer:
         raise OfferNotFoundError()
     if current_doctor.id != offer.doctor_id:
         raise OfferAccessDenied()
+    
+    update_data = offer_data.model_dump(exclude_unset=True)
+    if not update_data:
+        return OfferRead.model_validate(offer)
 
     for field, value in update_data.items():
         setattr(offer, field, value)
