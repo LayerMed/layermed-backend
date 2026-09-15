@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_PASSWORD: int
+    REDIS_DB: int = 0
 
     # S3
     S3_ENDPOINT: str
@@ -34,6 +35,7 @@ class Settings(BaseSettings):
     TOKEN_EXPIRE: int
 
     DUMMY_HASH: str
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     @property
     def pg_psycopg_dsn(self) -> str:

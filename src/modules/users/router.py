@@ -68,7 +68,7 @@ async def login_user_handle(
     if not user or not is_password_valid:
         raise InvalidCredentialsError()
 
-    token = create_access_token({"sub": form_data.username})
+    token = create_access_token({"sub": form_data.username}, user.token_version)
     return TokenResponse(access_token=token)
 
 

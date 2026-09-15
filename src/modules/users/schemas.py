@@ -20,7 +20,6 @@ def validate_password_rules(value: str) -> str:
     return value
 
 
-
 ValidPassword = Annotated[
     str,
     Field(min_length=8, max_length=128),
@@ -43,6 +42,7 @@ class UserRead(BaseModel):
     city_id: int | None = None
     email: EmailStr
     role: UserRole
+    token_version: int
     created_at: datetime.datetime
     updated_at: datetime.datetime
     doctor: DoctorRead | None = None

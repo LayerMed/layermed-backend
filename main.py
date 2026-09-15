@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
+from src.core.config import settings
 from src.core.logs import logger
 from src.common.exceptions import AppError
 from src.services.storage.redis import redis_client
@@ -48,11 +49,9 @@ async def app_error_handle(request: Request, exc: AppError):
     )
 
 
-origins = ["http://localhost:3000"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

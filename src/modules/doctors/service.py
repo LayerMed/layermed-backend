@@ -1,9 +1,13 @@
+import asyncio
+from typing import Sequence
+
 import sqlalchemy.exc
 from fastapi import UploadFile
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.services.moderation.service import SchemaT, ModelT, approve_item, reject_item
 from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
@@ -20,6 +24,7 @@ from src.modules.doctors.schemas import (
     DoctorFilterParams,
     DoctorRead,
     DoctorReadDetailed,
+    DoctorReject,
     DoctorUpdate,
 )
 from src.modules.specialties.models import Specialty
@@ -276,6 +281,78 @@ async def update_doctor(
     return DoctorRead.model_validate(doctor)
 
 
+async def approve_doctor(    
+    doctor_id: int,
+    db: AsyncSession,
+    redis: RedisCache,    
+):
+    query = (
+        update(Doctor)
+        .where(Doctor.id == doctor_id)
+        .values(status=ModerationStatus.APPROVED, rejection_reason=None)
+        .returning(Doctor)
+    )
+    result = await db.execute(query)
+    doctor = result.scalar_one_or_none()
+    if doctor is None:
+        raise DoctorNotFoundError()
+
+    query_email = select(User.email).where(User.id == doctor.user_id)
+    user_email = (await db.execute(query_email)).scalar_one()
+
+    await db.commit()
+
+    await asyncio.gather(
+        redis.invalidate("doctors"), 
+        redis.invalidate("users"),
+        redis.delc(redis.build_key("users", "current", user_email))
+    )
+
+    return DoctorRead.model_validate(doctor)
+
+
+async def reject_doctor(
+    doctor_id: int,
+    reject_data: DoctorReject,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> DoctorRead:
+    query_doctor = (
+        update(Doctor)
+        .where(Doctor.id == doctor_id)
+        .values(
+            status=ModerationStatus.REJECTED,
+            rejection_reason=reject_data.rejection_reason,
+        )
+        .returning(Doctor)
+    )
+    res_doctor = await db.execute(query_doctor)
+    doctor = res_doctor.scalar_one_or_none()
+    if doctor is None:
+        raise DoctorNotFoundError()
+
+    query_user = (
+        update(User)
+        .where(User.id == doctor.user_id)
+        .values(
+            role=UserRole.CLIENT,
+            token_version=User.token_version + 1,
+        )
+        .returning(User.email)
+    )
+    res_user = await db.execute(query_user)
+    user_email = res_user.scalar_one()
+
+    await db.commit()
+
+    await asyncio.gather(
+        redis.invalidate("doctors"), 
+        redis.invalidate("users"),
+        redis.delc(redis.build_key("users", "current", user_email))
+    )
+    return DoctorRead.model_validate(doctor)
+
+
 # DELETE
 async def delete_doctor(
     password_data: PasswordConfirm,
@@ -297,13 +374,22 @@ async def delete_doctor(
         raise DoctorNotFoundError()
 
     await db.execute(
-        update(User).where(User.id == current_user.id).values(role=UserRole.CLIENT)
+        update(User)
+        .where(User.id == current_user.id)
+        .values(
+            role=UserRole.CLIENT,
+            token_version=User.token_version + 1
+        )
     )
 
     await db.commit()
-
-    await redis.invalidate("doctors")
-    await redis.invalidate("users")
+    await asyncio.gather(
+        redis.delc(
+            redis.build_key("users", "current", current_user.email)
+        ),
+        redis.invalidate("doctors"),
+        redis.invalidate("users")
+    )
 
 
 async def delete_doctor_avatar(
