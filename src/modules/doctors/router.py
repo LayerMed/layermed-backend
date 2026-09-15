@@ -5,8 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
-from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user, get_optional_user
-from src.modules.doctors.exceptions import DoctorNotFoundError, DoctorProfileAlreadyExistsError
+from src.core.dependencies import (
+    get_admin_user,
+    get_current_doctor,
+    get_current_user,
+    get_optional_user,
+)
+from src.modules.doctors.exceptions import (
+    DoctorNotFoundError,
+    DoctorProfileAlreadyExistsError,
+)
 from src.modules.doctors.schemas import (
     DoctorCreate,
     DoctorFilterParams,
@@ -22,12 +30,11 @@ from src.modules.doctors.service import (
     get_doctor_by_id,
     get_doctors_by_filters,
     register_doctor,
-    reject_doctor,    
+    reject_doctor,
     update_doctor,
     upload_doctor_avatar,
 )
 from src.modules.users.schemas import UserRead
-from src.services.moderation.service import approve_item, reject_item
 from src.services.storage.postgres import get_session
 from src.services.storage.redis import RedisCache, get_redis
 
@@ -77,7 +84,9 @@ async def get_doctors_by_filters_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[DoctorRead]:
-    return await get_doctors_by_filters(filters, optional_user, specialty_ids, db, redis)
+    return await get_doctors_by_filters(
+        filters, optional_user, specialty_ids, db, redis
+    )
 
 
 @router.get(
@@ -105,7 +114,6 @@ async def get_doctor_by_id_handle(
     redis: RedisCache = Depends(get_redis),
 ) -> DoctorReadDetailed:
     return await get_doctor_by_id(doctor_id, optional_user, db, redis)
-
 
 
 # UPDATE

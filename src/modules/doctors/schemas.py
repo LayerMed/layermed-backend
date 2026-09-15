@@ -9,6 +9,7 @@ from src.modules.specialties.schemas import SpecialtyRead
 
 ValidBio = Annotated[str, Field(max_length=TextLength.MEDIUM)]
 
+
 class DoctorCreate(BaseModel):
     specialty_ids: list[int] = Field(default_factory=list)
     education: str

@@ -181,7 +181,7 @@ async def get_offers_by_filters(
 async def get_offers_by_doctor(
     current_doctor: DoctorRead,
     db: AsyncSession,
-) -> list[OfferRead]:    
+) -> list[OfferRead]:
     query = select(Offer).where(Offer.doctor_id == current_doctor.id)
     result = await db.execute(query)
     offers = result.scalars().all()
@@ -212,7 +212,7 @@ async def get_offer_by_id(
 
     result = await db.execute(query)
     offer = result.scalar_one_or_none()
-    
+
     if not offer:
         raise OfferNotFoundError()
 
@@ -238,7 +238,7 @@ async def update_offer_by_id(
         raise OfferNotFoundError()
     if current_doctor.id != offer.doctor_id:
         raise OfferAccessDenied()
-    
+
     update_data = offer_data.model_dump(exclude_unset=True)
     if not update_data:
         return OfferRead.model_validate(offer)
@@ -301,5 +301,5 @@ async def delete_offer_image(
     await db.commit()
 
     await delete_image(image_key)
-        
-    await redis.invalidate("offers")        
+
+    await redis.invalidate("offers")

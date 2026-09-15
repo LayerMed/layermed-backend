@@ -11,7 +11,7 @@ from src.modules.specialties.exceptions import (
 from src.modules.specialties.models import Specialty
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
-    SpecialtyCreate,    
+    SpecialtyCreate,
     SpecialtyRead,
     SpecialtyUpdate,
 )
@@ -40,9 +40,7 @@ async def create_specialty(
 
 
 # READ
-async def get_specialties(
-    db: AsyncSession, redis: RedisCache
-) -> list[SpecialtyRead]:
+async def get_specialties(db: AsyncSession, redis: RedisCache) -> list[SpecialtyRead]:
     cache_key = redis.build_key("specialties", "items", "all")
     cached = await redis.getc(cache_key)
     if cached:

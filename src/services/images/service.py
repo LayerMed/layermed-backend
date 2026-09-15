@@ -7,9 +7,13 @@ from PIL import Image, UnidentifiedImageError
 from PIL.Image import DecompressionBombError
 
 from src.common.enums import S3Folders
-from src.services.images.exceptions import ImageDimensionsError, ImageExtensionError, ImageWeightError, MegabyteNotLessNull
+from src.services.images.exceptions import (
+    ImageDimensionsError,
+    ImageExtensionError,
+    ImageWeightError,
+    MegabyteNotLessNull,
+)
 from src.services.storage.s3 import upload_image
-
 
 Image.MAX_IMAGE_PIXELS = 16_000_000
 
@@ -88,13 +92,14 @@ def offer_optimization(image_bytes: bytes, max_width: int = 1200) -> bytes:
     except (UnidentifiedImageError, OSError):
         raise ImageExtensionError()
 
+
 async def save_and_upload_image(
     image: UploadFile,
     folder: S3Folders,
     optimizer: Callable[[bytes], bytes],
 ) -> str:
     image_validate(image)
-    
+
     max_size = mb_to_bytes(5)
     image_bytes = await image.read(max_size + 1)
     if len(image_bytes) > max_size:

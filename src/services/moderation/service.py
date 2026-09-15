@@ -42,7 +42,6 @@ async def update_moderation_status(
     for ns in namespaces:
         await redis.invalidate(ns)
 
-    
     return schema.model_validate(updated_item)
 
 

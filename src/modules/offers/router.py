@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.users.models import User
 from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
 from src.modules.doctors.schemas import DoctorRead
@@ -105,7 +104,7 @@ async def update_offer_by_id_handle(
     offer_data: OfferUpdate,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),    
+    redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
     return await update_offer_by_id(offer_id, offer_data, current_doctor, db, redis)
 
@@ -118,7 +117,7 @@ async def update_offer_by_id_handle(
 async def approve_offer_handle(
     offer_id: int,
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),    
+    redis: RedisCache = Depends(get_redis),
     admin: UserRead = Depends(get_admin_user),
 ) -> OfferRead:
     return await approve_item(Offer, OfferRead, offer_id, db, redis, "offers")
@@ -157,7 +156,7 @@ async def delete_offer_handle(
     offer_id: int,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
-    redis: RedisCache = Depends(get_redis),    
+    redis: RedisCache = Depends(get_redis),
 ) -> None:
     await delete_offer(offer_id, current_doctor, db, redis)
 

@@ -25,7 +25,7 @@ class OfferRead(BaseModel):
     images: list[str] | None
 
     model_config = ConfigDict(from_attributes=True)
-    
+
 
 class OfferFilterParams(BaseFilterParams):
     city_id: int | None = None
@@ -44,7 +44,7 @@ class OfferUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=100)
     description: str | None = Field(default=None, min_length=2, max_length=500)
     cost: int | None = Field(default=None, gt=0)
-    offer_format: OfferFormat | None = None    
+    offer_format: OfferFormat | None = None
 
 
 class OfferReject(BaseModel):

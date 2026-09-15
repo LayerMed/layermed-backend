@@ -16,6 +16,7 @@ class ImageExtensionError(AppError):
 class MegabyteNotLessNull(AppError):
     detail = "The megabyte value must not be less than 0"
 
+
 class ImageDimensionsError(AppError):
     status_code = status.HTTP_400_BAD_REQUEST
     detail = "Image resolution is too large or corrupted"

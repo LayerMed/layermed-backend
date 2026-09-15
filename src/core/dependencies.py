@@ -31,8 +31,8 @@ async def get_current_user(
         email = payload.get("sub")
         token_version = payload.get("token_version")
 
-        if email is None or token_version is None:            
-            raise credentials_exception        
+        if email is None or token_version is None:
+            raise credentials_exception
     except jwt.PyJWTError as e:
         logger.warning("Failed to decode JWT token: {error}", error=str(e))
         raise credentials_exception

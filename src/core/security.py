@@ -28,12 +28,12 @@ def create_access_token(user_data: dict, token_version: int) -> str:
     now = datetime.now(UTC)
     expire = now + timedelta(minutes=settings.TOKEN_EXPIRE)
     data_copy = user_data.copy()
-    data_copy.update({
-        "iat": int(now.timestamp()),
-        "exp": token_version,
-        "exp": int(expire.timestamp()),
-    })
+    data_copy.update(
+        {
+            "iat": int(now.timestamp()),
+            "exp": token_version,
+            "exp": int(expire.timestamp()),
+        }
+    )
     encoded_jwt = jwt.encode(data_copy, settings.KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
-
-

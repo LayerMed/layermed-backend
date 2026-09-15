@@ -160,10 +160,7 @@ async def update_password(
     query = (
         update(User)
         .where(User.id == current_user.id)
-        .values(
-            password=hashed_password,
-            token_version=User.token_version + 1
-        )
+        .values(password=hashed_password, token_version=User.token_version + 1)
     )
 
     await db.execute(query)
@@ -195,9 +192,11 @@ async def delete_account(
     ]
 
     if current_user.role == UserRole.DOCTOR:
-        tasks.extend([
-            redis.invalidate("doctors"),
-            redis.invalidate("offers"),
-        ])
+        tasks.extend(
+            [
+                redis.invalidate("doctors"),
+                redis.invalidate("offers"),
+            ]
+        )
 
     await asyncio.gather(*tasks)

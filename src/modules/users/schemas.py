@@ -1,5 +1,6 @@
 import datetime
 from typing import Annotated
+
 import zxcvbn
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
@@ -13,10 +14,10 @@ def validate_password_rules(value: str) -> str:
         raise ValueError("This password is too easy. Please, use another password")
     if len(set(value)) == 1:
         raise ValueError("Password cannot consist of a single repeating character")
-    results = zxcvbn.zxcvbn(value)  
-    if results['score'] < 3:
+    results = zxcvbn.zxcvbn(value)
+    if results["score"] < 3:
         raise ValueError("Password is too predictable")
-        
+
     return value
 
 

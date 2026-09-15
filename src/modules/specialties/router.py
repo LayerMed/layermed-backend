@@ -46,7 +46,7 @@ async def create_specialty_handle(
     response_model=list[SpecialtyRead],
     summary="Get all specialties",
 )
-async def get_specialties_handle(    
+async def get_specialties_handle(
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SpecialtyRead]:

@@ -1,5 +1,4 @@
 import asyncio
-from typing import Sequence
 
 import sqlalchemy.exc
 from fastapi import UploadFile
@@ -7,7 +6,6 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.services.moderation.service import SchemaT, ModelT, approve_item, reject_item
 from src.common.enums import CacheTTL, ModerationStatus, S3Folders, UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.security import verify_pwd
@@ -145,7 +143,9 @@ async def get_doctors_by_filters(
     else:
         target_status = ModerationStatus.APPROVED
 
-    is_public_default = filters.is_default_page() and target_status == ModerationStatus.APPROVED
+    is_public_default = (
+        filters.is_default_page() and target_status == ModerationStatus.APPROVED
+    )
     cache_key = redis.build_key("doctors", "list", "default")
 
     if is_public_default and not is_admin:
@@ -194,11 +194,9 @@ async def get_doctor_by_id(
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorReadDetailed:
-    is_admin = (optional_user and optional_user.role == UserRole.ADMIN)
+    is_admin = optional_user and optional_user.role == UserRole.ADMIN
     is_owner = (
-        optional_user
-        and optional_user.doctor
-        and optional_user.doctor.id == doctor_id
+        optional_user and optional_user.doctor and optional_user.doctor.id == doctor_id
     )
 
     cache_key = redis.build_key("doctors", "items", doctor_id)
@@ -230,6 +228,7 @@ async def get_doctor_by_id(
         await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
+
 
 # UPDATE
 async def update_doctor(
@@ -281,10 +280,10 @@ async def update_doctor(
     return DoctorRead.model_validate(doctor)
 
 
-async def approve_doctor(    
+async def approve_doctor(
     doctor_id: int,
     db: AsyncSession,
-    redis: RedisCache,    
+    redis: RedisCache,
 ):
     query = (
         update(Doctor)
@@ -303,9 +302,9 @@ async def approve_doctor(
     await db.commit()
 
     await asyncio.gather(
-        redis.invalidate("doctors"), 
+        redis.invalidate("doctors"),
         redis.invalidate("users"),
-        redis.delc(redis.build_key("users", "current", user_email))
+        redis.delc(redis.build_key("users", "current", user_email)),
     )
 
     return DoctorRead.model_validate(doctor)
@@ -346,9 +345,9 @@ async def reject_doctor(
     await db.commit()
 
     await asyncio.gather(
-        redis.invalidate("doctors"), 
+        redis.invalidate("doctors"),
         redis.invalidate("users"),
-        redis.delc(redis.build_key("users", "current", user_email))
+        redis.delc(redis.build_key("users", "current", user_email)),
     )
     return DoctorRead.model_validate(doctor)
 
@@ -376,19 +375,14 @@ async def delete_doctor(
     await db.execute(
         update(User)
         .where(User.id == current_user.id)
-        .values(
-            role=UserRole.CLIENT,
-            token_version=User.token_version + 1
-        )
+        .values(role=UserRole.CLIENT, token_version=User.token_version + 1)
     )
 
     await db.commit()
     await asyncio.gather(
-        redis.delc(
-            redis.build_key("users", "current", current_user.email)
-        ),
+        redis.delc(redis.build_key("users", "current", current_user.email)),
         redis.invalidate("doctors"),
-        redis.invalidate("users")
+        redis.invalidate("users"),
     )
 
 
