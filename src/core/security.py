@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+import secrets
 
 import jwt
 from fastapi.security import OAuth2PasswordBearer
@@ -24,9 +25,9 @@ def verify_pwd(plain_pwd: str, hashed_pwd: str) -> bool:
     return pwd_context.verify(plain_pwd, target_pwd)
 
 
-def create_access_token(user_data: dict, token_version: int) -> str:
+def create_access_token(user_data: dict, token_version: int = 0) -> str:
     now = datetime.now(UTC)
-    expire = now + timedelta(minutes=settings.TOKEN_EXPIRE)
+    expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE)
     data_copy = user_data.copy()
     data_copy.update(
         {
@@ -37,3 +38,6 @@ def create_access_token(user_data: dict, token_version: int) -> str:
     )
     encoded_jwt = jwt.encode(data_copy, settings.KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+def generate_refresh_token() -> str:
+    return secrets.token_urlsafe(64)
