@@ -1,3 +1,5 @@
+import asyncio
+
 from pydantic import EmailStr
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -156,10 +158,17 @@ async def update_password(
 
     hashed_password = hash_pwd(password_data.new_password)
     query = (
-        update(User).where(User.id == current_user.id).values(password=hashed_password)
+        update(User)
+        .where(User.id == current_user.id)
+        .values(
+            password=hashed_password,
+            token_version=User.token_version + 1
+        )
     )
+
     await db.execute(query)
     await db.commit()
+
     cache_key = redis.build_key("users", "current", current_user.email)
     await redis.delc(cache_key)
 
@@ -180,5 +189,15 @@ async def delete_account(
     await db.execute(query)
     await db.commit()
 
-    cache_key = redis.build_key("users", "current", current_user.email)
-    await redis.delc(cache_key)
+    tasks = [
+        redis.delc(redis.build_key("users", "current", current_user.email)),
+        redis.invalidate("users"),
+    ]
+
+    if current_user.role == UserRole.DOCTOR:
+        tasks.extend([
+            redis.invalidate("doctors"),
+            redis.invalidate("offers"),
+        ])
+
+    await asyncio.gather(*tasks)
