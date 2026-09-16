@@ -9,7 +9,8 @@ from src.modules.specialties.router import router as specialty_router
 from src.modules.symptoms.router import router as symptom_router
 from src.modules.users.router import router as users_router
 
-api_router = APIRouter(prefix="/api/v1")
+# api_router = APIRouter(prefix="/api/v1")
+api_router = APIRouter()
 
 all_routers = [
     users_router,

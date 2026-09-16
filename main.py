@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 
-from src.core import limiter
+from src.core.limiter import limiter
 from src.core.config import settings
 from src.core.logs import logger
 from src.common.exceptions import AppError
@@ -57,4 +57,4 @@ app.add_middleware(
 )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=settings.DEBUG)
