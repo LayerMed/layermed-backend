@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import RateLimit
-from src.core.limiter import limiter
 from src.core.dependencies import get_admin_user
+from src.core.limiter import limiter
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
 from src.modules.cities.service import (
     create_city,

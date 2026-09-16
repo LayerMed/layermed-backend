@@ -5,10 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import RateLimit
-from src.core.limiter import limiter
-from src.core.config import settings
 from src.common.schemas import PaginatedResponse, PasswordConfirm, TokenResponse
+from src.core.config import settings
 from src.core.dependencies import get_admin_user, get_current_user
+from src.core.limiter import limiter
 from src.core.security import verify_pwd
 from src.modules.users.exceptions import InvalidCredentialsError
 from src.modules.users.models import User
@@ -43,7 +43,7 @@ def set_refresh_cookie(response: Response, refresh_token: str) -> None:
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False, # потом поставить true
+        secure=False,  # потом поставить true
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE,
     )
@@ -54,7 +54,7 @@ def set_refresh_cookie(response: Response, refresh_token: str) -> None:
     response_model=TokenResponse,
     summary="Refresh access token using cookie",
 )
-async def refresh_tokens_handle(    
+async def refresh_tokens_handle(
     response: Response,
     refresh_token: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_session),
@@ -152,8 +152,7 @@ async def get_users_by_filters_handle(
 )
 @limiter.limit(RateLimit.READ)
 async def get_me_handle(
-    request: Request,
-    current_user: UserRead = Depends(get_current_user)
+    request: Request, current_user: UserRead = Depends(get_current_user)
 ) -> UserRead:
     return current_user
 

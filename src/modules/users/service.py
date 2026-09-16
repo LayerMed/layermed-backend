@@ -6,10 +6,15 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from src.core.config import settings
 from src.common.enums import UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
-from src.core.security import hash_pwd, verify_pwd, create_access_token, generate_refresh_token
+from src.core.config import settings
+from src.core.security import (
+    create_access_token,
+    generate_refresh_token,
+    hash_pwd,
+    verify_pwd,
+)
 from src.modules.users.exceptions import (
     IncorrectPasswordError,
     InvalidCredentialsError,
@@ -26,14 +31,15 @@ from src.modules.users.schemas import (
 )
 from src.services.storage.redis import RedisCache
 
+
 # TOKEN
-async def tokens_for_user(user: User, redis: RedisCache) -> tuple[str, str]:    
+async def tokens_for_user(user: User, redis: RedisCache) -> tuple[str, str]:
     access_token = create_access_token(
         {"sub": user.email},
         user.token_version,
     )
     refresh_token = generate_refresh_token()
-    
+
     refresh_key = redis.build_key("users", "refresh", refresh_token)
     await redis.setc(refresh_key, user.email, ex=settings.REFRESH_TOKEN_EXPIRE)
 

@@ -3,10 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.limiter import limiter
 from src.common.enums import ModerationStatus, RateLimit
 from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
+from src.core.limiter import limiter
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.reviews.schemas import ReviewCreate, ReviewFilterParams, ReviewRead
 from src.modules.reviews.service import (
@@ -77,7 +77,7 @@ async def remove_review_request_handle(
     summary="Admin approves review deletion (Hide review & recalculate rating)",
     response_model=ReviewRead,
 )
-async def admin_approve_deletion_handle(    
+async def admin_approve_deletion_handle(
     review_id: int,
     admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),

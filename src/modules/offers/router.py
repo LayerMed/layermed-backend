@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import RateLimit
-from src.core.limiter import limiter
 from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
+from src.core.limiter import limiter
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
 from src.modules.offers.schemas import (
@@ -129,7 +129,6 @@ async def update_offer_by_id_handle(
     summary="Approve offer application (Admin only)",
 )
 async def approve_offer_handle(
-
     offer_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -144,7 +143,6 @@ async def approve_offer_handle(
     summary="Reject offer application (Admin only)",
 )
 async def reject_offer_handle(
-
     offer_id: int,
     reject_data: OfferReject,
     db: AsyncSession = Depends(get_session),

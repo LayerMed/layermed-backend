@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.limiter import limiter
 from src.common.enums import RateLimit, UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.dependencies import (
@@ -12,6 +11,7 @@ from src.core.dependencies import (
     get_current_user,
     get_optional_user,
 )
+from src.core.limiter import limiter
 from src.modules.doctors.exceptions import (
     DoctorNotFoundError,
     DoctorProfileAlreadyExistsError,

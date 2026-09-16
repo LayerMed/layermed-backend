@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import RateLimit
-from src.core.limiter import limiter
 from src.core.dependencies import get_admin_user
+from src.core.limiter import limiter
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 from src.modules.symptoms.service import (
     create_symptom,

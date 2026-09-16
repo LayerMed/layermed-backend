@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.enums import RateLimit
-from src.core.limiter import limiter
 from src.core.dependencies import get_current_user
+from src.core.limiter import limiter
 from src.modules.bookings.schemas import BookingCreate, BookingRead
 from src.modules.bookings.service import (
     cancel_booking,
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
 )
 @limiter.limit(RateLimit.MUTATION)
 async def create_booking_handle(
-    request: Request, 
+    request: Request,
     new_booking: BookingCreate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
