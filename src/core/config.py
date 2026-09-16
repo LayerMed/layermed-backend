@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     # JWT Settings
     KEY: str
     ALGORITHM: Literal["HS256"]
-    ACCESS_TOKEN_EXPIRE: int = 15
-    REFRESH_TOKEN_EXPIRE: int = 30
+    ACCESS_TOKEN_EXPIRE: int = 15 * 60
+    REFRESH_TOKEN_EXPIRE: int = 30 * 24 * 60 * 60
 
     DUMMY_HASH: str
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
