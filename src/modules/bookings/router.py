@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.enums import RateLimit
+from src.core.limiter import limiter
 from src.core.dependencies import get_current_user
 from src.modules.bookings.schemas import BookingCreate, BookingRead
 from src.modules.bookings.service import (
@@ -23,7 +25,9 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
     status_code=status.HTTP_201_CREATED,
     summary="Create booking",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def create_booking_handle(
+    request: Request, 
     new_booking: BookingCreate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -38,7 +42,9 @@ async def create_booking_handle(
     response_model=list[BookingRead],
     summary="Get bookings of current user",
 )
+@limiter.limit(RateLimit.READ)
 async def get_current_bookings_handle(
+    request: Request,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -51,7 +57,9 @@ async def get_current_bookings_handle(
     response_model=BookingRead,
     summary="Get booking by id",
 )
+@limiter.limit(RateLimit.READ)
 async def get_booking_by_id_handle(
+    request: Request,
     booking_id: int,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -66,7 +74,9 @@ async def get_booking_by_id_handle(
     response_model=BookingRead,
     summary="Cancel booking by id",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def cancel_booking_handle(
+    request: Request,
     booking_id: int,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),

@@ -44,3 +44,10 @@ class TextLength(IntEnum):
     SHORT = 100
     MEDIUM = 160
     LONG = 300
+
+
+class RateLimit(StrEnum):
+    AUTH = "5/minute"
+    MUTATION = "10/minute"    
+    READ = "60/minute"    
+    BURST = "120/minute"

@@ -1,9 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.enums import UserRole
+from src.core.limiter import limiter
+from src.common.enums import RateLimit, UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
 from src.core.dependencies import (
     get_admin_user,
@@ -48,7 +49,9 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
     status_code=status.HTTP_201_CREATED,
     summary="Registering a doctor account",
 )
+@limiter.limit(RateLimit.AUTH)
 async def register_doctor_handle(
+    request: Request,
     new_doctor: DoctorCreate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -62,7 +65,9 @@ async def register_doctor_handle(
 @router.post(
     "/avatar", status_code=status.HTTP_201_CREATED, summary="Upload doctor avatar"
 )
+@limiter.limit(RateLimit.MUTATION)
 async def upload_doctor_avatar_handle(
+    request: Request,
     image: UploadFile = File(...),
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
@@ -77,7 +82,9 @@ async def upload_doctor_avatar_handle(
     response_model=PaginatedResponse[DoctorRead],
     summary="Get all doctor from databse by filters",
 )
+@limiter.limit(RateLimit.BURST)
 async def get_doctors_by_filters_handle(
+    request: Request,
     filters: Annotated[DoctorFilterParams, Depends()],
     optional_user: UserRead | None = Depends(get_optional_user),
     specialty_ids: Annotated[list[int] | None, Query()] = None,
@@ -94,7 +101,9 @@ async def get_doctors_by_filters_handle(
     response_model=DoctorReadDetailed,
     summary="Get current doctor profile (including application status and rejection reason)",
 )
+@limiter.limit(RateLimit.READ)
 async def get_current_doctor_profile_handle(
+    request: Request,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -107,7 +116,9 @@ async def get_current_doctor_profile_handle(
 @router.get(
     "/{doctor_id}", response_model=DoctorReadDetailed, summary="Get doctor by id"
 )
+@limiter.limit(RateLimit.READ)
 async def get_doctor_by_id_handle(
+    request: Request,
     doctor_id: int,
     optional_user: UserRead | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_session),
@@ -118,9 +129,11 @@ async def get_doctor_by_id_handle(
 
 # UPDATE
 @router.patch(
-    "/me", response_model=DoctorRead, summary="Update doctor profile informaiton"
+    "/me", response_model=DoctorRead, summary="Update doctor profile information"
 )
+@limiter.limit(RateLimit.MUTATION)
 async def update_doctor_basic_handle(
+    request: Request,
     doctor_data: DoctorUpdate,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
@@ -164,7 +177,9 @@ async def reject_doctor_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete doctor profile",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def delete_doctor_account_handle(
+    request: Request,
     password_data: PasswordConfirm,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     current_user: UserRead = Depends(get_current_user),
@@ -179,7 +194,9 @@ async def delete_doctor_account_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete doctor avatar",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def delete_doctor_avatar_handle(
+    request: Request,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),

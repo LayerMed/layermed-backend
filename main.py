@@ -3,8 +3,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 
+from src.core import limiter
 from src.core.config import settings
 from src.core.logs import logger
 from src.common.exceptions import AppError
@@ -46,6 +48,18 @@ async def app_error_handle(request: Request, exc: AppError):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
+    )
+
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limiter(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please wait before sending new requests"},
+        headers={"Retry-After": str(exc.detail)},
     )
 
 

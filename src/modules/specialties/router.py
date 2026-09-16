@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.enums import RateLimit
+from src.core.limiter import limiter
 from src.core.dependencies import get_admin_user
 from src.modules.specialties.schemas import (
     SpecialtyCountRead,
@@ -46,7 +48,9 @@ async def create_specialty_handle(
     response_model=list[SpecialtyRead],
     summary="Get all specialties",
 )
+@limiter.limit(RateLimit.BURST)
 async def get_specialties_handle(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SpecialtyRead]:
@@ -59,7 +63,9 @@ async def get_specialties_handle(
     response_model=list[SpecialtyCountRead],
     summary="Get numbers of specialties",
 )
+@limiter.limit(RateLimit.BURST)
 async def get_specialties_count_handle(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SpecialtyCountRead]:
@@ -71,7 +77,9 @@ async def get_specialties_count_handle(
     response_model=SpecialtyRead,
     summary="Get specialty by id",
 )
+@limiter.limit(RateLimit.READ)
 async def get_specialty_by_id_handle(
+    request: Request,
     specialty_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -86,7 +94,9 @@ async def get_specialty_by_id_handle(
     response_model=SpecialtyRead,
     summary="Update specialty",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def update_specialty_by_id_handle(
+    request: Request,
     specialty_id: int,
     specialty_data: SpecialtyUpdate,
     db: AsyncSession = Depends(get_session),
@@ -103,7 +113,9 @@ async def update_specialty_by_id_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete specialty",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def delete_specialty_handle(
+    request: Request,
     specialty_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),

@@ -1,13 +1,15 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, Response, status
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.enums import RateLimit
+from src.core.limiter import limiter
 from src.core.config import settings
 from src.common.schemas import PaginatedResponse, PasswordConfirm, TokenResponse
 from src.core.dependencies import get_admin_user, get_current_user
-from src.core.security import create_access_token, verify_pwd
+from src.core.security import verify_pwd
 from src.modules.users.exceptions import InvalidCredentialsError
 from src.modules.users.models import User
 from src.modules.users.schemas import (
@@ -52,7 +54,7 @@ def set_refresh_cookie(response: Response, refresh_token: str) -> None:
     response_model=TokenResponse,
     summary="Refresh access token using cookie",
 )
-async def refresh_tokens_handle(
+async def refresh_tokens_handle(    
     response: Response,
     refresh_token: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_session),
@@ -70,7 +72,9 @@ async def refresh_tokens_handle(
     response_model=TokenResponse,
     summary="User login",
 )
+@limiter.limit(RateLimit.AUTH)
 async def login_user_handle(
+    request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_session),
@@ -94,7 +98,9 @@ async def login_user_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Logout user and revoke refresh token",
 )
+@limiter.limit(RateLimit.AUTH)
 async def logout_handle(
+    request: Request,
     response: Response,
     refresh_token: str | None = Cookie(default=None),
     redis: RedisCache = Depends(get_redis),
@@ -110,7 +116,9 @@ async def logout_handle(
     status_code=status.HTTP_201_CREATED,
     summary="Registering a new user",
 )
+@limiter.limit(RateLimit.AUTH)
 async def register_user_handle(
+    request: Request,
     response: Response,
     new_user: UserCreate,
     db: AsyncSession = Depends(get_session),
@@ -142,7 +150,11 @@ async def get_users_by_filters_handle(
     response_model=UserRead,
     summary="Get current active user",
 )
-async def get_me_handle(current_user: UserRead = Depends(get_current_user)) -> UserRead:
+@limiter.limit(RateLimit.READ)
+async def get_me_handle(
+    request: Request,
+    current_user: UserRead = Depends(get_current_user)
+) -> UserRead:
     return current_user
 
 
@@ -166,7 +178,9 @@ async def get_user_by_id_handle(
     response_model=UserRead,
     summary="Update basic profile information",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def update_user_basic_handle(
+    request: Request,
     user_data: UserUpdate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -181,7 +195,9 @@ async def update_user_basic_handle(
     response_model=dict[str, str],
     summary="Change user password",
 )
+@limiter.limit(RateLimit.AUTH)
 async def update_user_password_handle(
+    request: Request,
     password_data: UserPasswordUpdate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -197,7 +213,9 @@ async def update_user_password_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete current user account",
 )
+@limiter.limit(RateLimit.AUTH)
 async def delete_user_account_handle(
+    request: Request,
     password_data: PasswordConfirm,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),

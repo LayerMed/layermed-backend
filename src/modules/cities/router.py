@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.enums import RateLimit
+from src.core.limiter import limiter
 from src.core.dependencies import get_admin_user
 from src.modules.cities.schemas import CityCreate, CityRead, CityUpdate
 from src.modules.cities.service import (
@@ -24,7 +26,9 @@ router = APIRouter(prefix="/cities", tags=["Cities"])
     status_code=status.HTTP_201_CREATED,
     summary="Create city",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def create_city_handle(
+    request: Request,
     new_city: CityCreate,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -39,7 +43,9 @@ async def create_city_handle(
     response_model=list[CityRead],
     summary="Get all cities",
 )
+@limiter.limit(RateLimit.BURST)
 async def get_cities_handle(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[CityRead]:
@@ -51,7 +57,9 @@ async def get_cities_handle(
     response_model=CityRead,
     summary="Get city by id",
 )
+@limiter.limit(RateLimit.READ)
 async def get_city_by_id_handle(
+    request: Request,
     city_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -65,7 +73,9 @@ async def get_city_by_id_handle(
     response_model=CityRead,
     summary="Update city",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def update_city_by_id_handle(
+    request: Request,
     city_id: int,
     city_data: CityUpdate,
     db: AsyncSession = Depends(get_session),
@@ -81,7 +91,9 @@ async def update_city_by_id_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete city",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def delete_city_handle(
+    request: Request,
     city_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
