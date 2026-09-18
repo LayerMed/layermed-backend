@@ -164,16 +164,6 @@ class TestRegisterDoctor:
         assert await fake_get_redis.getc(cache_key) is None
 
 
-def create_test_image(
-    format: str = "JPEG", size: tuple[int, int] = (100, 100)
-) -> io.BytesIO:
-    file = io.BytesIO()
-    image = Image.new("RGB", size, color="blue")
-    image.save(file, format=format)
-    file.seek(0)
-    return file
-
-
 class TestUploadDoctorAvatar:
     async def test_upload_doctor_avatar_success(
         self,
@@ -181,6 +171,7 @@ class TestUploadDoctorAvatar:
         get_test_session,
         fake_get_redis,
         fake_get_current_user_as_doctor,
+        create_test_image
     ):
         image_stream = create_test_image(format="JPEG", size=(600, 400))
         files = {"image": ("avatar.jpg", image_stream, "image/jpeg")}

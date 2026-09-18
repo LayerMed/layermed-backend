@@ -30,14 +30,6 @@ def fake_current_user_as_admin(fake_admin_user: UserRead):
 
 class TestCreateBooking:
     @pytest.fixture
-    async def seed_city(self, get_test_session):
-        city = City(name="Test City")
-        get_test_session.add(city)
-        await get_test_session.commit()
-        await get_test_session.refresh(city)
-        return city
-
-    @pytest.fixture
     async def seed_approved_offer(self, get_test_session, seed_city):
         now = datetime.now(UTC).replace(tzinfo=None)
 

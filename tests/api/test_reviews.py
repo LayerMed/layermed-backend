@@ -491,7 +491,7 @@ class TestUpdateReviews:
         await fake_get_redis.setc(cache_key, {"cached": "data"}, CacheTTL.FAST)
 
         response = await ac.patch(
-            f"/reviews/review/{target_review.id}/approve-deletion"
+            f"/reviews/review/{target_review.id}/approve"
         )
         assert response.status_code == 200
 
@@ -527,7 +527,7 @@ class TestUpdateReviews:
         cache_key = fake_get_redis.build_key("doctors", "items", doc.id)
         await fake_get_redis.setc(cache_key, {"cached": "data"}, CacheTTL.FAST)
 
-        response = await ac.patch(f"/reviews/review/{target_review.id}/reject-deletion")
+        response = await ac.patch(f"/reviews/review/{target_review.id}/reject")
         assert response.status_code == 200
 
         data = response.json()
@@ -547,7 +547,7 @@ class TestUpdateReviews:
     ):
         target_review = seed_review_update_setup["review"]
         response = await ac.patch(
-            f"/reviews/review/{target_review.id}/approve-deletion"
+            f"/reviews/review/{target_review.id}/approve"
         )
         assert response.status_code == 401
 
@@ -557,7 +557,7 @@ class TestUpdateReviews:
         seed_review_update_setup,
     ):
         target_review = seed_review_update_setup["review"]
-        response = await ac.patch(f"/reviews/review/{target_review.id}/reject-deletion")
+        response = await ac.patch(f"/reviews/review/{target_review.id}/reject")
         assert response.status_code == 401
 
     async def test_appeal_review_not_found(
