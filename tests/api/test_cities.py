@@ -65,7 +65,7 @@ class TestCreateCity:
 
 
 class TestReadCity:
-    async def test_get_cities(self, ac, created_city, get_test_session):
+    async def test_get_cities(self, ac, created_city):
         response = await ac.get("/cities/")
         assert response.status_code == 200
         data = response.json()

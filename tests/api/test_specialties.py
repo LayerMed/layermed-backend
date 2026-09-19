@@ -33,7 +33,6 @@ class TestCreatespecialty:
 
     async def test_create_specialty_validation_error(self, ac, fake_get_admin_user):
         long_payload = {
-            "name": "Surgeon",
             "name": "Long" * 100,
         }
         response = await ac.post("/specialties/", json=long_payload)
@@ -68,7 +67,7 @@ class TestCreatespecialty:
 
 
 class TestReadspecialty:
-    async def test_get_specialties(self, ac, created_specialty, get_test_session):
+    async def test_get_specialties(self, ac, created_specialty):
         response = await ac.get("/specialties/")
         assert response.status_code == 200
         data = response.json()

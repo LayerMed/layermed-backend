@@ -71,7 +71,7 @@ class TestCreateSymptom:
 
 
 class TestReadSymptom:
-    async def test_get_symptoms(self, ac, created_symptom, get_test_session):
+    async def test_get_symptoms(self, ac, created_symptom):
         response = await ac.get("/symptoms/")
         assert response.status_code == 200
         data = response.json()

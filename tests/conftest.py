@@ -1,4 +1,3 @@
-import io
 import uuid
 from collections.abc import AsyncGenerator, Callable, Generator
 from datetime import UTC, datetime
@@ -6,7 +5,6 @@ from datetime import UTC, datetime
 import fakeredis
 import pytest
 from httpx import ASGITransport, AsyncClient
-from PIL import Image
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import joinedload
@@ -211,18 +209,6 @@ def disable_rate_limiter():
 
 
 @pytest.fixture
-def create_test_image(
-    format: str = "JPEG", size: tuple[int, int] = (100, 100)
-) -> io.BytesIO:
-    file = io.BytesIO()
-    image = Image.new("RGB", size, color="blue")
-    image.save(file, format=format)
-    file.seek(0)
-    return file
-
-
-
-@pytest.fixture
 async def seed_city(get_test_session: AsyncSession) -> City:
     city = City(name=f"City_{uuid.uuid4().hex[:6]}")
     get_test_session.add(city)
@@ -240,7 +226,6 @@ async def seed_specialties(get_test_session: AsyncSession) -> list[Specialty]:
     await get_test_session.refresh(spec1)
     await get_test_session.refresh(spec2)
     return [spec1, spec2]
-
 
 
 @pytest.fixture
@@ -316,37 +301,35 @@ def offer_factory(
         city: City | None = None,
         status: ModerationStatus = ModerationStatus.APPROVED,
         **kwargs,
-            -> Offer:
+    ) -> Offer:
         now = datetime.now(UTC).replace(tzinfo=None)
         if not doctor:
             doctor = await doctor_factory()
         if not city:
             city = seed_city
 
-    defaults = {
-        "title": "Consultation",
-        "description": "General consultation",
-        "cost": 100,
-        "offer_format": OfferFormat.CLINIC,
-        "status": status,
-        "images": [],
-        "created_at": now,
-        "updated_at": now,
-    }
-    defaults.update(kwargs)
+        defaults = {
+            "title": "Consultation",
+            "description": "General consultation",
+            "cost": 100,
+            "offer_format": OfferFormat.CLINIC,
+            "status": status,
+            "images": [],
+            "created_at": now,
+            "updated_at": now,
+        }
+        defaults.update(kwargs)
 
-    offer = Offer(
-        doctor_id=doctor.id,
-        city_id=city.id,
-        **defaults,
-    )
-    get_test_session.add(offer)
-    await get_test_session.flush()
-    return offer
+        offer = Offer(
+            doctor_id=doctor.id,
+            city_id=city.id,
+            **defaults,
+        )
+        get_test_session.add(offer)
+        await get_test_session.flush()
+        return offer
 
     return _create_offer
-)
-
 
 
 @pytest.fixture

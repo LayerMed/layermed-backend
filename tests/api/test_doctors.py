@@ -1,21 +1,23 @@
 import io
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from PIL import Image
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from main import app
 from src.common.enums import CacheTTL, ModerationStatus, UserRole
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_doctor, get_current_user
 from src.core.security import hash_pwd
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.specialties.models import Specialty
 from src.modules.users.models import User
 from src.modules.users.schemas import UserRead
+from tests.service import create_test_image
 
 
 class TestRegisterDoctor:
@@ -171,7 +173,6 @@ class TestUploadDoctorAvatar:
         get_test_session,
         fake_get_redis,
         fake_get_current_user_as_doctor,
-        create_test_image
     ):
         image_stream = create_test_image(format="JPEG", size=(600, 400))
         files = {"image": ("avatar.jpg", image_stream, "image/jpeg")}
@@ -201,10 +202,6 @@ class TestUploadDoctorAvatar:
         mock_delete.assert_awaited_once_with(current_doctor.avatar_url)
 
         query = select(Doctor).where(Doctor.id == current_doctor.id)
-        result = await get_test_session.execute(query)
-        doctor_in_db = result.scalar_one()
-
-        assert doctor_in_db.avatar_url == new_s3_key
         result = await get_test_session.execute(query)
         doctor_in_db = result.scalar_one()
 
@@ -669,33 +666,21 @@ class TestDoctorModeration:
 
 
 @pytest.fixture
-async def pending_doctor_user(get_test_session):
-    now = datetime.now(UTC).replace(tzinfo=None)
-
-    user = User(
-        name="Pending Doctor",
-        email="pending_doc@test.com",
-        password=hash_pwd("fake_password_secret"),
+async def pending_doctor_user(
+    get_test_session: AsyncSession,
+    user_factory,
+    doctor_factory,
+) -> AsyncGenerator[UserRead, None]:
+    user = await user_factory(
         role=UserRole.DOCTOR,
-        created_at=now,
-        updated_at=now,
+        password="fake_password_secret",
     )
-    get_test_session.add(user)
-    await get_test_session.flush()
-
-    doctor = Doctor(
-        user_id=user.id,
-        education="Initial Medical University",
-        degree="MD",
-        experience_years=5,
-        bio="Initial bio.",
-        clinic="Main Clinic",
+    doctor = await doctor_factory(
+        user=user,
         status=ModerationStatus.PENDING,
-        created_at=now,
-        updated_at=now,
     )
-    get_test_session.add(doctor)
     await get_test_session.commit()
+    await get_test_session.refresh(doctor)
 
     stmt = select(User).where(User.id == user.id).options(joinedload(User.doctor))
     res = await get_test_session.execute(stmt)
@@ -703,8 +688,6 @@ async def pending_doctor_user(get_test_session):
 
     user_read = UserRead.model_validate(full_user)
     doctor_read = DoctorRead.model_validate(doctor)
-
-    from src.core.dependencies import get_current_doctor
 
     app.dependency_overrides[get_current_user] = lambda: user_read
     app.dependency_overrides[get_current_doctor] = lambda: doctor_read

@@ -1,21 +1,19 @@
-import io
-from collections.abc import Generator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
+
 import pytest
-from PIL import Image
 from sqlalchemy import select
-from datetime import datetime, UTC
 
 from main import app
-from src.common.enums import CacheTTL, ModerationStatus, OfferFormat
+from src.common.enums import CacheTTL, ModerationStatus, OfferFormat, UserRole
 from src.core.dependencies import get_current_doctor
-from src.modules.cities.models import City
-from src.modules.users.models import User
-from src.common.enums import UserRole
 from src.core.security import hash_pwd
+from src.modules.cities.models import City
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
+from src.modules.users.models import User
+from tests.service import create_test_image
 
 
 class TestCreateOffer:
@@ -23,7 +21,7 @@ class TestCreateOffer:
         self,
         ac,
         get_test_session,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_city,
     ):
         payload = {
@@ -39,7 +37,7 @@ class TestCreateOffer:
 
         data = response.json()
         assert data["id"] is not None
-        assert data["doctor_id"] == fake_current_user_as_admin.id
+        assert data["doctor_id"] == fake_get_current_doctor.id
         assert data["city_id"] == seed_city.id
         assert data["title"] == payload["title"]
         assert data["status"] == ModerationStatus.PENDING.value
@@ -49,14 +47,14 @@ class TestCreateOffer:
         result = await get_test_session.execute(query)
         db_offer = result.scalar_one_or_none()
         assert db_offer is not None
-        assert db_offer.doctor_id == fake_current_user_as_admin.id
+        assert db_offer.doctor_id == fake_get_current_doctor.id
         assert db_offer.status == ModerationStatus.PENDING
 
     async def test_create_offer_invalidates_cache(
         self,
         ac,
         fake_get_redis,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_city,
     ):
         cache_key = fake_get_redis.build_key("offers", "list", "default")
@@ -78,7 +76,7 @@ class TestCreateOffer:
     async def test_create_offer_validation_error(
         self,
         ac,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_city,
     ):
         payload = {
@@ -110,12 +108,11 @@ class TestCreateOffer:
         self,
         ac,
         get_test_session,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_city,
-        create_test_image
     ):
         offer = Offer(
-            doctor_id=fake_current_user_as_admin.id,
+            doctor_id=fake_get_current_doctor.id,
             city_id=seed_city.id,
             title="Consultation for photos",
             description="Consultation description with photos attached.",
@@ -155,13 +152,12 @@ class TestCreateOffer:
         self,
         ac,
         get_test_session,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_city,
-        create_test_image
     ):
         existing_images = [f"offers/img_{i}.jpg" for i in range(9)]
         offer = Offer(
-            doctor_id=fake_current_user_as_admin.id,
+            doctor_id=fake_get_current_doctor.id,
             city_id=seed_city.id,
             title="Almost Full Offer",
             description="Offer containing 9 images already.",
@@ -188,9 +184,8 @@ class TestCreateOffer:
         self,
         ac,
         get_test_session,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_city,
-        create_test_image
     ):
         now = datetime.now(UTC).replace(tzinfo=None)
 
@@ -236,13 +231,15 @@ class TestCreateOffer:
         files = [("images", ("img1.jpg", create_test_image(), "image/jpeg"))]
         response = await ac.post(f"/offers/{offer.id}/images", files=files)
         assert response.status_code == 403
-        assert response.json()["detail"] == "You do not have the rights to access this offer."
+        assert (
+            response.json()["detail"]
+            == "You do not have the rights to access this offer."
+        )
 
     async def test_upload_offer_images_not_found(
         self,
         ac,
-        fake_current_user_as_admin,
-        create_test_image
+        fake_get_current_doctor,
     ):
         files = [("images", ("img1.jpg", create_test_image(), "image/jpeg"))]
         response = await ac.post("/offers/99999/images", files=files)
@@ -588,7 +585,7 @@ class TestReadOffers:
 
 class TestUpdateOffers:
     @pytest.fixture
-    async def seed_offer_for_update(self, fake_current_user_as_admin, get_test_session):
+    async def seed_offer_for_update(self, fake_get_current_doctor, get_test_session):
         now = datetime.now(UTC).replace(tzinfo=None)
 
         city = City(name="Update City")
@@ -621,7 +618,7 @@ class TestUpdateOffers:
         await get_test_session.flush()
 
         offer = Offer(
-            doctor_id=fake_current_user_as_admin.id,
+            doctor_id=fake_get_current_doctor.id,
             city_id=city.id,
             title="Initial Title",
             description="Initial Description",
@@ -641,7 +638,7 @@ class TestUpdateOffers:
     async def test_update_offer_fields_success(
         self,
         ac,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         get_test_session,
         fake_get_redis,
         seed_offer_for_update,
@@ -678,7 +675,7 @@ class TestUpdateOffers:
     async def test_update_offer_removes_deleted_images_from_s3(
         self,
         ac,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         get_test_session,
         seed_offer_for_update,
     ):
@@ -708,7 +705,7 @@ class TestUpdateOffers:
     async def test_update_offer_empty_body(
         self,
         ac,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
         seed_offer_for_update,
     ):
         target_offer = seed_offer_for_update["offer"]
@@ -722,7 +719,7 @@ class TestUpdateOffers:
     async def test_update_offer_not_found(
         self,
         ac,
-        fake_current_user_as_admin,
+        fake_get_current_doctor,
     ):
         payload = {"title": "Ghost Offer"}
         response = await ac.patch("/offers/99999", json=payload)
@@ -935,7 +932,8 @@ class TestDeleteOffers:
             response = await ac.delete(f"/offers/{target_offer.id}")
             assert response.status_code == 403
             assert (
-                response.json()["detail"] == "You do not have the rights to access this offer."
+                response.json()["detail"]
+                == "You do not have the rights to access this offer."
             )
 
             query = select(Offer).where(Offer.id == target_offer.id)
