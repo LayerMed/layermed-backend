@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import AsyncGenerator, Callable, Generator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import fakeredis
 import pytest
@@ -11,7 +11,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.pool import NullPool
 
 from main import app
-from src.common.enums import ModerationStatus, OfferFormat, UserRole
+from src.common.enums import BookingStatus, ModerationStatus, OfferFormat, UserRole
 from src.core.config import settings
 from src.core.dependencies import (
     get_admin_user,
@@ -21,6 +21,7 @@ from src.core.dependencies import (
 )
 from src.core.limiter import limiter
 from src.core.security import hash_pwd
+from src.modules.bookings.models import Booking
 from src.modules.cities.models import City
 from src.modules.doctors.models import Doctor
 from src.modules.doctors.schemas import DoctorRead
@@ -330,6 +331,33 @@ def offer_factory(
         return offer
 
     return _create_offer
+
+
+@pytest.fixture
+def booking_factory(
+    get_test_session: AsyncSession, fake_get_current_user, offer_factory
+):
+    async def _create(
+        user_id=None, offer_id=None, status=BookingStatus.PENDING, days_ahead=1
+    ):
+        now = datetime.now(UTC).replace(tzinfo=None)
+        if not offer_id:
+            default_offer = await offer_factory(status=ModerationStatus.APPROVED)
+            offer_id = default_offer.id
+
+        booking = Booking(
+            user_id=user_id or fake_get_current_user.id,
+            offer_id=offer_id,
+            status=status,
+            appointment_time=now + timedelta(days=days_ahead),
+            created_at=now,
+            updated_at=now,
+        )
+        get_test_session.add(booking)
+        await get_test_session.flush()
+        return booking
+
+    return _create
 
 
 @pytest.fixture

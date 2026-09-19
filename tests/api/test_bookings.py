@@ -9,9 +9,7 @@ from src.common.enums import (
     ModerationStatus,
     UserRole,
 )
-from src.core.security import hash_pwd
 from src.modules.bookings.models import Booking
-from src.modules.users.models import User
 
 
 @pytest.fixture
@@ -152,65 +150,27 @@ class TestCreateBooking:
 
 class TestGetBookings:
     @pytest.fixture
-    async def seed_user_bookings(
-        self, get_test_session, fake_get_current_user, seed_offer
-    ):
-        now = datetime.now(UTC).replace(tzinfo=None)
-        appointment1 = datetime.now(UTC) + timedelta(days=1)
-        appointment2 = datetime.now(UTC) + timedelta(days=2)
-
-        booking1 = Booking(
-            user_id=fake_get_current_user.id,
-            offer_id=seed_offer.id,
-            status=BookingStatus.PENDING,
-            appointment_time=appointment1,
-            created_at=now,
-            updated_at=now,
-        )
-        booking2 = Booking(
-            user_id=fake_get_current_user.id,
-            offer_id=seed_offer.id,
-            status=BookingStatus.CONFIRMED,
-            appointment_time=appointment2,
-            created_at=now,
-            updated_at=now,
-        )
-
-        get_test_session.add_all([booking1, booking2])
+    async def seed_user_bookings(self, get_test_session, booking_factory):
+        b1 = await booking_factory(status=BookingStatus.PENDING, days_ahead=1)
+        b2 = await booking_factory(status=BookingStatus.CONFIRMED, days_ahead=2)
         await get_test_session.commit()
-        await get_test_session.refresh(booking1)
-        await get_test_session.refresh(booking2)
-
-        return [booking1, booking2]
+        await get_test_session.refresh(b1)
+        await get_test_session.refresh(b2)
+        return [b1, b2]
 
     @pytest.fixture
-    async def seed_other_user_booking(self, get_test_session, seed_offer):
-        now = datetime.now(UTC).replace(tzinfo=None)
-
-        other_user = User(
-            name="Other Client",
-            email="other_client@test.com",
-            password=hash_pwd("test_hashed_password"),
-            role=UserRole.CLIENT,
-            created_at=now,
-            updated_at=now,
-        )
-        get_test_session.add(other_user)
-        await get_test_session.flush()
-
-        other_booking = Booking(
+    async def seed_other_user_booking(
+        self, get_test_session, user_factory, booking_factory
+    ):
+        other_user = await user_factory(role=UserRole.CLIENT)
+        booking = await booking_factory(
             user_id=other_user.id,
-            offer_id=seed_offer.id,
             status=BookingStatus.PENDING,
-            appointment_time=datetime.now(UTC) + timedelta(days=3),
-            created_at=now,
-            updated_at=now,
+            days_ahead=3,
         )
-        get_test_session.add(other_booking)
         await get_test_session.commit()
-        await get_test_session.refresh(other_booking)
-
-        return other_booking
+        await get_test_session.refresh(booking)
+        return booking
 
     async def test_get_current_bookings_success(
         self,
@@ -262,6 +222,22 @@ class TestGetBookings:
         response = await ac.get("/bookings/my")
         assert response.status_code == 200
         assert response.json() == cached_payload
+
+    async def test_get_current_bookings_empty_list(
+        self,
+        ac,
+        fake_get_current_user,
+        fake_get_redis,
+    ):
+        response = await ac.get("/bookings/my")
+        assert response.status_code == 200
+        assert response.json() == []
+
+        cache_key = fake_get_redis.build_key(
+            "bookings", "user", fake_get_current_user.id
+        )
+        cached_data = await fake_get_redis.getc(cache_key)
+        assert cached_data == []
 
     async def test_get_current_bookings_unauthorized(
         self,
@@ -381,51 +357,24 @@ class TestGetBookings:
 
 class TestCancelBooking:
     @pytest.fixture
-    async def seed_pending_booking(
-        self, get_test_session, fake_get_current_user, seed_offer
-    ):
-        now = datetime.now(UTC).replace(tzinfo=None)
-        booking = Booking(
-            user_id=fake_get_current_user.id,
-            offer_id=seed_offer.id,
-            status=BookingStatus.PENDING,
-            appointment_time=datetime.now(UTC) + timedelta(days=2),
-            created_at=now,
-            updated_at=now,
-        )
-        get_test_session.add(booking)
+    async def seed_pending_booking(self, get_test_session, booking_factory):
+        booking = await booking_factory(status=BookingStatus.PENDING, days_ahead=2)
         await get_test_session.commit()
         await get_test_session.refresh(booking)
-
         return booking
 
     @pytest.fixture
-    async def seed_other_user_booking(self, get_test_session, seed_offer):
-        now = datetime.now(UTC).replace(tzinfo=None)
-
-        other_user = User(
-            name="Other User",
-            email="other_client_cancel@test.com",
-            password=hash_pwd("test_hashed_password"),
-            role=UserRole.CLIENT,
-            created_at=now,
-            updated_at=now,
-        )
-        get_test_session.add(other_user)
-        await get_test_session.flush()
-
-        booking = Booking(
+    async def seed_other_user_booking(
+        self, get_test_session, user_factory, booking_factory
+    ):
+        other_user = await user_factory(role=UserRole.CLIENT)
+        booking = await booking_factory(
             user_id=other_user.id,
-            offer_id=seed_offer.id,
             status=BookingStatus.PENDING,
-            appointment_time=datetime.now(UTC) + timedelta(days=2),
-            created_at=now,
-            updated_at=now,
+            days_ahead=2,
         )
-        get_test_session.add(booking)
         await get_test_session.commit()
         await get_test_session.refresh(booking)
-
         return booking
 
     async def test_cancel_booking_success(
@@ -460,13 +409,33 @@ class TestCancelBooking:
         )
         assert await fake_get_redis.getc(cache_key_id) is None
 
+    async def test_cancel_confirmed_booking_success(
+        self,
+        ac,
+        get_test_session,
+        fake_get_current_user,
+        seed_pending_booking,
+    ):
+        seed_pending_booking.status = BookingStatus.CONFIRMED
+        await get_test_session.commit()
+
+        response = await ac.patch(f"/bookings/{seed_pending_booking.id}")
+        assert response.status_code == 200
+        assert response.json()["status"] == BookingStatus.CANCELLED
+
     async def test_cancel_booking_by_admin(
         self,
         ac,
         get_test_session,
         fake_get_admin_user,
+        fake_get_redis,
         seed_other_user_booking,
     ):
+        owner_cache_key = fake_get_redis.build_key(
+            "bookings", "user", seed_other_user_booking.user_id
+        )
+        await fake_get_redis.setc(owner_cache_key, [{"owner": "data"}], CacheTTL.FAST)
+
         response = await ac.patch(f"/bookings/{seed_other_user_booking.id}")
         assert response.status_code == 200
 
@@ -478,6 +447,8 @@ class TestCancelBooking:
         result = await get_test_session.execute(query)
         booking_in_db = result.scalar_one()
         assert booking_in_db.status == BookingStatus.CANCELLED
+
+        assert await fake_get_redis.getc(owner_cache_key) is None
 
     @pytest.mark.parametrize(
         "invalid_status",

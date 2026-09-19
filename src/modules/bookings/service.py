@@ -1,3 +1,5 @@
+import asyncio
+
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -118,8 +120,7 @@ async def cancel_booking(
     current_user: UserRead,
     db: AsyncSession,
     redis: RedisCache,
-) -> BookingRead:
-    await get_booking_by_id(booking_id, current_user, db, redis)
+) -> BookingRead:    
     booking = await get_booking_by_id(booking_id, current_user, db, redis)
 
     if booking.status in (
@@ -139,9 +140,11 @@ async def cancel_booking(
     updated_booking = result.scalars().first()
     await db.commit()
 
-    cache_key_user = redis.build_key("bookings", "user", current_user.id)
+    cache_key_user = redis.build_key("bookings", "user", booking.user_id)
     cache_key_id = redis.build_key("bookings", "id", booking_id)
-    await redis.delc(cache_key_user)
-    await redis.delc(cache_key_id)
+    await asyncio.gather(
+        redis.delc(cache_key_user),
+        redis.delc(cache_key_id)
+    )
 
     return BookingRead.model_validate(updated_booking)

@@ -6,59 +6,39 @@ from sqlalchemy import select
 
 from src.common.enums import CacheTTL, UserRole
 from src.core.config import settings
-from src.core.security import hash_pwd, verify_pwd
-from src.modules.cities.models import City
+from src.core.security import verify_pwd
 from src.modules.users.models import User
 
 
-@pytest.fixture
-async def persisted_user(get_test_session) -> dict:
-    raw_password = "test_password_secret"
-    user = User(
-        name="Tester",
-        email="user@test.com",
-        password=hash_pwd(raw_password),
-        role=UserRole.CLIENT,
-    )
-    get_test_session.add(user)
-    await get_test_session.commit()
-    await get_test_session.refresh(user)
-
-    return {
-        "instance": user,
-        "email": user.email,
-        "raw_password": raw_password,
-    }
-
-
 class TestRegisterUser:
-    async def test_register_user(self, ac):
+    async def test_register_user_success(self, ac):
         new_user = {
             "name": "Tester",
-            "email": "user@test.com",
-            "password": "test_password_secret",
+            "email": "user_reg@test.com",
+            "password": "TestPassword123!Secure",
         }
         response = await ac.post("/users/register", json=new_user)
         assert response.status_code == 201
 
         data = response.json()
-        raw_token = data["access_token"]
-        token = jwt.decode(raw_token, settings.KEY, settings.ALGORITHM)
+        assert "access_token" in data
+        assert "refresh_token" in response.cookies
 
+        token = jwt.decode(
+            data["access_token"],
+            settings.KEY,
+            algorithms=[settings.ALGORITHM],
+        )
         assert token.get("sub") == new_user["email"]
         assert token.get("exp") is not None
 
-    async def test_register_user_with_city(self, ac, get_test_session):
-        city = City(name="Novorossiysk")
-        get_test_session.add(city)
-        await get_test_session.commit()
-
+    async def test_register_user_with_city(self, ac, get_test_session, seed_city):
         new_user = {
             "name": "Tester",
             "birth_date": "1995-10-25",
-            "city_id": city.id,
-            "email": "user@test.com",
-            "password": "test_password_secret",
+            "city_id": seed_city.id,
+            "email": "user_city@test.com",
+            "password": "TestPassword123!Secure",
         }
         response = await ac.post("/users/register", json=new_user)
         assert response.status_code == 201
@@ -68,109 +48,169 @@ class TestRegisterUser:
         user = result.scalar_one_or_none()
 
         assert user is not None
-        assert user.name == "Tester"
-        assert user.city_id == city.id
-        assert user.email == "user@test.com"
+        assert user.city_id == seed_city.id
+        assert user.birth_date == datetime.date(1995, 10, 25)
         assert verify_pwd(new_user["password"], user.password)
 
-    async def test_register_user_already_exists_error(self, ac):
-        new_user = {
-            "name": "Tester Mikle",
-            "email": "mikle@etest.com",
-            "password": "test_password_secret_mikle",
-        }
-        response = await ac.post("/users/register", json=new_user)
-        assert response.status_code == 201
+    async def test_register_user_already_exists_error(
+        self, ac, user_factory, get_test_session
+    ):
+        await user_factory(email="existing@test.com")
+        await get_test_session.commit()
 
         new_user = {
-            "name": "CheaterHacker",
-            "email": "mikle@etest.com",
-            "password": "test_parol_secret_mikle",
+            "name": "Cheater",
+            "email": "existing@test.com",
+            "password": "TestPassword123!Secure",
         }
         response = await ac.post("/users/register", json=new_user)
         assert response.status_code == 409
+        assert response.json()["detail"] == "User with this email already exists"
 
     async def test_register_invalid_email(self, ac):
         payload = {
             "name": "Tester",
-            "email": "invalid-email-format",
-            "password": "test_parol_secret",
+            "email": "not-an-email",
+            "password": "TestPassword123!Secure",
         }
         response = await ac.post("/users/register", json=payload)
         assert response.status_code == 422
 
-    async def test_register_invalid_password(self, ac):
+    @pytest.mark.parametrize(
+        "invalid_password",
+        [
+            "123",
+            "password",
+            "aaaaaaaaaa",
+            "qwerty12345",
+        ],
+    )
+    async def test_register_weak_passwords(self, ac, invalid_password):
         payload = {
             "name": "Tester",
             "email": "valid@test.com",
-            "password": "123",
+            "password": invalid_password,
         }
         response = await ac.post("/users/register", json=payload)
         assert response.status_code == 422
 
 
 class TestLoginUser:
-    async def test_login_user(self, ac, persisted_user):
+    async def test_login_user_success(self, ac, get_test_session, user_factory):
+        raw_password = "TestPassword123!Secure"
+        user = await user_factory(
+            email="login_user@test.com",
+            password=raw_password,
+        )
+        await get_test_session.commit()
+
         payload = {
-            "username": persisted_user["email"],
-            "password": persisted_user["raw_password"],
+            "username": user.email,
+            "password": raw_password,
         }
         response = await ac.post("/users/login", data=payload)
         assert response.status_code == 200
         assert "access_token" in response.json()
+        assert "refresh_token" in response.cookies
 
-    async def test_login_wrong_password(self, ac, persisted_user):
+    async def test_login_wrong_password(self, ac, get_test_session, user_factory):
+        user = await user_factory(
+            email="wrong_pwd@test.com",
+            password="TestPassword123!Secure",
+        )
+        await get_test_session.commit()
+
         payload = {
-            "username": persisted_user["email"],
-            "password": "111",
+            "username": user.email,
+            "password": "CompletelyWrongPassword123!",
         }
         response = await ac.post("/users/login", data=payload)
         assert response.status_code == 401
+        assert response.json()["detail"] == "Incorrect email or password"
 
     async def test_login_wrong_email(self, ac):
         payload = {
-            "username": "wrong@bug.com",
-            "password": "test_password_secret",
+            "username": "non_existent@test.com",
+            "password": "TestPassword123!Secure",
         }
         response = await ac.post("/users/login", data=payload)
         assert response.status_code == 401
+        assert response.json()["detail"] == "Incorrect email or password"
+
+
+class TestSessionManagement:
+    async def test_refresh_token_success(
+        self, ac, fake_get_redis, get_test_session, user_factory
+    ):
+        user = await user_factory(email="refresh_me@test.com")
+        await get_test_session.commit()
+
+        refresh_token = "valid_refresh_token_uuid"
+        refresh_key = fake_get_redis.build_key("users", "refresh", refresh_token)
+        await fake_get_redis.setc(refresh_key, user.email, ex=CacheTTL.FAST)
+
+        response = await ac.post(
+            "/users/refresh", cookies={"refresh_token": refresh_token}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+        assert "refresh_token" in response.cookies
+
+        assert await fake_get_redis.getc(refresh_key) is None
+
+    async def test_refresh_token_missing_cookie(self, ac):
+        response = await ac.post("/users/refresh")
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Refresh token missing"
+
+    async def test_refresh_token_invalid_or_expired(self, ac):
+        response = await ac.post(
+            "/users/refresh", cookies={"refresh_token": "expired_token"}
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Invalid or expired refresh token"
+
+    async def test_logout_revokes_token_and_deletes_cookie(self, ac, fake_get_redis):
+        refresh_token = "token_to_revoke"
+        refresh_key = fake_get_redis.build_key("users", "refresh", refresh_token)
+        await fake_get_redis.setc(refresh_key, "user@test.com", ex=CacheTTL.FAST)
+
+        response = await ac.post(
+            "/users/logout", cookies={"refresh_token": refresh_token}
+        )
+        assert response.status_code == 204
+        assert await fake_get_redis.getc(refresh_key) is None
 
 
 class TestUserFilterParams:
     @pytest.fixture
-    async def seed_users(self, get_test_session) -> list[User]:
-        users = [
-            User(
-                name="Alice Smith",
-                email="alice@test.com",
-                password="pwd",
-                role=UserRole.CLIENT,
-                birth_date=datetime.date(1990, 1, 1),
-            ),
-            User(
-                name="Bob Jones",
-                email="bob@test.com",
-                password="pwd",
-                role=UserRole.DOCTOR,
-                birth_date=datetime.date(1985, 5, 10),
-            ),
-            User(
-                name="Charlie Brown",
-                email="charlie@test.com",
-                password="pwd",
-                role=UserRole.CLIENT,
-                birth_date=datetime.date(2000, 12, 12),
-            ),
-            User(
-                name="Admin Boss",
-                email="admin_user@test.com",
-                password="pwd",
-                role=UserRole.ADMIN,
-            ),
-        ]
-        get_test_session.add_all(users)
+    async def seed_users(self, get_test_session, user_factory):
+        u1 = await user_factory(
+            name="Alice Smith",
+            email="alice@test.com",
+            role=UserRole.CLIENT,
+            birth_date=datetime.date(1990, 1, 1),
+        )
+        u2 = await user_factory(
+            name="Bob Jones",
+            email="bob@test.com",
+            role=UserRole.DOCTOR,
+            birth_date=datetime.date(1985, 5, 10),
+        )
+        u3 = await user_factory(
+            name="Charlie Brown",
+            email="charlie@test.com",
+            role=UserRole.CLIENT,
+            birth_date=datetime.date(2000, 12, 12),
+        )
+        admin = await user_factory(
+            name="Admin Boss",
+            email="admin_in_list@test.com",
+            role=UserRole.ADMIN,
+        )
         await get_test_session.commit()
-        return users
+        return [u1, u2, u3, admin]
 
     async def test_get_users_pagination_and_admin_exclusion(
         self, ac, seed_users, fake_get_admin_user
@@ -206,159 +246,163 @@ class TestUserFilterParams:
         result_names = [user["name"] for user in data["items"]]
         assert result_names == expected_names
 
+    async def test_get_users_forbidden_for_client(self, ac, fake_get_current_user):
+        response = await ac.get("/users/")
+        assert response.status_code == 403
+
 
 class TestUserById:
-    async def test_get_user_by_id(self, ac, persisted_user, fake_get_admin_user):
-        user_id = persisted_user["instance"].id
-        assert user_id is not None
-        response = await ac.get(f"/users/{user_id}")
-
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["name"] == "Tester"
-        assert data["email"] == "user@test.com"
-
-    async def test_get_user_by_id_not_found_error(
-        self, ac, persisted_user, fake_get_admin_user
+    async def test_get_user_by_id_success(
+        self, ac, fake_get_admin_user, user_factory, get_test_session
     ):
-        response = await ac.get("/users/9999")
-        assert response.status_code == 404
+        user = await user_factory(name="Target User", email="target@test.com")
+        await get_test_session.commit()
 
-    async def test_get_user_by_id_access_error(self, ac, persisted_user):
+        response = await ac.get(f"/users/{user.id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == user.id
+        assert data["name"] == "Target User"
+        assert data["email"] == "target@test.com"
+
+    async def test_get_user_by_id_not_found_error(self, ac, fake_get_admin_user):
+        response = await ac.get("/users/99999")
+        assert response.status_code == 404
+        assert response.json()["detail"] == "User not found"
+
+    async def test_get_user_by_id_access_error(self, ac, fake_get_current_user):
         response = await ac.get("/users/1")
-        assert response.status_code == 401
+        assert response.status_code == 403
 
 
 class TestUserMe:
-    async def test_get_me(self, ac, fake_get_current_user):
+    async def test_get_me_success(self, ac, fake_get_current_user):
         response = await ac.get("/users/me")
-        data = response.json()
-
         assert response.status_code == 200
-        assert data["name"] == "TestUser"
-        assert data["email"] == "user@test.com"
+        data = response.json()
+        assert data["id"] == fake_get_current_user.id
+        assert data["name"] == fake_get_current_user.name
+        assert data["email"] == fake_get_current_user.email
 
     async def test_get_me_not_authorized(self, ac):
         response = await ac.get("/users/me")
         assert response.status_code == 401
 
 
-class TestUpdatreUser:
+class TestUpdateUser:
     async def test_update_user_basic(self, ac, fake_get_current_user):
-        assert fake_get_current_user.email == "user@test.com"
-        assert fake_get_current_user.birth_date is None
-        assert fake_get_current_user.name == "TestUser"
-
         update_data = {
             "birth_date": "1995-10-25",
             "name": "UpdatedUser",
         }
         response = await ac.patch("/users/me", json=update_data)
+        assert response.status_code == 200
         data = response.json()
 
         assert data["birth_date"] == "1995-10-25"
         assert data["name"] == "UpdatedUser"
 
+    async def test_update_user_empty_body(self, ac, fake_get_current_user):
+        response = await ac.patch("/users/me", json={})
+        assert response.status_code == 200
+        assert response.json()["id"] == fake_get_current_user.id
+
     async def test_update_user_access_error(self, ac):
-        update_data = {
-            "birth_date": "1995-10-25",
-            "name": "UpdatedUser",
-        }
-        response = await ac.patch("/users/me", json=update_data)
+        response = await ac.patch("/users/me", json={"name": "NoAuth"})
         assert response.status_code == 401
 
-    async def test_update_user_cache(self, ac, fake_get_current_user, fake_get_redis):
+    async def test_update_user_invalidates_cache(
+        self, ac, fake_get_current_user, fake_get_redis
+    ):
         cache_key = fake_get_redis.build_key(
             "users", "current", fake_get_current_user.email
         )
         await fake_get_redis.setc(cache_key, fake_get_current_user, CacheTTL.FAST)
+        assert await fake_get_redis.getc(cache_key) is not None
 
-        cached_user = await fake_get_redis.getc(cache_key)
-        assert cached_user is not None
-
-        update_data = {
-            "birth_date": "1995-10-25",
-            "name": "UpdatedUser",
-        }
-        await ac.patch("/users/me", json=update_data)
-
-        cached_user = await fake_get_redis.getc(cache_key)
-        assert cached_user is None
+        await ac.patch("/users/me", json={"name": "NewName"})
+        assert await fake_get_redis.getc(cache_key) is None
 
 
-class TestUpdatrePassword:
-    async def test_update_user_password(
+class TestUpdatePassword:
+    async def test_update_user_password_success(
         self, ac, fake_get_current_user, get_test_session
     ):
         update_data = {
             "old_password": "test_hashed_password",
-            "new_password": "new_password_update",
+            "new_password": "NewSecretPassword123!Secure",
         }
-        await ac.patch("/users/me/password", json=update_data)
+        response = await ac.patch("/users/me/password", json=update_data)
+        assert response.status_code == 200
+        assert response.json()["message"] == "Password successfully updated"
 
-        query = select(User.password).where(User.id == fake_get_current_user.id)
+        query = select(User).where(User.id == fake_get_current_user.id)
         result = await get_test_session.execute(query)
-        user_password = result.scalar_one_or_none()
+        user = result.scalar_one()
 
-        assert verify_pwd("new_password_update", user_password)
+        assert verify_pwd("NewSecretPassword123!Secure", user.password)
+        assert user.token_version == fake_get_current_user.token_version + 1
 
     async def test_update_user_incorrect_password(self, ac, fake_get_current_user):
         update_data = {
             "old_password": "wrong_password",
-            "new_password": "new_password_update",
+            "new_password": "NewSecretPassword123!Secure",
         }
         response = await ac.patch("/users/me/password", json=update_data)
         assert response.status_code == 400
+        assert response.json()["detail"] == "Incorrect password"
 
-    async def test_update_user_cache(self, ac, fake_get_current_user, fake_get_redis):
+    async def test_update_user_password_invalidates_cache(
+        self, ac, fake_get_current_user, fake_get_redis
+    ):
         cache_key = fake_get_redis.build_key(
             "users", "current", fake_get_current_user.email
         )
         await fake_get_redis.setc(cache_key, fake_get_current_user, CacheTTL.FAST)
 
-        cached_user = await fake_get_redis.getc(cache_key)
-        assert cached_user is not None
-
         update_data = {
             "old_password": "test_hashed_password",
-            "new_password": "new_password_update",
+            "new_password": "NewSecretPassword123!Secure",
         }
         await ac.patch("/users/me/password", json=update_data)
-
-        cached_user = await fake_get_redis.getc(cache_key)
-        assert cached_user is None
+        assert await fake_get_redis.getc(cache_key) is None
 
 
 class TestDeleteUser:
-    async def test_delete_user(self, ac, fake_get_current_user, get_test_session):
+    async def test_delete_user_client_success(
+        self, ac, fake_get_current_user, get_test_session, fake_get_redis
+    ):
+        cache_key = fake_get_redis.build_key(
+            "users", "current", fake_get_current_user.email
+        )
+        await fake_get_redis.setc(cache_key, fake_get_current_user, CacheTTL.FAST)
+
         delete_data = {"password": "test_hashed_password"}
         response = await ac.request("DELETE", "/users/me", json=delete_data)
         assert response.status_code == 204
 
         query = select(User).where(User.id == fake_get_current_user.id)
         result = await get_test_session.execute(query)
-        user = result.scalar_one_or_none()
+        assert result.scalar_one_or_none() is None
+        assert await fake_get_redis.getc(cache_key) is None
 
-        assert user is None
-
-    async def test_delete_user_incorrect_password(self, ac, fake_get_current_user):
-        delete_data = {"password": "wrong_password"}
-        response = await ac.request("DELETE", "/users/me", json=delete_data)
-        assert response.status_code == 400
-
-    async def test_delete_user_cache(self, ac, fake_get_current_user, fake_get_redis):
-        cache_key = fake_get_redis.build_key(
-            "users", "current", fake_get_current_user.email
-        )
-        await fake_get_redis.setc(cache_key, fake_get_current_user, CacheTTL.FAST)
-
-        cached_user = await fake_get_redis.getc(cache_key)
-        assert cached_user is not None
+    async def test_delete_user_doctor_invalidates_related_caches(
+        self, ac, fake_get_current_user_as_doctor, get_test_session, fake_get_redis
+    ):
+        doc_cache_key = fake_get_redis.build_key("doctors", "items", "all")
+        offer_cache_key = fake_get_redis.build_key("offers", "items", "all")
+        await fake_get_redis.setc(doc_cache_key, [{"fake": "doctor"}], CacheTTL.FAST)
+        await fake_get_redis.setc(offer_cache_key, [{"fake": "offer"}], CacheTTL.FAST)
 
         delete_data = {"password": "test_hashed_password"}
         response = await ac.request("DELETE", "/users/me", json=delete_data)
         assert response.status_code == 204
 
-        cached_user = await fake_get_redis.getc(cache_key)
-        assert cached_user is None
+        assert await fake_get_redis.getc(doc_cache_key) is None
+        assert await fake_get_redis.getc(offer_cache_key) is None
+
+    async def test_delete_user_incorrect_password(self, ac, fake_get_current_user):
+        delete_data = {"password": "wrong_password"}
+        response = await ac.request("DELETE", "/users/me", json=delete_data)
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Incorrect password"
