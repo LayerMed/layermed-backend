@@ -192,18 +192,14 @@ class TestUpdateSpecialty:
         )
         assert response.status_code == 404
 
-    async def test_update_specialty_unauthorized(self, ac, created_specialty):
-        response = await ac.patch(
-            f"/specialties/{created_specialty['id']}", json={"name": "Unauthorized"}
-        )
+    async def test_update_specialty_unauthorized(self, ac):
+        response = await ac.patch("/specialties/1", json={"name": "Unauthorized"})
         assert response.status_code == 401
 
     async def test_update_specialty_forbidden_for_client(
-        self, ac, fake_get_current_user, created_specialty
+        self, ac, fake_get_current_user
     ):
-        response = await ac.patch(
-            f"/specialties/{created_specialty['id']}", json={"name": "Forbidden"}
-        )
+        response = await ac.patch("/specialties/1", json={"name": "Forbidden"})
         assert response.status_code == 403
 
 
@@ -232,12 +228,12 @@ class TestDeleteSpecialty:
         response = await ac.delete("/specialties/99999")
         assert response.status_code == 404
 
-    async def test_delete_specialty_unauthorized(self, ac, created_specialty):
-        response = await ac.delete(f"/specialties/{created_specialty['id']}")
+    async def test_delete_specialty_unauthorized(self, ac):
+        response = await ac.delete("/specialties/1")
         assert response.status_code == 401
 
     async def test_delete_specialty_forbidden_for_client(
-        self, ac, fake_get_current_user, created_specialty
+        self, ac, fake_get_current_user
     ):
-        response = await ac.delete(f"/specialties/{created_specialty['id']}")
+        response = await ac.delete("/specialties/1")
         assert response.status_code == 403

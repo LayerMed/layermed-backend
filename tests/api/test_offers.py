@@ -577,12 +577,8 @@ class TestUpdateOffers:
         assert db_offer.status == ModerationStatus.APPROVED
         assert await fake_get_redis.getc(cache_key) is None
 
-    async def test_approve_offer_unauthorized(
-        self,
-        ac,
-        seed_offer_for_update,
-    ):
-        response = await ac.patch(f"/offers/{seed_offer_for_update.id}/approve")
+    async def test_approve_offer_unauthorized(self, ac):
+        response = await ac.patch("/offers/1/approve")
         assert response.status_code == 401
 
     async def test_reject_offer_success(

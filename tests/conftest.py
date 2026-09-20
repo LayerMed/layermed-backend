@@ -94,7 +94,7 @@ async def ac(get_test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
 def fake_admin_user() -> UserRead:
     now = datetime.now(UTC)
     return UserRead(
-        id=1,
+        id=999,
         name="TestAdmin",
         email="admin@test.com",
         role=UserRole.ADMIN,
@@ -107,8 +107,10 @@ def fake_admin_user() -> UserRead:
 @pytest.fixture
 def fake_get_admin_user(fake_admin_user: UserRead):
     app.dependency_overrides[get_admin_user] = lambda: fake_admin_user
+    app.dependency_overrides[get_current_user] = lambda: fake_admin_user
     yield fake_admin_user
     app.dependency_overrides.pop(get_admin_user, None)
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture(autouse=True)
@@ -236,6 +238,7 @@ def user_factory(get_test_session: AsyncSession) -> Callable:
         email: str | None = None,
         name: str = "Test User",
         password: str = "test_hashed_password",
+        token_version: int = 1,
         **kwargs,
     ) -> User:
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -244,6 +247,7 @@ def user_factory(get_test_session: AsyncSession) -> Callable:
             email=email or f"user_{uuid.uuid4().hex[:8]}@test.com",
             password=hash_pwd(password),
             role=role,
+            token_version=token_version,
             created_at=now,
             updated_at=now,
             **kwargs,
@@ -304,10 +308,15 @@ def offer_factory(
         **kwargs,
     ) -> Offer:
         now = datetime.now(UTC).replace(tzinfo=None)
-        if not doctor:
-            doctor = await doctor_factory()
-        if not city:
-            city = seed_city
+        doctor_id = kwargs.pop("doctor_id", None)
+        if not doctor_id:
+            if not doctor:
+                doctor = await doctor_factory()
+            doctor_id = doctor.id
+
+        city_id = kwargs.pop("city_id", None)
+        if not city_id:
+            city_id = city.id if city else seed_city.id
 
         defaults = {
             "title": "Consultation",
@@ -322,8 +331,8 @@ def offer_factory(
         defaults.update(kwargs)
 
         offer = Offer(
-            doctor_id=doctor.id,
-            city_id=city.id,
+            doctor_id=doctor_id,
+            city_id=city_id,
             **defaults,
         )
         get_test_session.add(offer)
@@ -335,18 +344,24 @@ def offer_factory(
 
 @pytest.fixture
 def booking_factory(
-    get_test_session: AsyncSession, fake_get_current_user, offer_factory
+    get_test_session: AsyncSession,
+    user_factory: Callable,
+    offer_factory: Callable,
 ):
     async def _create(
         user_id=None, offer_id=None, status=BookingStatus.PENDING, days_ahead=1
     ):
         now = datetime.now(UTC).replace(tzinfo=None)
+        if not user_id:
+            default_user = await user_factory()
+            user_id = default_user.id
+
         if not offer_id:
             default_offer = await offer_factory(status=ModerationStatus.APPROVED)
             offer_id = default_offer.id
 
         booking = Booking(
-            user_id=user_id or fake_get_current_user.id,
+            user_id=user_id,
             offer_id=offer_id,
             status=status,
             appointment_time=now + timedelta(days=days_ahead),
@@ -368,3 +383,9 @@ def fake_get_current_doctor(
     app.dependency_overrides[get_current_doctor] = lambda: doctor_read
     yield doctor_read
     app.dependency_overrides.pop(get_current_doctor, None)
+
+
+@pytest.fixture(autouse=True)
+def reset_dependency_overrides():
+    yield
+    app.dependency_overrides.clear()

@@ -5,9 +5,13 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from main import app
 from src.common.enums import CacheTTL, ModerationStatus, UserRole
+from src.core.dependencies import get_current_doctor, get_current_user
 from src.modules.doctors.models import Doctor
+from src.modules.doctors.schemas import DoctorRead
 from src.modules.users.models import User
+from src.modules.users.schemas import UserRead
 from tests.service import create_test_image
 
 
@@ -575,7 +579,9 @@ class TestDoctorUpdate:
         assert response.status_code == 200
         assert response.json()["id"] == current_doctor.id
 
-    async def test_update_doctor_pending_status_forbidden(self, ac, pending_doctor):
+    async def test_update_doctor_pending_status_forbidden(
+        self, ac, pending_doctor_user
+    ):
         payload = {"bio": "Trying to update"}
         response = await ac.patch("/doctors/me", json=payload)
         assert response.status_code == 403
@@ -584,6 +590,34 @@ class TestDoctorUpdate:
         payload = {"bio": "No authorization"}
         response = await ac.patch("/doctors/me", json=payload)
         assert response.status_code == 401
+
+
+@pytest.fixture
+async def pending_doctor_user(
+    get_test_session,
+    user_factory,
+    doctor_factory,
+):
+    user = await user_factory(
+        role=UserRole.DOCTOR,
+        password="fake_password_secret",
+    )
+    doctor = await doctor_factory(
+        user=user,
+        status=ModerationStatus.PENDING,
+    )
+    await get_test_session.commit()
+    await get_test_session.refresh(user)
+    await get_test_session.refresh(doctor)
+
+    user_read = UserRead.model_validate(user)
+    doctor_read = DoctorRead.model_validate(doctor)
+
+    app.dependency_overrides[get_current_user] = lambda: user_read
+    app.dependency_overrides[get_current_doctor] = lambda: doctor_read
+    yield user_read
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_doctor, None)
 
 
 class TestDoctorDelete:
@@ -622,7 +656,9 @@ class TestDoctorDelete:
         assert response.status_code == 400
         assert response.json()["detail"] == "Incorrect password"
 
-    async def test_delete_doctor_account_pending_forbidden(self, ac, pending_doctor):
+    async def test_delete_doctor_account_pending_forbidden(
+        self, ac, pending_doctor_user
+    ):
         payload = {"password": "fake_password_secret"}
         response = await ac.request("DELETE", "/doctors/me", json=payload)
         assert response.status_code == 403

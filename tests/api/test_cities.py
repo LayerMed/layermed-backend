@@ -160,18 +160,12 @@ class TestUpdateCity:
         response = await ac.patch("/cities/99999", json={"name": "Ghost City"})
         assert response.status_code == 404
 
-    async def test_update_city_unauthorized(self, ac, created_city):
-        response = await ac.patch(
-            f"/cities/{created_city['id']}", json={"name": "Unauthorized"}
-        )
+    async def test_update_city_unauthorized(self, ac):
+        response = await ac.patch("/cities/1", json={"name": "Unauthorized"})
         assert response.status_code == 401
 
-    async def test_update_city_forbidden_for_client(
-        self, ac, fake_get_current_user, created_city
-    ):
-        response = await ac.patch(
-            f"/cities/{created_city['id']}", json={"name": "Forbidden"}
-        )
+    async def test_update_city_forbidden_for_client(self, ac, fake_get_current_user):
+        response = await ac.patch("/cities/1", json={"name": "Forbidden"})
         assert response.status_code == 403
 
 
@@ -200,12 +194,10 @@ class TestDeleteCity:
         response = await ac.delete("/cities/99999")
         assert response.status_code == 404
 
-    async def test_delete_city_unauthorized(self, ac, created_city):
-        response = await ac.delete(f"/cities/{created_city['id']}")
+    async def test_delete_city_unauthorized(self, ac):
+        response = await ac.delete("/cities/1")
         assert response.status_code == 401
 
-    async def test_delete_city_forbidden_for_client(
-        self, ac, fake_get_current_user, created_city
-    ):
-        response = await ac.delete(f"/cities/{created_city['id']}")
+    async def test_delete_city_forbidden_for_client(self, ac, fake_get_current_user):
+        response = await ac.delete("/cities/1")
         assert response.status_code == 403

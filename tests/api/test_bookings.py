@@ -317,8 +317,8 @@ class TestGetBookings:
     async def test_get_booking_by_id_admin_success(
         self,
         ac,
-        fake_get_admin_user,
         seed_other_user_booking,
+        fake_get_admin_user,
     ):
         response = await ac.get(f"/bookings/{seed_other_user_booking.id}")
         assert response.status_code == 200
@@ -346,12 +346,8 @@ class TestGetBookings:
         assert response.status_code == 404
         assert response.json()["detail"] == "Booking not found"
 
-    async def test_get_booking_by_id_unauthorized(
-        self,
-        ac,
-        seed_other_user_booking,
-    ):
-        response = await ac.get(f"/bookings/{seed_other_user_booking.id}")
+    async def test_get_booking_by_id_unauthorized(self, ac):
+        response = await ac.get("/bookings/1")
         assert response.status_code == 401
 
 
@@ -427,9 +423,9 @@ class TestCancelBooking:
         self,
         ac,
         get_test_session,
-        fake_get_admin_user,
         fake_get_redis,
         seed_other_user_booking,
+        fake_get_admin_user,
     ):
         owner_cache_key = fake_get_redis.build_key(
             "bookings", "user", seed_other_user_booking.user_id
@@ -495,10 +491,6 @@ class TestCancelBooking:
         assert response.status_code == 404
         assert response.json()["detail"] == "Booking not found"
 
-    async def test_cancel_booking_unauthorized(
-        self,
-        ac,
-        seed_other_user_booking,
-    ):
-        response = await ac.patch(f"/bookings/{seed_other_user_booking.id}")
+    async def test_cancel_booking_unauthorized(self, ac):
+        response = await ac.patch("/bookings/1")
         assert response.status_code == 401

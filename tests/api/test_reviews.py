@@ -486,6 +486,9 @@ class TestDeleteReviews:
         doctor = await doctor_factory(rating_avg=4.0, reviews_count=2)
         owner_user = await user_factory()
         foreign_user = await user_factory()
+        await get_test_session.commit()
+        await get_test_session.refresh(owner_user)
+        await get_test_session.refresh(foreign_user)
 
         review = await review_factory(
             doctor_id=doctor.id,
@@ -512,7 +515,16 @@ class TestDeleteReviews:
         doc = seed_review_delete_setup["doctor"]
         owner_user = seed_review_delete_setup["owner_user"]
         target_review = seed_review_delete_setup["review"]
-        owner_read = UserRead.model_validate(owner_user)
+        owner_read = UserRead(
+            id=owner_user.id,
+            name=owner_user.name,
+            email=owner_user.email,
+            role=owner_user.role,
+            token_version=owner_user.token_version,
+            created_at=owner_user.created_at,
+            updated_at=owner_user.updated_at,
+            doctor=None,
+        )
 
         cache_key = fake_get_redis.build_key("doctors", "items", doc.id)
         await fake_get_redis.setc(cache_key, {"cached": "data"}, CacheTTL.FAST)
@@ -552,7 +564,16 @@ class TestDeleteReviews:
         )
         await get_test_session.commit()
 
-        owner_read = UserRead.model_validate(owner_user)
+        owner_read = UserRead(
+            id=owner_user.id,
+            name=owner_user.name,
+            email=owner_user.email,
+            role=owner_user.role,
+            token_version=owner_user.token_version,
+            created_at=owner_user.created_at,
+            updated_at=owner_user.updated_at,
+            doctor=None,
+        )
         app.dependency_overrides[get_current_user] = lambda: owner_read
         response = await ac.patch(f"/reviews/{review.id}")
 
@@ -572,7 +593,16 @@ class TestDeleteReviews:
     ):
         foreign_user = seed_review_delete_setup["foreign_user"]
         target_review = seed_review_delete_setup["review"]
-        foreign_read = UserRead.model_validate(foreign_user)
+        foreign_read = UserRead(
+            id=foreign_user.id,
+            name=foreign_user.name,
+            email=foreign_user.email,
+            role=foreign_user.role,
+            token_version=foreign_user.token_version,
+            created_at=foreign_user.created_at,
+            updated_at=foreign_user.updated_at,
+            doctor=None,
+        )
 
         app.dependency_overrides[get_current_user] = lambda: foreign_read
         response = await ac.patch(f"/reviews/{target_review.id}")
@@ -590,7 +620,16 @@ class TestDeleteReviews:
         seed_review_delete_setup,
     ):
         owner_user = seed_review_delete_setup["owner_user"]
-        owner_read = UserRead.model_validate(owner_user)
+        owner_read = UserRead(
+            id=owner_user.id,
+            name=owner_user.name,
+            email=owner_user.email,
+            role=owner_user.role,
+            token_version=owner_user.token_version,
+            created_at=owner_user.created_at,
+            updated_at=owner_user.updated_at,
+            doctor=None,
+        )
 
         app.dependency_overrides[get_current_user] = lambda: owner_read
         response = await ac.patch("/reviews/99999")

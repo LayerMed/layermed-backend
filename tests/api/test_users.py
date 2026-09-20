@@ -149,9 +149,9 @@ class TestSessionManagement:
         refresh_key = fake_get_redis.build_key("users", "refresh", refresh_token)
         await fake_get_redis.setc(refresh_key, user.email, ex=CacheTTL.FAST)
 
-        response = await ac.post(
-            "/users/refresh", cookies={"refresh_token": refresh_token}
-        )
+        ac.cookies.set("refresh_token", refresh_token)
+        response = await ac.post("/users/refresh")
+
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -165,9 +165,8 @@ class TestSessionManagement:
         assert response.json()["detail"] == "Refresh token missing"
 
     async def test_refresh_token_invalid_or_expired(self, ac):
-        response = await ac.post(
-            "/users/refresh", cookies={"refresh_token": "expired_token"}
-        )
+        ac.cookies.set("refresh_token", "expired_token")
+        response = await ac.post("/users/refresh")
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid or expired refresh token"
 
@@ -176,9 +175,8 @@ class TestSessionManagement:
         refresh_key = fake_get_redis.build_key("users", "refresh", refresh_token)
         await fake_get_redis.setc(refresh_key, "user@test.com", ex=CacheTTL.FAST)
 
-        response = await ac.post(
-            "/users/logout", cookies={"refresh_token": refresh_token}
-        )
+        ac.cookies.set("refresh_token", refresh_token)
+        response = await ac.post("/users/logout")
         assert response.status_code == 204
         assert await fake_get_redis.getc(refresh_key) is None
 

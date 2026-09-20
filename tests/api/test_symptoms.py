@@ -171,18 +171,12 @@ class TestUpdateSymptom:
         response = await ac.patch("/symptoms/99999", json={"name": "Ghost"})
         assert response.status_code == 404
 
-    async def test_update_symptom_unauthorized(self, ac, created_symptom):
-        response = await ac.patch(
-            f"/symptoms/{created_symptom['id']}", json={"name": "Unauthorized"}
-        )
+    async def test_update_symptom_unauthorized(self, ac):
+        response = await ac.patch("/symptoms/1", json={"name": "Unauthorized"})
         assert response.status_code == 401
 
-    async def test_update_symptom_forbidden_for_client(
-        self, ac, fake_get_current_user, created_symptom
-    ):
-        response = await ac.patch(
-            f"/symptoms/{created_symptom['id']}", json={"name": "Forbidden"}
-        )
+    async def test_update_symptom_forbidden_for_client(self, ac, fake_get_current_user):
+        response = await ac.patch("/symptoms/1", json={"name": "Forbidden"})
         assert response.status_code == 403
 
 
@@ -211,12 +205,10 @@ class TestDeleteSymptom:
         response = await ac.delete("/symptoms/99999")
         assert response.status_code == 404
 
-    async def test_delete_symptom_unauthorized(self, ac, created_symptom):
-        response = await ac.delete(f"/symptoms/{created_symptom['id']}")
+    async def test_delete_symptom_unauthorized(self, ac):
+        response = await ac.delete("/symptoms/1")
         assert response.status_code == 401
 
-    async def test_delete_symptom_forbidden_for_client(
-        self, ac, fake_get_current_user, created_symptom
-    ):
-        response = await ac.delete(f"/symptoms/{created_symptom['id']}")
+    async def test_delete_symptom_forbidden_for_client(self, ac, fake_get_current_user):
+        response = await ac.delete("/symptoms/1")
         assert response.status_code == 403
