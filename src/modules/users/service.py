@@ -1,3 +1,5 @@
+import asyncio
+
 from pydantic import EmailStr
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -6,7 +8,13 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from src.common.enums import UserRole
 from src.common.schemas import PaginatedResponse, PasswordConfirm
-from src.core.security import hash_pwd, verify_pwd
+from src.core.config import settings
+from src.core.security import (
+    create_access_token,
+    generate_refresh_token,
+    hash_pwd,
+    verify_pwd,
+)
 from src.modules.users.exceptions import (
     IncorrectPasswordError,
     InvalidCredentialsError,
@@ -24,17 +32,54 @@ from src.modules.users.schemas import (
 from src.services.storage.redis import RedisCache
 
 
-async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
-    query_password = select(User.password).where(User.id == current_user.id)
-    result = await db.execute(query_password)
-    current_password = result.scalar_one_or_none()
-    if current_password is None:
+# TOKEN
+async def tokens_for_user(user: User, redis: RedisCache) -> tuple[str, str]:
+    access_token = create_access_token(
+        {"sub": user.email},
+        user.token_version,
+    )
+    refresh_token = generate_refresh_token()
+
+    refresh_key = redis.build_key("users", "refresh", refresh_token)
+    await redis.setc(refresh_key, user.email, ex=settings.REFRESH_TOKEN_EXPIRE)
+
+    return access_token, refresh_token
+
+
+async def refresh_user_session(
+    refresh_token: str | None,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> tuple[str, str]:
+    if not refresh_token:
+        raise InvalidCredentialsError(detail="Refresh token missing")
+
+    refresh_key = redis.build_key("users", "refresh", refresh_token)
+    email = await redis.getc(refresh_key)
+
+    if not email:
+        raise InvalidCredentialsError(detail="Invalid or expired refresh token")
+
+    await redis.delc(refresh_key)
+
+    query = select(User).where(User.email == email)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
         raise UserNotFoundError()
-    return current_password
+
+    return await tokens_for_user(user, redis)
+
+
+async def revoke_refresh_session(refresh_token: str | None, redis: RedisCache) -> None:
+    if refresh_token:
+        refresh_key = redis.build_key("users", "refresh", refresh_token)
+        await redis.delc(refresh_key)
 
 
 # CREATE
-async def create_user(new_user: UserCreate, db: AsyncSession) -> None:
+async def create_user(new_user: UserCreate, db: AsyncSession) -> User:
     query = (
         insert(User)
         .on_conflict_do_nothing()
@@ -45,15 +90,16 @@ async def create_user(new_user: UserCreate, db: AsyncSession) -> None:
             email=new_user.email,
             password=hash_pwd(new_user.password),
         )
-        .returning(User.id)
+        .returning(User)
     )
     result = await db.execute(query)
-    user_id = result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
 
-    if user_id is None:
+    if user is None:
         raise UserAlreadyExistsError()
 
     await db.commit()
+    return user
 
 
 # READ
@@ -115,6 +161,15 @@ async def get_user_by_email(username: EmailStr, db: AsyncSession) -> User:
     return user
 
 
+async def get_user_password(current_user: UserRead, db: AsyncSession) -> str:
+    query_password = select(User.password).where(User.id == current_user.id)
+    result = await db.execute(query_password)
+    current_password = result.scalar_one_or_none()
+    if current_password is None:
+        raise UserNotFoundError()
+    return current_password
+
+
 # UPDATE
 async def update_user(
     user_data: UserUpdate,
@@ -156,10 +211,14 @@ async def update_password(
 
     hashed_password = hash_pwd(password_data.new_password)
     query = (
-        update(User).where(User.id == current_user.id).values(password=hashed_password)
+        update(User)
+        .where(User.id == current_user.id)
+        .values(password=hashed_password, token_version=User.token_version + 1)
     )
+
     await db.execute(query)
     await db.commit()
+
     cache_key = redis.build_key("users", "current", current_user.email)
     await redis.delc(cache_key)
 
@@ -180,5 +239,17 @@ async def delete_account(
     await db.execute(query)
     await db.commit()
 
-    cache_key = redis.build_key("users", "current", current_user.email)
-    await redis.delc(cache_key)
+    tasks = [
+        redis.delc(redis.build_key("users", "current", current_user.email)),
+        redis.invalidate("users"),
+    ]
+
+    if current_user.role == UserRole.DOCTOR:
+        tasks.extend(
+            [
+                redis.invalidate("doctors"),
+                redis.invalidate("offers"),
+            ]
+        )
+
+    await asyncio.gather(*tasks)

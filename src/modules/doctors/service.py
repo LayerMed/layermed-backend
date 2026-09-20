@@ -1,3 +1,5 @@
+import asyncio
+
 import sqlalchemy.exc
 from fastapi import UploadFile
 from sqlalchemy import delete, func, select, update
@@ -20,6 +22,7 @@ from src.modules.doctors.schemas import (
     DoctorFilterParams,
     DoctorRead,
     DoctorReadDetailed,
+    DoctorReject,
     DoctorUpdate,
 )
 from src.modules.specialties.models import Specialty
@@ -140,7 +143,9 @@ async def get_doctors_by_filters(
     else:
         target_status = ModerationStatus.APPROVED
 
-    is_public_default = filters.is_default_page() and target_status == ModerationStatus.APPROVED
+    is_public_default = (
+        filters.is_default_page() and target_status == ModerationStatus.APPROVED
+    )
     cache_key = redis.build_key("doctors", "list", "default")
 
     if is_public_default and not is_admin:
@@ -189,11 +194,9 @@ async def get_doctor_by_id(
     db: AsyncSession,
     redis: RedisCache,
 ) -> DoctorReadDetailed:
-    is_admin = optional_user is not None and optional_user.role == UserRole.ADMIN
+    is_admin = optional_user and optional_user.role == UserRole.ADMIN
     is_owner = (
-        optional_user is not None
-        and optional_user.doctor is not None
-        and optional_user.doctor.id == doctor_id
+        optional_user and optional_user.doctor and optional_user.doctor.id == doctor_id
     )
 
     cache_key = redis.build_key("doctors", "items", doctor_id)
@@ -217,7 +220,11 @@ async def get_doctor_by_id(
         raise DoctorNotFoundError()
 
     doctor_dto = DoctorReadDetailed.model_validate(doctor)
-    if doctor.status == ModerationStatus.APPROVED:
+
+    if not (is_admin or is_owner):
+        doctor_dto.rejection_reason = None
+
+    if doctor.status == ModerationStatus.APPROVED and not (is_admin or is_owner):
         await redis.setc(cache_key, doctor_dto, CacheTTL.SLOW)
 
     return doctor_dto
@@ -273,6 +280,78 @@ async def update_doctor(
     return DoctorRead.model_validate(doctor)
 
 
+async def approve_doctor(
+    doctor_id: int,
+    db: AsyncSession,
+    redis: RedisCache,
+):
+    query = (
+        update(Doctor)
+        .where(Doctor.id == doctor_id)
+        .values(status=ModerationStatus.APPROVED, rejection_reason=None)
+        .returning(Doctor)
+    )
+    result = await db.execute(query)
+    doctor = result.scalar_one_or_none()
+    if doctor is None:
+        raise DoctorNotFoundError()
+
+    query_email = select(User.email).where(User.id == doctor.user_id)
+    user_email = (await db.execute(query_email)).scalar_one()
+
+    await db.commit()
+
+    await asyncio.gather(
+        redis.invalidate("doctors"),
+        redis.invalidate("users"),
+        redis.delc(redis.build_key("users", "current", user_email)),
+    )
+
+    return DoctorRead.model_validate(doctor)
+
+
+async def reject_doctor(
+    doctor_id: int,
+    reject_data: DoctorReject,
+    db: AsyncSession,
+    redis: RedisCache,
+) -> DoctorRead:
+    query_doctor = (
+        update(Doctor)
+        .where(Doctor.id == doctor_id)
+        .values(
+            status=ModerationStatus.REJECTED,
+            rejection_reason=reject_data.rejection_reason,
+        )
+        .returning(Doctor)
+    )
+    res_doctor = await db.execute(query_doctor)
+    doctor = res_doctor.scalar_one_or_none()
+    if doctor is None:
+        raise DoctorNotFoundError()
+
+    query_user = (
+        update(User)
+        .where(User.id == doctor.user_id)
+        .values(
+            role=UserRole.CLIENT,
+            token_version=User.token_version + 1,
+        )
+        .returning(User.email)
+    )
+    res_user = await db.execute(query_user)
+    user_email = res_user.scalar_one()
+
+    await db.commit()
+
+    await asyncio.gather(
+        redis.invalidate("doctors"),
+        redis.invalidate("users"),
+        redis.delc(redis.build_key("users", "current", user_email)),
+    )
+    return DoctorRead.model_validate(doctor)
+
+
 # DELETE
 async def delete_doctor(
     password_data: PasswordConfirm,
@@ -294,13 +373,17 @@ async def delete_doctor(
         raise DoctorNotFoundError()
 
     await db.execute(
-        update(User).where(User.id == current_user.id).values(role=UserRole.CLIENT)
+        update(User)
+        .where(User.id == current_user.id)
+        .values(role=UserRole.CLIENT, token_version=User.token_version + 1)
     )
 
     await db.commit()
-
-    await redis.invalidate("doctors")
-    await redis.invalidate("users")
+    await asyncio.gather(
+        redis.delc(redis.build_key("users", "current", current_user.email)),
+        redis.invalidate("doctors"),
+        redis.invalidate("users"),
+    )
 
 
 async def delete_doctor_avatar(

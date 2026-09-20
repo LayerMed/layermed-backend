@@ -1,3 +1,4 @@
+import secrets
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -20,14 +21,24 @@ def hash_pwd(pwd: str) -> str:
 
 
 def verify_pwd(plain_pwd: str, hashed_pwd: str) -> bool:
-    return pwd_context.verify(plain_pwd, hashed_pwd)
+    target_pwd = hashed_pwd if hashed_pwd is not None else settings.DUMMY_PASSWORD_HASH
+    return pwd_context.verify(plain_pwd, target_pwd)
 
 
-def create_access_token(user_data: dict) -> str:
+def create_access_token(user_data: dict, token_version: int = 0) -> str:
+    now = datetime.now(UTC)
+    expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE)
     data_copy = user_data.copy()
-    expire = datetime.now(UTC) + timedelta(minutes=settings.TOKEN_EXPIRE)
-    data_copy.update({"exp": int(expire.timestamp())})
+    data_copy.update(
+        {
+            "iat": int(now.timestamp()),
+            "exp": token_version,
+            "exp": int(expire.timestamp()),
+        }
+    )
     encoded_jwt = jwt.encode(data_copy, settings.KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
+def generate_refresh_token() -> str:
+    return secrets.token_urlsafe(64)

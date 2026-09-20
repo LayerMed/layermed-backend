@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.common.enums import TextLength
 
-
 CityName = Annotated[str, Field(max_length=TextLength.SHORT)]
 
 

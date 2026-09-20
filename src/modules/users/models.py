@@ -19,8 +19,11 @@ class User(Base, Timestamp):
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
     role: Mapped[UserRole] = mapped_column(default=UserRole.CLIENT)
+    token_version: Mapped[int] = mapped_column(default=1)
 
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="user", lazy="selectin")
+    bookings: Mapped[list["Booking"]] = relationship(
+        back_populates="user", lazy="selectin"
+    )
     doctor: Mapped[Optional["Doctor"]] = relationship(
         back_populates="user", uselist=False, lazy="joined"
     )

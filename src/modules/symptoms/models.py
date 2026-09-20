@@ -19,7 +19,7 @@ class offerSymptom(Base):
         ForeignKey("offers.id", ondelete="cascade"), primary_key=True
     )
     symptom_id: Mapped[int] = mapped_column(
-        ForeignKey("offers.id", ondelete="cascade"), primary_key=True
+        ForeignKey("symptoms.id", ondelete="cascade"), primary_key=True
     )
 
     __table_args__ = (Index("idx_symptom_offer", "symptom_id", "offer_id"),)

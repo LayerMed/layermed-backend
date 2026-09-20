@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.enums import RateLimit
 from src.core.dependencies import get_admin_user
+from src.core.limiter import limiter
 from src.modules.symptoms.schemas import SymptomCreate, SymptomRead, SymptomUpdate
 from src.modules.symptoms.service import (
     create_symptom,
@@ -40,7 +42,9 @@ async def create_symptom_handle(
     response_model=list[SymptomRead],
     summary="Get all symptoms",
 )
+@limiter.limit(RateLimit.BURST)
 async def get_symptoms_handle(
+    request: Request,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> list[SymptomRead]:
@@ -53,7 +57,9 @@ async def get_symptoms_handle(
     response_model=SymptomRead,
     summary="Get symptom by id",
 )
+@limiter.limit(RateLimit.READ)
 async def get_symptom_by_id_handle(
+    request: Request,
     symptom_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
@@ -68,7 +74,9 @@ async def get_symptom_by_id_handle(
     response_model=SymptomRead,
     summary="Update symptom",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def update_symptom_by_id_handle(
+    request: Request,
     symptom_id: int,
     symptom_data: SymptomUpdate,
     db: AsyncSession = Depends(get_session),
@@ -85,7 +93,9 @@ async def update_symptom_by_id_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete symptom",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def delete_symptom_handle(
+    request: Request,
     symptom_id: int,
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),

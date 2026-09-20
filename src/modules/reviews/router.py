@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.enums import ModerationStatus
+from src.common.enums import ModerationStatus, RateLimit
 from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_current_user
+from src.core.limiter import limiter
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.reviews.schemas import ReviewCreate, ReviewFilterParams, ReviewRead
 from src.modules.reviews.service import (
@@ -29,7 +30,9 @@ router = APIRouter(prefix="/reviews", tags=["Reviews"])
     status_code=status.HTTP_201_CREATED,
     summary="Create review",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def create_review_handle(
+    request: Request,
     new_review: ReviewCreate,
     current_user: UserRead = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
@@ -44,7 +47,9 @@ async def create_review_handle(
     response_model=PaginatedResponse[ReviewRead],
     summary="Get doctor reviews",
 )
+@limiter.limit(RateLimit.READ)
 async def get_reviews_by_filter_handle(
+    request: Request,
     doctor_id: int,
     filters: Annotated[ReviewFilterParams, Depends()],
     db: AsyncSession = Depends(get_session),
@@ -56,7 +61,9 @@ async def get_reviews_by_filter_handle(
 @router.patch(
     "/review/{review_id}/appeal", summary="Doctor requests to remove the review"
 )
+@limiter.limit(RateLimit.MUTATION)
 async def remove_review_request_handle(
+    request: Request,
     review_id: int,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
@@ -66,7 +73,7 @@ async def remove_review_request_handle(
 
 
 @router.patch(
-    "/review/{review_id}/approve-deletion",
+    "/review/{review_id}/approve",
     summary="Admin approves review deletion (Hide review & recalculate rating)",
     response_model=ReviewRead,
 )
@@ -80,7 +87,7 @@ async def admin_approve_deletion_handle(
 
 
 @router.patch(
-    "/review/{review_id}/reject-deletion",
+    "/review/{review_id}/reject",
     summary="Admin rejects review deletion (Keep review active)",
     response_model=ReviewRead,
 )

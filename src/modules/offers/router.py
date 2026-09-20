@@ -1,10 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.enums import RateLimit
 from src.common.schemas import PaginatedResponse
 from src.core.dependencies import get_admin_user, get_current_doctor, get_optional_user
+from src.core.limiter import limiter
 from src.modules.doctors.schemas import DoctorRead
 from src.modules.offers.models import Offer
 from src.modules.offers.schemas import (
@@ -17,6 +19,7 @@ from src.modules.offers.schemas import (
 from src.modules.offers.service import (
     create_offer,
     delete_offer,
+    delete_offer_image,
     get_offer_by_id,
     get_offers_by_doctor,
     get_offers_by_filters,
@@ -38,7 +41,9 @@ router = APIRouter(prefix="/offers", tags=["Offers"])
     status_code=status.HTTP_201_CREATED,
     summary="Create offer",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def create_offer_handle(
+    request: Request,
     new_offer: OfferCreate,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
@@ -53,7 +58,9 @@ async def create_offer_handle(
     status_code=status.HTTP_201_CREATED,
     summary="Upload images for doctor offer",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def upload_offer_images_handle(
+    request: Request,
     offer_id: int,
     images: list[UploadFile] = File(...),
     current_doctor: DoctorRead = Depends(get_current_doctor),
@@ -65,13 +72,15 @@ async def upload_offer_images_handle(
 
 # READ
 @router.get("/", response_model=PaginatedResponse[OfferRead], summary="Get all offers")
+@limiter.limit(RateLimit.BURST)
 async def get_offers_by_filters_handle(
+    request: Request,
     filters: Annotated[OfferFilterParams, Depends()],
-    current_user: UserRead | None = Depends(get_optional_user),
+    optional_user: UserRead | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> PaginatedResponse[OfferRead]:
-    return await get_offers_by_filters(current_user, filters, db, redis)
+    return await get_offers_by_filters(optional_user, filters, db, redis)
 
 
 @router.get(
@@ -79,7 +88,9 @@ async def get_offers_by_filters_handle(
     response_model=list[OfferRead],
     summary="Get all offers from current doctor",
 )
+@limiter.limit(RateLimit.READ)
 async def get_offers_by_doctor_handle(
+    request: Request,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
 ) -> list[OfferRead]:
@@ -87,23 +98,29 @@ async def get_offers_by_doctor_handle(
 
 
 @router.get("/{offer_id}", response_model=OfferRead, summary="Get offer by id")
+@limiter.limit(RateLimit.READ)
 async def get_offer_by_id_handle(
+    request: Request,
     offer_id: int,
+    optional_user: UserRead | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await get_offer_by_id(offer_id, db, redis)
+    return await get_offer_by_id(offer_id, optional_user, db, redis)
 
 
 # UPDATE
 @router.patch("/{offer_id}", response_model=OfferRead, summary="Update offer by id")
+@limiter.limit(RateLimit.MUTATION)
 async def update_offer_by_id_handle(
+    request: Request,
     offer_id: int,
     offer_data: OfferUpdate,
+    current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> OfferRead:
-    return await update_offer_by_id(offer_id, offer_data, db, redis)
+    return await update_offer_by_id(offer_id, offer_data, current_doctor, db, redis)
 
 
 @router.patch(
@@ -113,9 +130,9 @@ async def update_offer_by_id_handle(
 )
 async def approve_offer_handle(
     offer_id: int,
-    admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
+    admin: UserRead = Depends(get_admin_user),
 ) -> OfferRead:
     return await approve_item(Offer, OfferRead, offer_id, db, redis, "offers")
 
@@ -128,9 +145,9 @@ async def approve_offer_handle(
 async def reject_offer_handle(
     offer_id: int,
     reject_data: OfferReject,
-    admin: UserRead = Depends(get_admin_user),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
+    admin: UserRead = Depends(get_admin_user),
 ) -> OfferRead:
     return await reject_item(
         Offer,
@@ -149,10 +166,29 @@ async def reject_offer_handle(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete offer",
 )
+@limiter.limit(RateLimit.MUTATION)
 async def delete_offer_handle(
+    request: Request,
     offer_id: int,
     current_doctor: DoctorRead = Depends(get_current_doctor),
     db: AsyncSession = Depends(get_session),
     redis: RedisCache = Depends(get_redis),
 ) -> None:
     await delete_offer(offer_id, current_doctor, db, redis)
+
+
+@router.delete(
+    "/{offer_id}/images/{image_key:path}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete image from offer",
+)
+@limiter.limit(RateLimit.MUTATION)
+async def delete_offer_image_handle(
+    request: Request,
+    offer_id: int,
+    image_key: str,
+    current_doctor: DoctorRead = Depends(get_current_doctor),
+    db: AsyncSession = Depends(get_session),
+    redis: RedisCache = Depends(get_redis),
+) -> None:
+    await delete_offer_image(offer_id, image_key, current_doctor, db, redis)

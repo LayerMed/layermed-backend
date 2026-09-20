@@ -29,8 +29,9 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, settings.KEY, algorithms=settings.ALGORITHM)
         email = payload.get("sub")
-        if email is None:
-            logger.warning("JWT Token payload is missing 'sub' (email) claim")
+        token_version = payload.get("token_version")
+
+        if email is None or token_version is None:
             raise credentials_exception
     except jwt.PyJWTError as e:
         logger.warning("Failed to decode JWT token: {error}", error=str(e))
@@ -38,28 +39,27 @@ async def get_current_user(
 
     cache_key = redis.build_key("users", "current", email)
     cached_user = await redis.getc(cache_key)
+    user_dto = None
     if cached_user is not None:
         try:
-            return UserRead.model_validate(cached_user)
+            user_dto = UserRead.model_validate(cached_user)
         except Exception:
-            logger.info(
-                "Outdated cache structure for user {email}. Refreshing from database.",
-                email=email,
-            )
             await redis.delc(cache_key)
 
-    query = select(User).where(User.email == email).options(joinedload(User.doctor))
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
+    if user_dto is None:
+        query = select(User).where(User.email == email).options(joinedload(User.doctor))
+        result = await db.execute(query)
+        user = result.scalar_one_or_none()
 
-    if user is None:
-        logger.warning(
-            "Token contains email {email}, but user was not found in DB", email=email
-        )
+        if user is None:
+            raise credentials_exception
+
+        user_dto = UserRead.model_validate(user)
+        await redis.setc(cache_key, user_dto, ex=CacheTTL.FAST)
+
+    if user_dto.token_version != token_version:
         raise credentials_exception
 
-    user_dto = UserRead.model_validate(user)
-    await redis.setc(cache_key, user_dto, ex=CacheTTL.FAST)
     return user_dto
 
 

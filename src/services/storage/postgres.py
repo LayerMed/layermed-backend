@@ -23,7 +23,7 @@ psycopg_engine = create_engine(
 )
 
 
-engine = create_async_engine(settings.pg_asyncpg_dsn, echo=True)
+engine = create_async_engine(settings.pg_asyncpg_dsn, echo=False)
 
 
 async_session_maker = async_sessionmaker(

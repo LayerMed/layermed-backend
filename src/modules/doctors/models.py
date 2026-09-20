@@ -28,7 +28,9 @@ class Doctor(Base, Timestamp):
     )
 
     user: Mapped["User"] = relationship(back_populates="doctor", lazy="joined")
-    offers: Mapped[list["Offer"]] = relationship(back_populates="doctor", lazy="selectin")
+    offers: Mapped[list["Offer"]] = relationship(
+        back_populates="doctor", lazy="selectin"
+    )
     specialties: Mapped[list["Specialty"]] = relationship(
         back_populates="doctors", secondary="doctor_specialties", lazy="selectin"
     )

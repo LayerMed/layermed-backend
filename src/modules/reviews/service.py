@@ -119,7 +119,6 @@ async def get_reviews_by_filter(
     result = await db.execute(query)
     reviews = result.scalars().all()
 
-
     return PaginatedResponse[ReviewRead](
         items=[ReviewRead.model_validate(r) for r in reviews],
         limit=filters.limit,

@@ -24,10 +24,10 @@ async def create_symptom(
     )
     result = await db.execute(query)
     created_symptom = result.scalar_one_or_none()
-    
+
     if created_symptom is None:
         raise SymptomAlreadyExistsError()
-    
+
     await db.commit()
     await redis.invalidate("symptoms")
     return SymptomRead.model_validate(created_symptom)
