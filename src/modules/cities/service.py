@@ -1,4 +1,3 @@
-import sqlalchemy.exc
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,8 +37,8 @@ async def get_cities(db: AsyncSession, redis: RedisCache) -> list[CityRead]:
     query = select(City)
     result = await db.execute(query)
     cities = result.scalars().all()
-
     cities_dto = [CityRead.model_validate(c) for c in cities]
+
     await redis.setc(cache_key, cities_dto, CacheTTL.STATIC)
     return cities_dto
 
@@ -63,21 +62,15 @@ async def update_city(
     if not update_data:
         return await get_city_by_id(city_id, db, redis)
 
-    try:
-        query = (
-            update(City).where(City.id == city_id).values(**update_data).returning(City)
-        )
-        result = await db.execute(query)
-        updated_city = result.scalar_one_or_none()
-        if updated_city is None:
-            raise CityNotFoundError()
+    query = update(City).where(City.id == city_id).values(**update_data).returning(City)
+    result = await db.execute(query)
+    updated_city = result.scalar_one_or_none()
+    if updated_city is None:
+        raise CityNotFoundError()
 
-        await db.commit()
-        await redis.invalidate("cities")
-        return CityRead.model_validate(updated_city)
-    except sqlalchemy.exc.IntegrityError:
-        await db.rollback()
-        raise CityAlreadyExistsError()
+    await db.commit()
+    await redis.invalidate("cities")
+    return CityRead.model_validate(updated_city)
 
 
 # DELETE

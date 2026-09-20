@@ -11,7 +11,7 @@ class Symptom(Base, Timestamp):
     description: Mapped[str]
 
 
-class offerSymptom(Base):
+class OfferSymptom(Base):
     __tablename__ = "offer_symptoms"
 
     id = None

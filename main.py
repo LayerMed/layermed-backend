@@ -43,7 +43,9 @@ app.state.limiter = limiter
 async def rate_limiter(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
-        content={"detail": "Too many requests. Please wait before sending new requests"},
+        content={
+            "detail": "Too many requests. Please wait before sending new requests"
+        },
         headers={"Retry-After": str(exc.detail)},
     )
 

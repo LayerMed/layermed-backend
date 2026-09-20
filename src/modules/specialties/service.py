@@ -32,8 +32,10 @@ async def create_specialty(
     )
     result = await db.execute(query)
     created_specialty = result.scalar_one_or_none()
+
     if created_specialty is None:
         raise SpecialtyAlreadyExistsError()
+
     await db.commit()
     await redis.invalidate("specialties")
     return SpecialtyRead.model_validate(created_specialty)
@@ -42,8 +44,8 @@ async def create_specialty(
 # READ
 async def get_specialties(db: AsyncSession, redis: RedisCache) -> list[SpecialtyRead]:
     cache_key = redis.build_key("specialties", "items", "all")
-    cached = await redis.getc(cache_key)
-    if cached:
+    cached_specialties = await redis.getc(cache_key)
+    if cached_specialties:
         return [SpecialtyRead.model_validate(s) for s in cached]
 
     query = select(Specialty).order_by(Specialty.name)
