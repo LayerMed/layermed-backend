@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str
     REDIS_PORT: int
-    REDIS_PASSWORD: int
+    REDIS_PASSWORD: str | None = None
     REDIS_DB: int = 0
 
     # S3
