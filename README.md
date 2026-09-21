@@ -105,7 +105,7 @@ docker compose up --build -d
 
 API будет доступен по адресу `http://localhost:8000/docs`.
 
-### 2. Запуск для локальной разработки (uv)
+### 2. Запуск для локальной разработки
 
 ```bash
 # Установка окружения
@@ -116,6 +116,9 @@ cp .env.example .env
 
 # Применение миграций БД
 uv run alembic upgrade head
+
+# Наполнение базы данных тестовыми пользователями
+uv run python -m ./src/services/seed
 
 # Запуск dev-сервера
 uv run uvicorn main:app --reload
