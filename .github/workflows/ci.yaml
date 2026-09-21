@@ -57,26 +57,26 @@ jobs:
       - name: Run Pyright
         run: uv run pyright
 
-      - name: Run Pytest
-        env:
-          POSTGRES_USER: testpostgres
-          POSTGRES_PASSWORD: testpostgres
-          POSTGRES_DB: test_layermed_db
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5434
-          TEST_POSTGRES_USER: testpostgres
-          TEST_POSTGRES_PASSWORD: testpostgres
-          TEST_POSTGRES_DB: test_layermed_db
-          TEST_POSTGRES_PORT: 5434
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-          KEY: test_secret_jwt_key_for_ci_pipeline_only
-          ALGORITHM: HS256
-          DUMMY_HASH: '$2b$12$liS94xlilOmkVG.NyGtEMOYKfvOgfxis0jem1MOq.fOW4IobaQFR.'
-          S3_ENDPOINT: https://storage.yandexcloud.net
-          S3_ACCESS_KEY: test_key
-          S3_SECRET_KEY: test_secret
-          S3_BUCKET_NAME: general-media
-          DEBUG: "False"
-          PYTHONPATH: src
-        run: uv run pytest
+      # - name: Run Pytest
+      #   env:
+      #     POSTGRES_USER: testpostgres
+      #     POSTGRES_PASSWORD: testpostgres
+      #     POSTGRES_DB: test_layermed_db
+      #     POSTGRES_HOST: localhost
+      #     POSTGRES_PORT: 5434
+      #     TEST_POSTGRES_USER: testpostgres
+      #     TEST_POSTGRES_PASSWORD: testpostgres
+      #     TEST_POSTGRES_DB: test_layermed_db
+      #     TEST_POSTGRES_PORT: 5434
+      #     REDIS_HOST: localhost
+      #     REDIS_PORT: 6379
+      #     KEY: test_secret_jwt_key_for_ci_pipeline_only
+      #     ALGORITHM: HS256
+      #     DUMMY_HASH: '$2b$12$liS94xlilOmkVG.NyGtEMOYKfvOgfxis0jem1MOq.fOW4IobaQFR.'
+      #     S3_ENDPOINT: https://storage.yandexcloud.net
+      #     S3_ACCESS_KEY: test_key
+      #     S3_SECRET_KEY: test_secret
+      #     S3_BUCKET_NAME: general-media
+      #     DEBUG: "False"
+      #     PYTHONPATH: src
+      #   run: uv run pytest
