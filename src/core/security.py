@@ -37,7 +37,7 @@ def create_access_token(user_data: dict, token_version: int = 0) -> str:
         }
     )
     encoded_jwt = jwt.encode(data_copy, settings.KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+    return encoded_jwt.decode("utf-8")
 
 
 def generate_refresh_token() -> str:
