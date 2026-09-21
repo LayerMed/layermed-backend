@@ -1,9 +1,8 @@
-import asyncio
 from sqlalchemy import select
 
+from src.core.security import hash_pwd
+from src.modules.users.models import User, UserRole
 from src.services.storage.postgres import async_session_maker
-from src.core.security import hash_pwd  
-from src.modules.users.models import User, UserRole 
 
 USERS_TO_SEED = [
     {
@@ -37,6 +36,6 @@ async def seed_users() -> None:
                     role=user_data["role"],
                     is_active=True,
                 )
-                session.add(new_user)            
+                session.add(new_user)
 
         await session.commit()

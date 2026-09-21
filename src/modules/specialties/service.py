@@ -46,7 +46,7 @@ async def get_specialties(db: AsyncSession, redis: RedisCache) -> list[Specialty
     cache_key = redis.build_key("specialties", "items", "all")
     cached_specialties = await redis.getc(cache_key)
     if cached_specialties:
-        return [SpecialtyRead.model_validate(s) for s in cached]
+        return [SpecialtyRead.model_validate(s) for s in cached_specialties]
 
     query = select(Specialty).order_by(Specialty.name)
     result = await db.execute(query)

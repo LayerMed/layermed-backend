@@ -39,13 +39,16 @@ dependencies = [
 
 
 [tool.pyright]
-typeCheckingMode='standard'
+typeCheckingMode = "standard"
+include = ["src"]
+exclude = [
+    "**/migrations",
+    "tests",
+    "**/node_modules",
+    "**/__pycache__",
+]
+reportUndefinedVariable = "none"
 
 [tool.ruff]
-extend-exclude = [
-    "migrations"
-]
-
-[tool.pytest.ini_options]
-pythonpath = ["."]
-asyncio_mode = "auto"
+target-version = "py312"
+line-length = 88

@@ -1,17 +1,17 @@
 from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
-import uvicorn
 
-from src.core.limiter import limiter
-from src.core.config import settings
-from src.core.logs import logger
-from src.common.exceptions import AppError
-from src.services.storage.redis import redis_client
 from src.api import api_router
+from src.common.exceptions import AppError
+from src.core.config import settings
+from src.core.limiter import limiter
+from src.core.logs import logger
+from src.services.storage.redis import redis_client
 
 
 @asynccontextmanager

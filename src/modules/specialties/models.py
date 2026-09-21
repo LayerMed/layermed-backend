@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,7 +20,7 @@ class Specialty(Base, Timestamp):
 class DoctorSpecialty(Base):
     __tablename__ = "doctor_specialties"
 
-    id = None
+    id: Any = None
     doctor_id: Mapped[int] = mapped_column(
         ForeignKey("doctors.id", ondelete="cascade"), primary_key=True
     )

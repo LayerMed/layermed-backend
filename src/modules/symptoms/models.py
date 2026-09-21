@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,7 +16,7 @@ class Symptom(Base, Timestamp):
 class OfferSymptom(Base):
     __tablename__ = "offer_symptoms"
 
-    id = None
+    id: Any = None
     offer_id: Mapped[int] = mapped_column(
         ForeignKey("offers.id", ondelete="cascade"), primary_key=True
     )
