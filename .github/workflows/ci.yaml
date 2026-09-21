@@ -1,0 +1,84 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: testpostgres
+          POSTGRES_PASSWORD: testpostgres
+          POSTGRES_DB: test_layermed_db
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff (Linter & Format)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Run Pyright (Type checking)
+        run: uv run pyright
+
+      - name: Run Pytest
+        env:
+          POSTGRES_USER: testpostgres
+          POSTGRES_PASSWORD: testpostgres
+          POSTGRES_DB: test_layermed_db
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5434
+          TEST_POSTGRES_USER: testpostgres
+          TEST_POSTGRES_PASSWORD: testpostgres
+          TEST_POSTGRES_DB: test_layermed_db
+          TEST_POSTGRES_PORT: 5434
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          KEY: test_secret_jwt_key_for_ci_pipeline_only
+          ALGORITHM: HS256
+          DUMMY_HASH: '$2b$12$liS94xlilOmkVG.NyGtEMOYKfvOgfxis0jem1MOq.fOW4IobaQFR.'
+          S3_ENDPOINT: https://storage.yandexcloud.net
+          S3_ACCESS_KEY: test_key
+          S3_SECRET_KEY: test_secret
+          S3_BUCKET_NAME: general-media
+          DEBUG: "False"
+          PYTHONPATH: src
+        run: uv run pytest
