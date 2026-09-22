@@ -5,10 +5,10 @@ from sqlalchemy import Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.common.enums import UserRole
-from src.services.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, IdMixin, Timestamp
 
 
-class User(Base, Timestamp):
+class User(Base, IdMixin, Timestamp):
     __tablename__ = "users"
 
     name: Mapped[str]

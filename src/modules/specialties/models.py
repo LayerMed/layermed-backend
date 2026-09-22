@@ -1,4 +1,3 @@
-from typing import Any
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.services.storage.postgres import Base, Timestamp
 
 
-class Specialty(Base, Timestamp):
+class Specialty(Base, IdMixin, Timestamp):
     __tablename__ = "specialties"
 
     name: Mapped[str] = mapped_column(unique=True)
@@ -20,7 +19,6 @@ class Specialty(Base, Timestamp):
 class DoctorSpecialty(Base):
     __tablename__ = "doctor_specialties"
 
-    id: Any = None
     doctor_id: Mapped[int] = mapped_column(
         ForeignKey("doctors.id", ondelete="cascade"), primary_key=True
     )

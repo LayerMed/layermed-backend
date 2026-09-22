@@ -8,7 +8,7 @@ from src.core.config import settings
 
 
 class Base(DeclarativeBase):
-    id: Mapped[int] = mapped_column(primary_key=True)
+    pass
 
 
 class Timestamp:
@@ -16,6 +16,10 @@ class Timestamp:
     updated_at: Mapped[datetime.datetime] = mapped_column(
         onupdate=func.now(), server_default=func.now()
     )
+
+
+class IdMixin:
+    id: Mapped[int] = mapped_column(primary_key=True)
 
 
 psycopg_engine = create_engine(

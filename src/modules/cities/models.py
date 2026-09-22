@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.services.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, IdMixin, Timestamp
 
 
-class City(Base, Timestamp):
+class City(Base, IdMixin, Timestamp):
     __tablename__ = "cities"
 
     name: Mapped[str] = mapped_column(unique=True)

@@ -4,10 +4,10 @@ from sqlalchemy import TIMESTAMP, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.common.enums import BookingStatus
-from src.services.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, IdMixin, Timestamp
 
 
-class Booking(Base, Timestamp):
+class Booking(Base, IdMixin, Timestamp):
     __tablename__ = "bookings"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="cascade"))

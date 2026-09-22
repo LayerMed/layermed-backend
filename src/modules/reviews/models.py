@@ -2,10 +2,10 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.common.enums import ModerationStatus
-from src.services.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, IdMixin, Timestamp
 
 
-class Review(Base, Timestamp):
+class Review(Base, IdMixin, Timestamp):
     __tablename__ = "reviews"
 
     doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id", ondelete="CASCADE"))

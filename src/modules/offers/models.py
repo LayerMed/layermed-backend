@@ -6,7 +6,7 @@ from src.common.enums import ModerationStatus, OfferFormat
 from src.services.storage.postgres import Base, Timestamp
 
 
-class Offer(Base, Timestamp):
+class Offer(Base, IdMixin, Timestamp):
     __tablename__ = "offers"
 
     doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id", ondelete="cascade"))

@@ -6,17 +6,17 @@ Create Date: 2026-08-27 16:32:44.953197
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "dad7bf119fa1"
-down_revision: Union[str, Sequence[str], None] = "b07869fc99bd"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "b07869fc99bd"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -54,11 +54,22 @@ def upgrade() -> None:
     )
 
     op.add_column("doctors", sa.Column("degree", sa.String(), nullable=True))
-    op.add_column("doctors", sa.Column("min_price", sa.Integer(), nullable=False))
-    op.add_column("doctors", sa.Column("clinic", sa.String(), nullable=False))
+    op.add_column(
+        "doctors",
+        sa.Column("min_price", sa.Integer(), server_default="0", nullable=False),
+    )
+    op.add_column(
+        "doctors", sa.Column("clinic", sa.String(), server_default="", nullable=False)
+    )
     op.add_column("doctors", sa.Column("avatar_url", sa.String(), nullable=True))
-    op.add_column("doctors", sa.Column("rating_avg", sa.Float(), nullable=False))
-    op.add_column("doctors", sa.Column("reviews_count", sa.Integer(), nullable=False))
+    op.add_column(
+        "doctors",
+        sa.Column("rating_avg", sa.Float(), server_default="0.0", nullable=False),
+    )
+    op.add_column(
+        "doctors",
+        sa.Column("reviews_count", sa.Integer(), server_default="0", nullable=False),
+    )
 
     bookstatus_enum = postgresql.ENUM(
         "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW", name="bookstatus"

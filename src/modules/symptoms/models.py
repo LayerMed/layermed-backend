@@ -1,12 +1,11 @@
-from typing import Any
 
 from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.services.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, IdMixin, Timestamp
 
 
-class Symptom(Base, Timestamp):
+class Symptom(Base, IdMixin, Timestamp):
     __tablename__ = "symptoms"
 
     name: Mapped[str] = mapped_column(unique=True)
@@ -16,7 +15,6 @@ class Symptom(Base, Timestamp):
 class OfferSymptom(Base):
     __tablename__ = "offer_symptoms"
 
-    id: Any = None
     offer_id: Mapped[int] = mapped_column(
         ForeignKey("offers.id", ondelete="cascade"), primary_key=True
     )

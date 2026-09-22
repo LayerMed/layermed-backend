@@ -2,17 +2,7 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from src.services.storage.postgres import psycopg_engine
-import src.services.storage
-from src.modules.bookings.models import Booking
-from src.modules.cities.models import City
-from src.modules.doctors.models import Doctor
-from src.modules.offers.models import Offer
-from src.modules.reviews.models import Review
-from src.modules.specialties.models import DoctorSpecialty, Specialty
-from src.modules.symptoms.models import Symptom
-from src.modules.users.models import User
-from src.services.storage.postgres import Base
+from src.services.storage.postgres import Base, psycopg_engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

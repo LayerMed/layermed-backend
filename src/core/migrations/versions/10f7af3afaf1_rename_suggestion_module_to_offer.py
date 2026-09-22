@@ -6,18 +6,17 @@ Create Date: 2026-08-31 13:39:07.328734
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 # revision identifiers, used by Alembic.
 revision: str = "10f7af3afaf1"
-down_revision: Union[str, Sequence[str], None] = "c4c72ee85c12"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c4c72ee85c12"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 moderation_status_enum = postgresql.ENUM(
     "PENDING", "APPROVED", "REJECTED", name="moderationstatus"
@@ -63,7 +62,7 @@ def upgrade() -> None:
         sa.Column("offer_id", sa.Integer(), nullable=False),
         sa.Column("symptom_id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["offer_id"], ["offers.id"], ondelete="cascade"),
-        sa.ForeignKeyConstraint(["symptom_id"], ["offers.id"], ondelete="cascade"),
+        sa.ForeignKeyConstraint(["symptom_id"], ["symptoms.id"], ondelete="cascade"),
         sa.PrimaryKeyConstraint("offer_id", "symptom_id"),
     )
     op.create_index(
