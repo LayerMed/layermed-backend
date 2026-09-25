@@ -41,7 +41,11 @@ async def tokens_for_user(user: User, redis: RedisCache) -> tuple[str, str]:
     refresh_token = generate_refresh_token()
 
     refresh_key = redis.build_key("users", "refresh", refresh_token)
-    await redis.setc(refresh_key, user.email, ex=settings.REFRESH_TOKEN_EXPIRE)
+    await redis.setc(
+        refresh_key,
+        {"email": user.email, "token_version": user.token_version},
+        ex=settings.REFRESH_TOKEN_EXPIRE,
+    )
 
     return access_token, refresh_token
 
@@ -55,12 +59,18 @@ async def refresh_user_session(
         raise InvalidCredentialsError(detail="Refresh token missing")
 
     refresh_key = redis.build_key("users", "refresh", refresh_token)
-    email = await redis.getc(refresh_key)
-
-    if not email:
-        raise InvalidCredentialsError(detail="Invalid or expired refresh token")
-
+    stored_data = await redis.getc(refresh_key)
     await redis.delc(refresh_key)
+
+    if isinstance(stored_data, dict):
+        email = stored_data.get("email")
+        token_version = stored_data.get("token_version")
+    else:
+        email = stored_data
+        token_version = None
+
+    if not isinstance(email, str):
+        raise InvalidCredentialsError(detail="Invalid or expired refresh token")
 
     query = select(User).where(User.email == email)
     result = await db.execute(query)
@@ -68,6 +78,9 @@ async def refresh_user_session(
 
     if not user:
         raise UserNotFoundError()
+
+    if token_version is not None and user.token_version != token_version:
+        raise InvalidCredentialsError(detail="Refresh token is revoked or expired")
 
     return await tokens_for_user(user, redis)
 

@@ -1,5 +1,6 @@
 import jwt
 from fastapi import Depends, HTTPException, status
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -31,7 +32,11 @@ async def get_current_user(
         email = payload.get("sub")
         token_version = payload.get("token_version")
 
-        if email is None or token_version is None:
+        if (
+            not isinstance(email, str)
+            or not isinstance(token_version, int)
+            or isinstance(token_version, bool)
+        ):
             raise credentials_exception
     except jwt.PyJWTError as e:
         logger.warning("Failed to decode JWT token: {error}", error=str(e))
@@ -43,7 +48,7 @@ async def get_current_user(
     if cached_user is not None:
         try:
             user_dto = UserRead.model_validate(cached_user)
-        except Exception:
+        except ValidationError:
             await redis.delc(cache_key)
 
     if user_dto is None:

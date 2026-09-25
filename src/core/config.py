@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE: int = 15 * 60
     REFRESH_TOKEN_EXPIRE: int = 30 * 24 * 60 * 60
 
-    DUMMY_HASH: str
+    DUMMY_PASSWORD_HASH: str
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     DEBUG: bool
 

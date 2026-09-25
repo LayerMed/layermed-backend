@@ -55,6 +55,18 @@ class RedisCache:
         except (json.JSONDecodeError, TypeError):
             return data
 
+    async def getdel(self, key: str) -> Any:
+        data = await self.redis_client.getdel(key)
+        if data is None:
+            return None
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+
+        try:
+            return json.loads(data)
+        except (json.JSONDecodeError, TypeError):
+            return data
+
     async def delc(self, key: str) -> None:
         await self.redis_client.delete(key)
 

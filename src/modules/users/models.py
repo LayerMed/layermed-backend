@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional
 
-from sqlalchemy import Date, ForeignKey
+from sqlalchemy import Date, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.common.enums import UserRole
@@ -19,7 +19,9 @@ class User(Base, IdMixin, Timestamp):
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
     role: Mapped[UserRole] = mapped_column(default=UserRole.CLIENT)
-    token_version: Mapped[int] = mapped_column(default=1)
+    token_version: Mapped[int] = mapped_column(
+        default=1, server_default=text("1"), nullable=False
+    )
 
     bookings: Mapped[list["Booking"]] = relationship(
         back_populates="user", lazy="selectin"

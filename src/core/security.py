@@ -1,5 +1,6 @@
 import secrets
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import jwt
 from fastapi.security import OAuth2PasswordBearer
@@ -12,7 +13,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login", auto_error=False)
 
 
-with open("src/core/bad_passwords.txt", encoding="utf-8") as f:
+BAD_PASSWORDS_PATH = Path(__file__).with_name("bad_passwords.txt")
+with BAD_PASSWORDS_PATH.open(encoding="utf-8") as f:
     BAD_PASSWORDS = set(f.read().splitlines())
 
 
@@ -29,15 +31,15 @@ def create_access_token(user_data: dict, token_version: int = 0) -> str:
     now = datetime.now(UTC)
     expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE)
     data_copy = user_data.copy()
-    data_copy.update(
-        {
-            "iat": int(now.timestamp()),
-            "exp": token_version,
-            "exp": int(expire.timestamp()),
-        }
-    )
+    data_copy["token_version"] = int(token_version)
+    data_copy["iat"] = int(now.timestamp())
+    data_copy["exp"] = int(expire.timestamp())
     encoded_jwt = jwt.encode(data_copy, settings.KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt.decode("utf-8")
+    return (
+        encoded_jwt.decode("utf-8")
+        if isinstance(encoded_jwt, bytes)
+        else encoded_jwt
+    )
 
 
 def generate_refresh_token() -> str:

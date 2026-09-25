@@ -43,9 +43,10 @@ def set_refresh_cookie(response: Response, refresh_token: str) -> None:
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,  # потом поставить true
+        secure=not settings.DEBUG,
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE,
+        path="/",
     )
 
 
@@ -82,7 +83,7 @@ async def login_user_handle(
 ) -> TokenResponse:
     user = await get_user_by_email(form_data.username, db)
 
-    target_hash = user.password if user else settings.DUMMY_HASH
+    target_hash = user.password if user else settings.DUMMY_PASSWORD_HASH
 
     is_password_valid = verify_pwd(form_data.password, target_hash)
     if not user or not is_password_valid:
