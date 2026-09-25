@@ -5,7 +5,7 @@ from src.common.enums import ModerationStatus
 from src.services.storage.postgres import Base, Timestamp
 
 
-class Doctor(Base, Timestamp):
+class Doctor(Base, IdMixin, Timestamp):
     __tablename__ = "doctors"
 
     user_id: Mapped[int] = mapped_column(

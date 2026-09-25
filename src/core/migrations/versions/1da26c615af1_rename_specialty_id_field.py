@@ -48,7 +48,7 @@ def downgrade() -> None:
         "doctor_specialties",
         sa.Column("speciality_id", sa.INTEGER(), autoincrement=False, nullable=False),
     )
-    op.drop_constraint(None, "doctor_specialties", type_="foreignkey")
+    op.drop_constraint("doctor_specialties_specialty_id_fkey", "doctor_specialties", type_="foreignkey")
     op.create_foreign_key(
         op.f("doctor_specialties_speciality_id_fkey"),
         "doctor_specialties",
