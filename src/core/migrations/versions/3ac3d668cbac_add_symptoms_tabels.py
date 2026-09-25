@@ -37,13 +37,13 @@ def upgrade() -> None:
     op.create_table(
         "suggestion_symptoms",
         sa.Column("suggestion_id", sa.Integer(), nullable=False),
-        sa.Column("symptome_id", sa.Integer(), nullable=False),
+        sa.Column("symptom_id", sa.Integer(), nullable=False),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ["suggestion_id"], ["suggestions.id"], ondelete="cascade"
         ),
-        sa.ForeignKeyConstraint(["symptome_id"], ["symptoms.id"], ondelete="cascade"),
-        sa.PrimaryKeyConstraint("suggestion_id", "symptome_id", "id"),
+        sa.ForeignKeyConstraint(["symptom_id"], ["symptoms.id"], ondelete="cascade"),
+        sa.PrimaryKeyConstraint("suggestion_id", "symptom_id", "id"),
     )
     # ### end Alembic commands ###
 

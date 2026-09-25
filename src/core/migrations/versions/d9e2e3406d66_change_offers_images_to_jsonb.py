@@ -6,26 +6,24 @@ Create Date: 2026-09-07 14:09:20.709416
 
 """
 
-from collections.abc import Sequence
+from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "d9e2e3406d66"
-down_revision: str | Sequence[str] | None = "09fac1b6484b"
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
-
-
+down_revision: Union[str, Sequence[str], None] = "09fac1b6484b"
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     op.alter_column(
         "offers",
         "images",
-        existing_type=sa.VARCHAR(),
+        existing_type=postgresql.ARRAY(sa.VARCHAR()),
         type_=postgresql.JSONB(astext_type=sa.Text()),
         postgresql_using="to_jsonb(images)",
         existing_nullable=False,
@@ -33,11 +31,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "offers",
-        "images",
-        existing_type=postgresql.JSONB(astext_type=sa.Text()),
-        type_=postgresql.ARRAY(sa.VARCHAR()),
-        postgresql_using="ARRAY(SELECT jsonb_array_elements_text(images))",
-        existing_nullable=False,
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION pg_temp.jsonb_to_varchar_array(j jsonb) 
+        RETURNS varchar[] LANGUAGE sql IMMUTABLE AS 
+        $$ SELECT ARRAY(SELECT jsonb_array_elements_text(j)) $$;
+        """
+    )
+    op.execute(
+        """
+        ALTER TABLE offers 
+        ALTER COLUMN images TYPE varchar[] 
+        USING pg_temp.jsonb_to_varchar_array(images);
+        """
     )
