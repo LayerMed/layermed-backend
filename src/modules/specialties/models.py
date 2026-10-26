@@ -2,7 +2,7 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.services.storage.postgres import Base, Timestamp, IdMixin
+from src.services.storage.postgres import Base, IdMixin, Timestamp
 
 
 class Specialty(Base, IdMixin, Timestamp):
