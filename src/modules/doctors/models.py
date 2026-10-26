@@ -2,7 +2,7 @@ from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.common.enums import ModerationStatus
-from src.services.storage.postgres import Base, Timestamp
+from src.services.storage.postgres import Base, Timestamp, IdMixin
 
 
 class Doctor(Base, IdMixin, Timestamp):
